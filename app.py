@@ -19,7 +19,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS DEFINITIVO (FULL SCREEN REAL) ---
+# --- ESTILO CSS DEFINITIVO (FULL SCREEN REAL SIN TÍTULO) ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -32,7 +32,7 @@ st.markdown(f"""
         padding: 0 !important;
         max-width: 100% !important;
     }}
-    header {{display: none !important;}} /* Esconde la barra superior de Streamlit */
+    header {{display: none !important;}} 
 
     /* CAPA DE FONDO FULL SCREEN */
     .landing-bg {{
@@ -48,45 +48,20 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO MONUMENTAL (OCUPA EL CENTRO) */
-    .hero-title {{
-        position: fixed;
-        top: 45%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100vw;
-        text-align: center;
-        z-index: 10;
-        pointer-events: none;
-        font-family: 'Arial Black', sans-serif;
-    }}
-    .hero-line1 {{
-        font-size: 10vw; /* Tamaño dinámico gigante */
-        font-weight: 900;
-        color: #FFFFFF;
-        line-height: 0.8;
-        margin: 0;
-        text-shadow: 10px 10px 30px rgba(0,0,0,0.8);
-    }}
-    .hero-line2 {{
-        font-size: 12vw; /* Más grande aún */
-        font-weight: 900;
-        color: #FFFF00; /* Amarillo vibrante */
-        line-height: 0.8;
-        margin: 0;
-        letter-spacing: 2vw;
-        text-shadow: 15px 15px 40px rgba(0,0,0,1);
-    }}
-
     /* BOTONES FIJOS EN LOS RECUADROS AMARILLOS */
-    .fixed-btn-container {{
+    .stButton {{
         position: fixed;
         bottom: 12vh;
-        width: 100vw;
-        display: flex;
-        justify-content: center;
-        gap: 15vw; /* Espacio entre botones para calzar con la imagen */
-        z-index: 20;
+        z-index: 100;
+    }}
+    
+    /* Posicionamiento quirúrgico de botones */
+    div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
+        left: 20vw;
+    }}
+    
+    div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
+        right: 20vw;
     }}
 
     /* ESTILO BOTONES AMARILLOS */
@@ -108,7 +83,7 @@ st.markdown(f"""
         background-color: #FFEA00 !important;
     }}
 
-    /* ESTILOS DASHBOARD (SOLO SE APLICAN EN PÁGINA CURRENT) */
+    /* ESTILOS DASHBOARD INTERNO */
     .dashboard-container {{
         background-color: #000000;
         min-height: 100vh;
@@ -124,7 +99,6 @@ def load_data():
         df = pd.read_excel('Base bruta dic.xlsx')
         df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-        # Limpieza básica de drivers
         for col in ['Primary Driver', 'Secondary Driver', 'Category']:
             if col in df.columns:
                 df[col] = df[col].astype(str).replace('nan', 'N/A')
@@ -136,27 +110,21 @@ def load_data():
 df, mes_base = load_data()
 
 # ==========================================
-# VISTA: LANDING PAGE
+# VISTA: LANDING PAGE (SÓLO FONDO Y BOTONES)
 # ==========================================
 if st.session_state.page == 'landing':
-    # 1. Capa de imagen
+    # Capa de imagen de fondo
     st.markdown('<div class="landing-bg"></div>', unsafe_allow_html=True)
     
-    # 2. Capa de Título
-    st.markdown(f'''
-        <div class="hero-title">
-            <p class="hero-line1">NET PROMOTER SCORE</p>
-            <p class="hero-line2">PERFORMANCE</p>
-        </div>
-    ''', unsafe_allow_html=True)
-    
-    # 3. Capa de Botones (Fijos)
-    st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True) # Empuja el renderizado
+    # Grid invisible de Streamlit para renderizar los botones en sus posiciones CSS
+    st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True) 
     col1, col2, col3, col4, col5 = st.columns([1, 4, 1, 4, 1])
+    
     with col2:
         if st.button("MONTHLY EVOLUTION", key="btn_evo"):
             st.session_state.page = 'evolution'
             st.rerun()
+            
     with col4:
         if st.button("CURRENT MONTH", key="btn_curr"):
             st.session_state.page = 'current'
@@ -168,11 +136,10 @@ if st.session_state.page == 'landing':
 elif st.session_state.page == 'current':
     st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
     
-    if st.button("⬅ VOLVER AL INICIO", key="back"):
+    if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
 
-    # Banner NPS
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     st.markdown(f'''
         <div style="background-color:#FFFF00; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:25px;">
@@ -210,8 +177,10 @@ elif st.session_state.page == 'current':
 # VISTA: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
+    st.markdown('<div class="dashboard-container">', unsafe_allow_html=True)
     if st.button("⬅ VOLVER"):
         st.session_state.page = 'landing'
         st.rerun()
     st.title("📈 Monthly Evolution")
-    st.info("Próximamente contenido histórico.")
+    st.info("Sección en desarrollo.")
+    st.markdown('</div>', unsafe_allow_html=True)
