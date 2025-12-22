@@ -141,16 +141,28 @@ with col_d2:
 # ==========================================
 st.markdown("<br>", unsafe_allow_html=True)
 if not df_sec.empty:
-    # --- GRÁFICA 5: AVG SCORE BY SECONDARY DRIVER (ANCHO COMPLETO) ---
-    data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(ascending=False)
+    # --- GRÁFICA 5: AVG SCORE BY SECONDARY DRIVER (CORREGIDA) ---
+    # 1. Agrupamos y calculamos la media
+    data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index()
+    
+    # 2. Ordenamos especificando la columna 'Score' (Esto evita el TypeError)
+    data_score = data_score.sort_values(by='Score', ascending=False)
+    
+    # 3. Formateamos etiquetas para que no se amontonen
     data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
     
     fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
     fig5.update_traces(marker_color='#FFD700', textposition='outside', textfont=dict(color='white', size=14))
     
     v_min = data_score['Score'].min()
-    fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font':{'color':'white', 'size':22}},
-                       paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"),
-                       yaxis=dict(range=[max(0, v_min - 0.6), 10.6], gridcolor='#333333', title=None),
-                       xaxis=dict(title=None, tickfont=dict(size=12)), height=500, margin=dict(t=80))
+    fig5.update_layout(
+        title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font':{'color':'white', 'size':22}},
+        paper_bgcolor='rgba(0,0,0,0)', 
+        plot_bgcolor='rgba(0,0,0,0)', 
+        font=dict(color="white"),
+        yaxis=dict(range=[max(0, v_min - 0.6), 10.6], gridcolor='#333333', title=None),
+        xaxis=dict(title=None, tickfont=dict(size=12)), 
+        height=500, 
+        margin=dict(t=80)
+    )
     st.plotly_chart(fig5, use_container_width=True)
