@@ -14,7 +14,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS ---
+# --- ESTILO CSS REFINADO ---
 st.markdown("""
     <style>
     /* Fondo general negro */
@@ -40,19 +40,22 @@ st.markdown("""
         border-radius: 15px;
         overflow: hidden;
         margin-bottom: 20px;
-        border: 1px solid #444;
+        border: 2px solid #FFFF00; /* Borde amarillo para dar continuidad */
+        background-color: #FFFFFF; /* Fondo base blanco */
     }
     .plot-header-yellow {
-        background-color: #FFFF00; /* Fondo amarillo solo para el título */
+        background-color: #FFFF00; /* Fondo amarillo sólido */
         color: #000000;
         text-align: center;
         font-weight: bold;
         font-size: 18px;
-        padding: 12px;
-        margin: 0;
+        padding: 12px 0px; /* Padding vertical */
+        margin: 0px;
+        width: 100%;
+        display: block;
     }
     .plot-body-white {
-        background-color: #FFFFFF; /* Fondo blanco para la gráfica */
+        background-color: #FFFFFF; /* Fondo blanco solo para el área del gráfico */
         padding: 10px;
         margin: 0;
     }
@@ -67,7 +70,14 @@ def load_data():
     df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
     df_filtrado = df[df['Primary Driver'] != 'N/A'].copy()
     mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
-    return df_filtrado, mes_nombre
+    
+    traducciones = {
+        'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
+        'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
+        'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
+        'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+    }
+    return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
 
 df, mes_base = load_data()
 
@@ -81,8 +91,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    # Contenedor con Header Amarillo y Body Blanco
-    st.markdown('<div class="plot-container"><p class="plot-header-yellow">1. Primary Driver Composition</p><div class="plot-body-white">', unsafe_allow_html=True)
+    st.markdown('<div class="plot-container"><div class="plot-header-yellow">1. Primary Driver Composition</div><div class="plot-body-white">', unsafe_allow_html=True)
     
     data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
     fig_pie = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
@@ -100,8 +109,7 @@ with col1:
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col2:
-    # Contenedor con Header Amarillo y Body Blanco
-    st.markdown('<div class="plot-container"><p class="plot-header-yellow">2. Average Score Per Primary Driver</p><div class="plot-body-white">', unsafe_allow_html=True)
+    st.markdown('<div class="plot-container"><div class="plot-header-yellow">2. Average Score Per Primary Driver</div><div class="plot-body-white">', unsafe_allow_html=True)
     
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
@@ -121,3 +129,4 @@ with col2:
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
+    
