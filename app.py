@@ -56,12 +56,12 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 230px; 
+        font-size: 400px; 
         font-weight: 900;
         color: #FFFFFF;
         text-shadow: 8px 8px 30px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1.0; /* Interlineado 1.0 solicitado */
+        line-height: 1.5; /* Interlineado 1.0 solicitado */
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
