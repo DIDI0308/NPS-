@@ -24,11 +24,11 @@ b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
     <style>
-    /* ELIMINAR MÁRGENES DE STREAMLIT */
+    /* ELIMINAR MÁRGENES Y SCROLL DE STREAMLIT EN LANDING */
     [data-testid="stAppViewContainer"] > section:nth-child(2) > div:nth-child(1) {{
         padding: 0px;
     }}
-    .stApp {{ background-color: #000000; color: #FFFFFF; }}
+    .stApp {{ background-color: #000000; color: #FFFFFF; overflow: hidden; }}
     
     /* LANDING FULL SCREEN */
     .landing-wrapper {{
@@ -44,47 +44,34 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS (TAMAÑO AUMENTADO) */
-    .landing-title-container {{
-        position: absolute;
-        top: 45%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        text-align: center;
-        z-index: 5;
+    /* BOTONES TOTALMENTE INMÓVILES (POSICIONAMIENTO FIJO) */
+    .stButton {{
+        position: fixed;
+        bottom: 15%; /* Ajusta este % para subir o bajar los botones */
+        z-index: 10;
     }}
-    .landing-title-line1 {{
-        font-family: 'Arial Black', sans-serif;
-        font-size: 85px; /* Aumentado */
-        font-weight: 900;
-        color: #FFFFFF;
-        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
-        margin: 0;
-        line-height: 1;
+
+    /* Anclaje exacto para Botón Izquierdo */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stButton {{
+        left: 21vw; /* Posición horizontal fija */
     }}
-    .landing-title-line2 {{
-        font-family: 'Arial Black', sans-serif;
-        font-size: 110px; /* Aumentado */
-        font-weight: 900;
-        color: #FFFFFF;
-        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
-        margin: 0;
-        line-height: 1.1;
-        letter-spacing: 5px;
+
+    /* Anclaje exacto para Botón Derecho */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(4) .stButton {{
+        right: 21vw; /* Posición horizontal fija */
     }}
 
     /* ESTILO ESTÉTICO DE BOTONES LANDING (AMARILLOS SIN BORDE) */
     div.stButton > button {{
         width: 320px !important;
-        height: 75px !important;
+        height: 85px !important;
         background-color: #FFFF00 !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 20px !important;
-        border-radius: 10px !important;
+        font-size: 22px !important;
+        border-radius: 12px !important;
         border: none !important;
-        box-shadow: 0px 8px 20px rgba(0,0,0,0.6);
+        box-shadow: 0px 10px 25px rgba(0,0,0,0.7);
         text-transform: uppercase;
         transition: all 0.3s ease;
     }}
@@ -92,7 +79,7 @@ st.markdown(f"""
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
         transform: scale(1.05);
-        box-shadow: 0px 10px 25px rgba(255, 255, 0, 0.3);
+        box-shadow: 0px 12px 30px rgba(255, 255, 0, 0.4);
     }}
 
     /* ESTILOS DEL DASHBOARD INTERNO */
@@ -140,17 +127,12 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    # Capa de imagen y título en dos líneas
+    # Capa de imagen (Título borrado)
     st.markdown(f'''
-        <div class="landing-wrapper">
-            <div class="landing-title-container">
-                <p class="landing-title-line1">NET PROMOTER SCORE</p>
-                <p class="landing-title-line2">PERFORMANCE</p>
-            </div>
-        </div>
+        <div class="landing-wrapper"></div>
     ''', unsafe_allow_html=True)
     
-    # Botones centrados
+    # Grid para renderizar botones en sus anclajes CSS
     st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.4, 3, 1.5])
     
