@@ -20,12 +20,11 @@ def get_base64(bin_file):
 if 'page' not in st.session_state:
     st.session_state.page = "home"
 
-# --- VISTA 1: HOME (FONDO LOGO3.PNG CON BOTONES ABAJO) ---
+# --- VISTA 1: HOME ---
 if st.session_state.page == "home":
     bin_str = get_base64('logo3.png')
     style_home = f'''
     <style>
-    /* Fondo y bloqueo de scroll */
     .stApp {{
         background-image: url("data:image/png;base64,{bin_str}");
         background-size: cover;
@@ -37,34 +36,22 @@ if st.session_state.page == "home":
     }}
     header {{visibility: hidden;}}
     .block-container {{padding: 0 !important;}}
-
-    /* Título en el centro exacto */
     .main-title {{
         position: fixed;
-        top: 50%;
-        left: 50%;
+        top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        color: white;
-        font-size: 4rem;
-        font-weight: 800;
-        text-align: center;
-        width: 100%;
+        color: white; font-size: 4rem; font-weight: 800;
+        text-align: center; width: 100%;
         text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        z-index: 1000;
-        letter-spacing: 2px;
+        z-index: 1000; letter-spacing: 2px;
     }}
-
-    /* Botones en la PARTE INFERIOR como antes */
     .stHorizontalBlock {{
         position: fixed;
-        bottom: 10%; 
-        left: 50%;
+        bottom: 10%; left: 50%;
         transform: translateX(-50%);
         width: 50% !important;
         z-index: 1001;
     }}
-
-    /* Estilo botones Amarillos */
     div.stButton > button {{
         background-color: #FFFF00 !important;
         color: black !important;
@@ -75,37 +62,44 @@ if st.session_state.page == "home":
         border-radius: 10px !important;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
     }}
-    div.stButton > button:hover {{
-        background-color: #FFEA00 !important;
-        transform: scale(1.05);
-    }}
     </style>
     '''
     st.markdown(style_home, unsafe_allow_html=True)
     st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
     
-    # Contenedor de botones (ubicados por CSS en la parte inferior)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("MONTHLY EVOLUTION", use_container_width=True):
-            st.toast("Aún trabajando...")
+        st.button("MONTHLY EVOLUTION", use_container_width=True, on_click=lambda: st.toast("Aún trabajando..."))
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
             st.session_state.page = "dashboard"
             st.rerun()
 
-# --- VISTA 2: DASHBOARD (TU CÓDIGO CURRENT MONTH) ---
+# --- VISTA 2: DASHBOARD ---
 elif st.session_state.page == "dashboard":
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
+        
+        /* Contenedor del Banner */
         .banner-amarillo {
-            background-color: #FFFF00; padding: 15px; display: flex;
-            justify-content: space-between; align-items: center;
+            background-color: #FFFF00; padding: 10px 20px; 
+            display: flex; justify-content: space-between; align-items: center;
             border-radius: 5px; margin-bottom: 25px;
         }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
-        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
+        .titulo-texto h1 { margin: 0; font-size: 40px; font-weight: 900; line-height: 1; }
+        .titulo-texto h2 { margin: 0; font-size: 20px; }
+
+        /* Botón Volver específico */
+        .stButton > button.back-btn {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+            border: 2px solid #000000 !important;
+            border-radius: 5px !important;
+            font-weight: bold !important;
+        }
+
         .card-transparent {
             background-color: rgba(255, 255, 255, 0.02);
             border-radius: 15px; padding: 10px; margin-bottom: 20px; color: #FFFFFF;
@@ -121,6 +115,30 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
+    # --- HEADER CON BOTÓN INTEGRADO ---
+    b64_logo2 = get_base64('logo2.png')
+    b64_logo = get_base64('logo.png')
+    
+    # Usamos columnas de Streamlit para el Header para poder meter el botón real de Streamlit
+    head_col1, head_col2, head_col3, head_col4, head_col5 = st.columns([1, 1, 4, 1, 1])
+    
+    with st.container():
+        # Fondo amarillo simulado con CSS para el contenedor del header
+        st.markdown(f'''
+            <div class="banner-amarillo">
+                <img src="data:image/png;base64,{b64_logo2}" style="max-height:60px;">
+                <div class="titulo-texto">
+                    <h1>NPS 2025</h1>
+                </div>
+                <img src="data:image/png;base64,{b64_logo}" style="max-height:60px;">
+            </div>
+        ''', unsafe_allow_html=True)
+    
+    # Botón de volver justo arriba o en una fila superior limpia
+    if st.button("⬅ VOLVER AL INICIO", key="back_home"):
+        st.session_state.page = "home"
+        st.rerun()
+
     @st.cache_data
     def load_data():
         try:
@@ -130,33 +148,21 @@ elif st.session_state.page == "dashboard":
             df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
             df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
             df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-            mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
-            traducciones = {'January': 'Enero', 'December': 'Diciembre'}
-            return df, traducciones.get(mes_nombre, mes_nombre)
-        except: return pd.DataFrame(), "Mes"
+            return df
+        except: return pd.DataFrame()
 
-    df, mes_base = load_data()
+    df = load_data()
 
-    # Botón discreto para volver al inicio en el sidebar
-    if st.sidebar.button("⬅ Volver al Inicio"):
-        st.session_state.page = "home"
-        st.rerun()
+    if not df.empty:
+        # --- GRÁFICAS GLOBALES ---
+        col_g1, col_g2 = st.columns(2)
+        df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
-    # --- HEADER / BANNER ---
-    b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
-    if b64_logo and b64_logo2:
-        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
-
-    # --- GRÁFICAS GLOBALES ---
-    col_g1, col_g2 = st.columns(2)
-    df_global = df[df['Primary Driver'] != 'N/A'].copy() if not df.empty else pd.DataFrame()
-
-    if not df_global.empty:
         with col_g1:
             st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400)
+            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, showlegend=True)
             st.plotly_chart(fig1, use_container_width=True)
 
         with col_g2:
@@ -164,13 +170,12 @@ elif st.session_state.page == "dashboard":
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
             fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
-            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333'))
             st.plotly_chart(fig2, use_container_width=True)
 
-    # --- PANEL INTERACTIVO ---
-    st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-    c_f1, c_f2 = st.columns(2)
-    if not df.empty:
+        # --- PANEL INTERACTIVO ---
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        c_f1, c_f2 = st.columns(2)
         with c_f1:
             selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
         with c_f2:
@@ -203,30 +208,32 @@ elif st.session_state.page == "dashboard":
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
 
-    # --- SCORE PROMEDIO ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    if not df_sec.empty:
-        data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-        data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
-        fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
-        fig5.update_traces(marker_color='#FFD700', textposition='outside')
-        fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=500)
-        st.plotly_chart(fig5, use_container_width=True)
+        # --- SCORE PROMEDIO ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        if not df_sec.empty:
+            data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
+            fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
+            fig5.update_traces(marker_color='#FFD700', textposition='outside')
+            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=500)
+            st.plotly_chart(fig5, use_container_width=True)
 
-    # --- SECCIÓN: COMMENTS CHOSEN ---
-    st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-    st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">COMMENTS CHOSEN</p>', unsafe_allow_html=True)
-    col_t1, col_t2, col_t3 = st.columns(3)
+        # --- SECCIÓN: COMMENTS CHOSEN ---
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">COMMENTS CHOSEN</p>', unsafe_allow_html=True)
+        col_t1, col_t2, col_t3 = st.columns(3)
 
-    def render_dynamic_card(col, key_id, default_title):
-        with col:
-            st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
-            st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
-            st.text_input("Cliente:", key=f"client_{key_id}")
-            st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
-            st.text_area("Comentario:", key=f"comment_{key_id}", height=120)
-            st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
+        def render_dynamic_card(col, key_id, default_title):
+            with col:
+                st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
+                st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
+                st.text_input("Cliente:", key=f"client_{key_id}")
+                st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
+                st.text_area("Comentario:", key=f"comment_{key_id}", height=120)
+                st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
 
-    render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
-    render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
-    render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
+        render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
+        render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+    else:
+        st.warning("Por favor, asegúrate de que el archivo 'Base bruta dic.xlsx' esté en la carpeta.")
