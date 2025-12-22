@@ -6,7 +6,7 @@ import base64
 import textwrap
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Performance 2025", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NET PROMOTER SCORE PERFORMANCE", layout="wide", initial_sidebar_state="collapsed")
 
 def get_base64(bin_file):
     try:
@@ -94,7 +94,7 @@ df, mes_base = load_data()
 # PÁGINA 1: LANDING (BASADA EN TU IMAGEN)
 # ==========================================
 if st.session_state.page == 'landing':
-    b64_bg = get_base64('logo3.jpg') # Asegúrate que el archivo se llame así
+    b64_bg = get_base64('logo3.png') # Asegúrate que el archivo se llame así
     
     if b64_bg:
         st.markdown(f'''
