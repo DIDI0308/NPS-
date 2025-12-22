@@ -6,55 +6,50 @@ import base64
 import textwrap
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NET PROMOTER SCORE PERFORMANCE", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NPS Performance 2025", layout="wide", initial_sidebar_state="collapsed")
 
 def get_base64(bin_file):
     try:
         with open(bin_file, 'rb') as f:
             data = f.read()
-        return base64.decodebytes(data).decode() if isinstance(data, bytes) else base64.b64encode(data).decode()
+        return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS PARA LA LANDING PAGE Y DASHBOARD ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
     
-    /* Contenedor de la Imagen de Fondo (Landing) */
+    /* Imagen de Fondo Landing */
     .landing-container {
         position: relative;
         text-align: center;
-        color: white;
         width: 100%;
     }
     .main-bg {
         width: 100%;
-        border-radius: 10px;
+        max-width: 1200px;
+        border-radius: 15px;
     }
 
-    /* Posicionamiento de Botones sobre los recuadros amarillos de la imagen */
-    .button-overlay {
-        position: absolute;
-        bottom: 15%; /* Ajustar según la imagen */
+    /* Estilo de los Botones de la Landing */
+    div.stButton > button {
         width: 100%;
-        display: flex;
-        justify-content: center;
-        gap: 150px; /* Espacio entre botones para alinearlos con los cuadros amarillos */
-    }
-
-    /* Estilo de los botones para que parezcan integrados */
-    .stButton>button {
-        background-color: transparent !important;
+        height: 60px;
+        background-color: #FFFF00 !important;
         color: #000000 !important;
+        font-weight: bold !important;
+        font-size: 18px !important;
+        border-radius: 10px !important;
         border: none !important;
-        font-weight: 900 !important;
-        font-size: 20px !important;
-        height: 60px !important;
-        width: 250px !important;
-        text-transform: uppercase;
+        transition: 0.3s;
+    }
+    div.stButton > button:hover {
+        background-color: #FFEA00 !important;
+        transform: scale(1.05);
     }
 
-    /* Estilos del Dashboard (Copiados de tu versión anterior) */
+    /* Estilos del Dashboard */
     .banner-amarillo {
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
@@ -62,14 +57,14 @@ st.markdown("""
     }
     .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
-    .card-transparent { background-color: rgba(255, 255, 255, 0.02); border-radius: 15px; padding: 10px; margin-bottom: 20px; }
-    .emoji-solid-yellow { font-size: 110px; text-align: center; color: #FFFF00; text-shadow: 0 0 0 #FFFF00; line-height: 1; margin-bottom: 15px; display: block; }
+    .card-transparent { background-color: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 15px; margin-bottom: 20px; }
+    .emoji-solid-yellow { font-size: 100px; text-align: center; color: #FFFF00; line-height: 1; margin-bottom: 10px; display: block; }
     label { color: #FFFF00 !important; font-weight: bold !important; }
     .stTextInput input, .stTextArea textarea, .stNumberInput input { background-color: #1A1A1A !important; color: white !important; border: 1px solid #333 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- GESTIÓN DE ESTADO DE NAVEGACIÓN ---
+# --- INICIALIZAR ESTADO DE NAVEGACIÓN ---
 if 'page' not in st.session_state:
     st.session_state.page = 'landing'
 
@@ -91,47 +86,49 @@ def load_data():
 df, mes_base = load_data()
 
 # ==========================================
-# PÁGINA 1: LANDING (BASADA EN TU IMAGEN)
+# PÁGINA 1: LANDING (Bienvenida)
 # ==========================================
 if st.session_state.page == 'landing':
-    b64_bg = get_base64('logo3.png') # Asegúrate que el archivo se llame así
+    b64_bg = get_base64('logo3.png')
     
-    if b64_bg:
-        st.markdown(f'''
-            <div class="landing-container">
-                <img src="data:image/jpg;base64,{b64_bg}" class="main-bg">
-            </div>
-        ''', unsafe_allow_html=True)
-        
-        # Botones invisibles sobre los recuadros amarillos
-        col_space1, col_btn1, col_space2, col_btn2, col_space3 = st.columns([1.5, 2, 0.8, 2, 1.5])
+    st.markdown("<br>", unsafe_allow_html=True)
+    col_c, col_main, col_r = st.columns([1, 8, 1])
+    
+    with col_main:
+        if b64_bg:
+            st.markdown(f'<div class="landing-container"><img src="data:image/png;base64,{b64_bg}" class="main-bg"></div>', unsafe_allow_html=True)
+        else:
+            st.error("Archivo 'logo3.png' no encontrado.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        # Botones debajo de la imagen, alineados con los recuadros
+        col_btn1, col_space, col_btn2 = st.columns([4, 2, 4])
         
         with col_btn1:
             if st.button("MONTHLY EVOLUTION"):
                 st.session_state.page = 'evolution'
                 st.rerun()
+        
         with col_btn2:
             if st.button("CURRENT MONTH"):
                 st.session_state.page = 'current'
                 st.rerun()
-    else:
-        st.error("No se encontró el archivo 'logo3.jpg'. Por favor súbelo para ver la página principal.")
 
 # ==========================================
 # PÁGINA 2: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
-    if st.button("⬅ Volver al Inicio"):
+    if st.sidebar.button("⬅ Volver al Inicio"):
         st.session_state.page = 'landing'
         st.rerun()
     st.title("📈 MONTHLY EVOLUTION")
-    st.info("Esta sección se encuentra en desarrollo.")
+    st.info("Próximamente: Análisis histórico y tendencias mensuales.")
 
 # ==========================================
-# PÁGINA 3: CURRENT MONTH (DASHBOARD COMPLETO)
+# PÁGINA 3: CURRENT MONTH (Dashboard Completo)
 # ==========================================
 elif st.session_state.page == 'current':
-    if st.button("⬅ Volver al Inicio"):
+    if st.sidebar.button("⬅ Volver al Inicio"):
         st.session_state.page = 'landing'
         st.rerun()
 
@@ -141,8 +138,7 @@ elif st.session_state.page == 'current':
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        # Aquí va todo tu código de gráficas y Chosen Comments (ya integrado arriba)
-        # 1. Primary Driver Composition... 2. Average Score... etc.
+        # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
@@ -150,21 +146,54 @@ elif st.session_state.page == 'current':
             st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, legend=dict(font=dict(color="white")))
+            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400)
             st.plotly_chart(fig1, use_container_width=True)
 
         with col_g2:
             st.markdown('<p style="font-size:22px; font-weight:bold;">2. Average Score Per Primary Driver</p>', unsafe_allow_html=True)
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
-            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
-            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333', title=None))
+            fig2.update_traces(line_color='#FFD700', marker=dict(size=10), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
+            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333'))
             st.plotly_chart(fig2, use_container_width=True)
 
-        # (Resto del código interactivo y de tarjetas que ya teníamos listo...)
+        # --- PANEL INTERACTIVO ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        # ... filtros y gráficas 3, 4, 5 ...
-        # (Chosen Comments al final)
+        c_f1, c_f2 = st.columns(2)
+        with c_f1:
+            selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
+        with c_f2:
+            opciones_cat = sorted([cat for cat in df['Category'].unique() if cat != 'N/A'])
+            selector_cat = st.multiselect('Category:', opciones_cat, default=opciones_cat)
+
+        df_filt3 = df.copy()
+        if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
+        df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+
+        col_d1, col_d2 = st.columns([1, 2])
+        with col_d1:
+            df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
+            if not df_visual_cat.empty:
+                conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
+                orden = ['Detractor', 'Passive', 'Promoter']
+                color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+                fig3 = go.Figure()
+                for cat in orden:
+                    val = conteo_cat.get(cat, 0)
+                    fig3.add_trace(go.Bar(name=cat, x=['Composición %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else ""))
+                fig3.update_layout(title="3. Category Composition", barmode='stack', paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), showlegend=True)
+                st.plotly_chart(fig3, use_container_width=True)
+
+        with col_d2:
+            if not df_sec.empty:
+                data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
+                fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
+                fig4.update_traces(marker_color='#FFEA00')
+                fig4.update_layout(title="4. Volume by Secondary Driver", paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+                st.plotly_chart(fig4, use_container_width=True)
+
+        # --- CHOSEN COMMENTS ---
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS </p>', unsafe_allow_html=True)
         col_t1, col_t2, col_t3 = st.columns(3)
         def render_dynamic_card(col, key_id, title):
@@ -177,3 +206,5 @@ elif st.session_state.page == 'current':
         render_dynamic_card(col_t1, "1", "Secondary Driver 1:")
         render_dynamic_card(col_t2, "2", "Secondary Driver 2:")
         render_dynamic_card(col_t3, "3", "Secondary Driver 3:")
+    else:
+        st.error("No hay datos cargados.")
