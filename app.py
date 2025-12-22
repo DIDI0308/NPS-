@@ -2,64 +2,90 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Configuración de la página (esto siempre debe ir primero)
-st.set_page_config(page_title="NPS Dashboard - Paso 1", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="NPS Dashboard 2025", layout="wide")
 
-# Estilo para fondo negro (opcional, como lo pediste anteriormente)
+# --- ESTILO DARK MODE ---
 st.markdown("""
     <style>
     .stApp {
         background-color: #000000;
         color: #FFFFFF;
     }
+    .titulo-nps {
+        text-align: center;
+        color: #FFD700;
+        font-family: 'Arial Black', Gadget, sans-serif;
+        font-size: 50px;
+        margin-bottom: 0px;
+    }
+    .sub-info {
+        text-align: center;
+        color: #FFFFFF;
+        font-size: 20px;
+        margin-bottom: 30px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. CARGA Y LIMPIEZA DE DATOS
+# --- 1. CARGA Y EXTRACCIÓN DEL MES ---
 @st.cache_data
-def load_data():
-    # Asegúrate de que el archivo Excel esté en la misma carpeta que este script
+def load_data_and_get_month():
+    # Cargamos el archivo
     df = pd.read_excel('Base bruta dic.xlsx')
     
-    # Limpieza idéntica a tu código original
-    df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-    df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
-    df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
+    # Limpieza y conversión de fechas
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
-    return df
+    
+    # Extraemos el nombre del mes en español (o inglés según tu sistema)
+    # Tomamos el mes de la primera fila disponible
+    mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
+    
+    # Traducción manual rápida si es necesario (opcional)
+    traducciones = {
+        'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
+        'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
+        'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
+        'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+    }
+    mes_final = traducciones.get(mes_nombre, mes_nombre)
+    
+    return df, mes_final
 
 # Ejecutar carga
-df = load_data()
+df, mes_base = load_data_and_get_month()
 
-# TÍTULO DEL DASHBOARD
-st.title("📊 NPS Dashboard 2025")
+# --- 2. TÍTULO CON ICONOS ---
+# Usamos HTML para combinar el texto, el mes dinámico y los iconos
+st.markdown(f"""
+    <div class="titulo-nps">
+        📊 NPS 2025 - {mes_base} 📈
+    </div>
+    <div class="sub-info">
+        Análisis Operativo de Satisfacción del Cliente
+    </div>
+    """, unsafe_allow_html=True)
 
-# --- GRÁFICA 1: PRIMARY DRIVER COMPOSITION ---
+# --- 3. PRIMERA GRÁFICA (ANILLO) ---
+st.markdown("---")
 st.subheader("1. Primary Driver Composition")
 
-# Preparación de datos para Plotly
 data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
 data_anillo.columns = ['Primary Driver', 'Total Customers']
+colores_amarillos = ['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D', '#F4D03F']
 
-# Definición de colores amarillos (consistente con tu paleta)
-colores_amarillos = ['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D', '#F4D03F', '#F9E79F']
-
-# Crear la gráfica con Plotly
 fig_pie = px.pie(
     data_anillo, 
     values='Total Customers', 
     names='Primary Driver',
-    hole=0.6, # Esto crea el efecto de "anillo"
+    hole=0.6,
     color_discrete_sequence=colores_amarillos
 )
 
-# Ajustes de diseño para que se vea bien en fondo negro
 fig_pie.update_layout(
     paper_bgcolor='rgba(0,0,0,0)', 
     plot_bgcolor='rgba(0,0,0,0)',
-    legend_font_color="white",
-    title_font_color="white"
+    legend_font_color="white"
 )
 
-# Mostrar en Streamlit
 st.plotly_chart(fig_pie, use_container_width=True)
