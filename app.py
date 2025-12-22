@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import base64
 import textwrap
 
@@ -14,11 +15,10 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS (DARK MODE PURO) ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
-    
     .banner-amarillo {
         background-color: #FFFF00;
         padding: 15px;
@@ -32,14 +32,10 @@ st.markdown("""
     .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
-
-    .plot-title-solo-texto {
-        color: #FFFFFF;
-        text-align: left;
-        font-weight: bold;
-        font-size: 22px;
-        margin-bottom: 5px;
-    }
+    .plot-title-solo-texto { color: #FFFFFF; text-align: left; font-weight: bold; font-size: 22px; margin-bottom: 5px; }
+    
+    /* Estilo para los selectores (Filtros) */
+    .stSelectbox label, .stMultiSelect label { color: white !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -49,86 +45,102 @@ def load_data():
         df = pd.read_excel('Base bruta dic.xlsx')
         df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
         df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+        df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
+        df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-        df_filt = df[df['Primary Driver'] != 'N/A'].copy()
+        
         mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
-        traducciones = {
-            'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
-            'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
-            'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
-            'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
-        }
-        return df_filt, traducciones.get(mes_nombre, mes_nombre)
+        traducciones = {'January': 'Enero', 'December': 'Diciembre'} # Agregar más según mes
+        return df, traducciones.get(mes_nombre, mes_nombre)
     except:
-        return pd.DataFrame({'Primary Driver': ['Ejemplo A', 'Ejemplo B'], 'Score': [9.2, 8.5], 'Customer ID': [50, 30]}), "Diciembre"
+        # Data dummy para desarrollo
+        data = {
+            'Primary Driver': ['Logística', 'Producto', 'Logística'],
+            'Secondary Driver': ['Tiempo Entrega', 'Calidad', 'Costo'],
+            'Category': ['Promoter', 'Detractor', 'Passive'],
+            'Score': [10, 5, 8],
+            'Customer ID': [1, 2, 3]
+        }
+        return pd.DataFrame(data), "Diciembre"
 
 df, mes_base = load_data()
 
 # --- HEADER / BANNER ---
 b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
 if b64_logo and b64_logo2:
-    st.markdown(f"""
-        <div class="banner-amarillo">
-            <img src="data:image/png;base64,{b64_logo2}" class="logo-img">
-            <div class="titulo-texto">
-                <h1>NPS 2025</h1>
-                <h2>{mes_base}</h2>
-            </div>
-            <img src="data:image/png;base64,{b64_logo}" class="logo-img">
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" class="logo-img"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" class="logo-img"></div>', unsafe_allow_html=True)
 
-# --- SECCIÓN DE GRÁFICAS ---
-st.markdown("<br>", unsafe_allow_html=True)
-col1, col2 = st.columns(2)
+# --- 1. GRÁFICAS GLOBALES (SIN FILTRO) ---
+df_global = df[df['Primary Driver'] != 'N/A'].copy()
+col_g1, col_g2 = st.columns(2)
 
-with col1:
+with col_g1:
     st.markdown('<p class="plot-title-solo-texto">1. Primary Driver Composition</p>', unsafe_allow_html=True)
-    data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
-    
+    data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
     fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
-                  color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D'])
-    
-    fig1.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)',
-        # CONFIGURACIÓN DE LEYENDA EN BLANCO
-        legend=dict(
-            font=dict(color="white"), # Texto de la leyenda en blanco
-            orientation="v", 
-            yanchor="middle", 
-            y=0.5, 
-            xanchor="left", 
-            x=1.02
-        ),
-        font=dict(color="white"), # Asegura que otros textos (si los hay) sean blancos
-        margin=dict(t=10, b=10, l=0, r=120),
-        height=400
-    )
+                  color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
+    fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=350,
+                       legend=dict(font=dict(color="white"), orientation="v", yanchor="middle", y=0.5, x=1.1))
     st.plotly_chart(fig1, use_container_width=True)
 
-with col2:
+with col_g2:
     st.markdown('<p class="plot-title-solo-texto">2. Average Score Per Primary Driver</p>', unsafe_allow_html=True)
-    data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-    data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
-    
-    fig2 = px.line(data_lineas, x='Primary Driver Wrap', y='Score', markers=True)
-    fig2.update_traces(
-        line_color='#FFD700', 
-        marker=dict(size=10, color='#FFD700'),
-        text=data_lineas['Score'].map('{:.2f}'.format), 
-        textposition="top center", 
-        mode='lines+markers+text',
-        textfont=dict(color="white") # Texto de los scores en blanco
-    )
-    
-    fig2.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color="white"),
-        yaxis=dict(gridcolor='#333333', title=None, tickfont=dict(color="white")),
-        xaxis=dict(title=None, tickfont=dict(color="white")),
-        margin=dict(t=40, b=80, l=0, r=10),
-        height=400
-    )
+    data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+    fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
+    fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'),
+                       text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
+    fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"),
+                       yaxis=dict(gridcolor='#333333', title=None), height=350)
     st.plotly_chart(fig2, use_container_width=True)
+
+# --- 2. PANEL INTERACTIVO (CON FILTROS) ---
+st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+st.markdown('<p class="plot-title-solo-texto">3. Panel Dinámico por Driver y Categoría</p>', unsafe_allow_html=True)
+
+# Columnas para los filtros
+c_f1, c_f2 = st.columns(2)
+with c_f1:
+    opciones_driver = ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A'])
+    selector_driver = st.selectbox('Selecciona Primary Driver:', opciones_driver)
+
+with c_f2:
+    opciones_cat = sorted([cat for cat in df['Category'].unique() if cat != 'N/A'])
+    selector_cat = st.multiselect('Filtrar por Categoría:', opciones_cat, default=opciones_cat)
+
+# --- LÓGICA DE FILTRADO DINÁMICO ---
+df_filt = df.copy()
+if selector_driver != 'All':
+    df_filt = df_filt[df_filt['Primary Driver'] == selector_driver]
+
+# Gráficas Dinámicas
+col_d1, col_d2, col_d3 = st.columns([1, 2, 2])
+
+with col_d1:
+    # --- DINÁMICA A: CATEGORY COMPOSITION (Stacked Bar) ---
+    df_visual_cat = df_filt[df_filt['Category'] != 'N/A']
+    conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
+    
+    orden = ['Detractor', 'Passive', 'Promoter']
+    color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+    
+    fig_stack = go.Figure()
+    for cat in orden:
+        val = conteo_cat.get(cat, 0)
+        fig_stack.add_trace(go.Bar(
+            name=cat, x=['Composition %'], y=[val],
+            marker_color=color_map[cat],
+            text=f"{val:.1f}%" if val > 0 else "",
+            textposition='auto',
+            textfont=dict(color='black', shadow="none")
+        ))
+
+    fig_stack.update_layout(
+        barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color="white"), height=450, showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        yaxis=dict(range=[0, 100], visible=False)
+    )
+    st.markdown("<p style='text-align:center;'>Category Composition</p>", unsafe_allow_html=True)
+    st.plotly_chart(fig_stack, use_container_width=True)
+
+# Aquí puedes continuar con col_d2 y col_d3 para volumen y score por Secondary Driver
