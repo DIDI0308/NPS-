@@ -4,27 +4,36 @@ import plotly.express as px
 import plotly.graph_objects as go
 import textwrap
 
-# Configuración de la página
-st.set_page_config(page_title="Dashboard NPS", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="NPS Dashboard 2025", layout="wide")
 
-# Estilos CSS para las tarjetas (Mantiene tu diseño original)
+# --- ESTILO DARK MODE CON GRÁFICAS BLANCAS ---
 st.markdown("""
     <style>
-    .card {
-        background-color: #ffffff;
+    /* Fondo general de la web en negro */
+    .stApp {
+        background-color: #000000;
+        color: #FFFFFF;
+    }
+    /* Estilo de los contenedores de gráficas (Fondo Blanco) */
+    .plot-container {
+        background-color: #FFFFFF;
         padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        border-radius: 15px;
+        margin-bottom: 25px;
+        border: 1px solid #ddd;
+        color: #000000;
+    }
+    /* Estilo de las tarjetas de comentarios */
+    .card {
+        background-color: #1A1A1A;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(255,255,255,0.1);
         margin-bottom: 20px;
-        color: #31333F;
+        border: 1px solid #333;
     }
-    .emoji {
-        font-size: 80px;
-        text-align: center;
-        color: #FFD700;
-        line-height: 1;
-        margin-bottom: 10px;
-    }
+    .emoji-grande { font-size: 80px; text-align: center; color: #FFD700; margin-bottom: 0px;}
     .header-naranja {
         background-color: #FF8C00;
         color: white;
@@ -34,127 +43,110 @@ st.markdown("""
         font-weight: bold;
         margin-bottom: 15px;
     }
+    /* Etiquetas de filtros en blanco */
+    label { color: white !important; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# 1. CARGA Y LIMPIEZA DE DATOS
-# ==========================================
+# --- 1. CARGA DE DATOS ---
 @st.cache_data
 def load_data():
     df = pd.read_excel('Base bruta dic.xlsx')
     df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
     df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
     df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
+    df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
-    df['Mes_Nombre'] = df['Survey Completed Date'].dt.month_name()
     return df
 
-df = load_data()
+try:
+    df = load_data()
+    mes_actual = df['Survey Completed Date'].dt.month_name().iloc[0]
+except Exception as e:
+    st.error(f"Error cargando datos: {e}")
+    st.stop()
 
-# ==========================================
-# 2. GRÁFICAS ESTÁTICAS (RESUMEN GLOBAL)
-# ==========================================
-st.title("DASHBOARD INTERACTIVO NPS")
+# --- TÍTULO PRINCIPAL ---
+st.markdown(f"<h1 style='text-align: center; color: #FFD700; margin-bottom: 50px;'>NPS 2025 - {mes_actual}</h1>", unsafe_allow_html=True)
 
-col_global1, col_global2 = st.columns(2)
+# --- 2. BARRA LATERAL (FILTROS) ---
+st.sidebar.header("Filtros de Segmentación")
+driver_list = ['All'] + sorted(df['Primary Driver'].unique().tolist())
+driver_select = st.sidebar.selectbox("Primary Driver:", driver_list)
 
-with col_global1:
-    st.subheader("Primary Driver Composition")
-    data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
-    fig_anillo = px.pie(data_anillo, values='Customer ID', names='Primary Driver', 
-                        hole=0.5, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D', '#F4D03F'])
-    st.plotly_chart(fig_anillo, use_container_width=True)
+cat_options = sorted([c for c in df['Category'].unique().tolist() if c != 'N/A'])
+cat_select = st.sidebar.multiselect("Categorías:", cat_options, default=cat_options)
 
-with col_global2:
-    st.subheader("Average Score Per Primary Driver")
-    data_lineas_global = df.groupby('Primary Driver')['Score'].mean().sort_values(ascending=False).reset_index()
-    fig_lineas_global = px.line(data_lineas_global, x='Primary Driver', y='Score', markers=True)
-    fig_lineas_global.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'))
-    fig_lineas_global.update_yaxes(range=[6, 10])
-    st.plotly_chart(fig_lineas_global, use_container_width=True)
+# Filtrado de datos
+df_filt = df if driver_select == 'All' else df[df['Primary Driver'] == driver_select]
+df_sec = df_filt[df_filt['Category'].isin(cat_select)]
 
-st.divider()
+# --- 3. DISEÑO DE GRÁFICAS ---
 
-# ==========================================
-# 3. PANEL INTERACTIVO (FILTROS SIDEBAR)
-# ==========================================
-st.sidebar.header("Filtros del Panel")
-opciones_driver = ['All'] + sorted(df['Primary Driver'].unique().tolist())
-selector_driver = st.sidebar.selectbox("Primary Driver:", opciones_driver)
+# FILA 1: NPS y Resumen Global
+col_top1, col_top2 = st.columns([1, 1.5])
 
-opciones_cat = sorted([cat for cat in df['Category'].unique().tolist() if cat != 'N/A'])
-selector_cat = st.sidebar.multiselect("Category:", opciones_cat, default=opciones_cat)
-
-# Lógica de filtrado
-df_filt = df.copy()
-if selector_driver != 'All':
-    df_filt = df_filt[df_filt['Primary Driver'] == selector_driver]
-
-df_sec = df_filt[df_filt['Category'].isin(selector_cat)].copy()
-
-# Renderizado de Gráficas Dinámicas
-col_din1, col_din2, col_din3 = st.columns(3)
-
-with col_din1:
-    st.markdown("### Category Composition")
-    df_visual_cat = df_filt[df_filt['Category'] != 'N/A']
-    conteo_cat = df_visual_cat['Category'].value_counts(normalize=True).reset_index()
+with col_top1:
+    st.markdown("<div class='plot-container'>", unsafe_allow_html=True)
+    df_vis = df_filt[df_filt['Category'] != 'N/A']
+    conteo_cat = df_vis['Category'].value_counts(normalize=True).reset_index()
     conteo_cat.columns = ['Category', 'Percentage']
+    conteo_cat['Composition %'] = 'NPS'  # Fix para el error de Plotly
     
-    # Mapeo de colores original
-    color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
-    
-    fig_nps = px.bar(conteo_cat, x=['Composition %'], y='Percentage', color='Category',
-                     color_discrete_map=color_map, barmode='stack')
-    fig_nps.update_layout(yaxis_tickformat='.1%')
+    fig_nps = px.bar(conteo_cat, x='Composition %', y='Percentage', color='Category',
+                     color_discrete_map={'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'},
+                     title="<b>Category Composition %</b>", template="plotly_white", barmode='stack')
+    fig_nps.update_layout(yaxis_tickformat='.1%', xaxis_title=None)
     st.plotly_chart(fig_nps, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with col_din2:
-    st.markdown("### Volume by Secondary Driver")
-    if not df_sec.empty:
-        data_count_sec = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
-        fig_vol = px.bar(data_count_sec, x='count', y='Secondary Driver', orientation='h',
-                         color_discrete_sequence=['#FFD700'])
-        st.plotly_chart(fig_vol, use_container_width=True)
+with col_top2:
+    st.markdown("<div class='plot-container'>", unsafe_allow_html=True)
+    data_lineas = df.groupby('Primary Driver')['Score'].mean().sort_values(ascending=False).reset_index()
+    fig_lineas = px.line(data_lineas, x='Primary Driver', y='Score', markers=True,
+                         title="<b>Average Score per Primary Driver (Global)</b>", template="plotly_white")
+    fig_lineas.update_traces(line_color='#FF8C00', marker=dict(size=10))
+    fig_lineas.update_layout(yaxis_range=[6, 10])
+    st.plotly_chart(fig_lineas, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with col_din3:
-    st.markdown("### Avg Score by Secondary Driver")
-    if not df_sec.empty:
-        data_score_sec = df_sec.groupby('Secondary Driver')['Score'].mean().sort_values(ascending=False).reset_index()
-        v_min, v_max = data_score_sec['Score'].min(), data_score_sec['Score'].max()
-        
-        fig_score = px.bar(data_score_sec, x='Secondary Driver', y='Score',
-                           color_discrete_sequence=['#F4D03F'])
-        fig_score.update_yaxes(range=[max(0, v_min - 0.4), min(10, v_max + 0.4)])
-        st.plotly_chart(fig_score, use_container_width=True)
+# FILA 2: Volume by Secondary Driver (Largo completo)
+st.markdown("<div class='plot-container'>", unsafe_allow_html=True)
+if not df_sec.empty:
+    vol_data = df_sec['Secondary Driver'].value_counts().reset_index().sort_values(by='count')
+    fig_vol = px.bar(vol_data, y='Secondary Driver', x='count', orientation='h', 
+                     title="<b>Volume by Secondary Driver</b>", template="plotly_white",
+                     color_discrete_sequence=['#FFD700'])
+    st.plotly_chart(fig_vol, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ==========================================
-# 4. SECCIÓN: COMMENTS CHOSEN (TARJETAS)
-# ==========================================
+# FILA 3: Avg Score by Secondary Driver (Abajo y Largo completo)
+st.markdown("<div class='plot-container'>", unsafe_allow_html=True)
+if not df_sec.empty:
+    score_data = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+    fig_score = px.bar(score_data, x='Secondary Driver', y='Score', 
+                       title="<b>Average Score by Secondary Driver</b>", template="plotly_white",
+                       color_discrete_sequence=['#FF8C00'])
+    ymin = max(0, score_data['Score'].min() - 0.4)
+    fig_score.update_layout(yaxis_range=[ymin, 10])
+    st.plotly_chart(fig_score, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# --- 4. SECCIÓN COMMENTS CHOSEN ---
 st.divider()
-st.header("COMMENTS CHOSEN")
+st.markdown("<h2 style='text-align: center; color: #FFD700;'>☹ COMMENTS CHOSEN</h2>", unsafe_allow_html=True)
+t1, t2, t3 = st.columns(3)
 
-col_t1, col_t2, col_t3 = st.columns(3)
-
-def render_tarjeta(col, key_suffix, titulo_default):
+for i, col in enumerate([t1, t2, t3]):
     with col:
         st.markdown(f"""
-            <div class="card">
-                <div class="emoji">☹</div>
-            </div>
+        <div class="card">
+            <div class="emoji-grande">☹</div>
+        </div>
         """, unsafe_allow_html=True)
-        
-        # Streamlit no permite inputs dentro de HTML directamente, 
-        # así que usamos el componente st.text_input con CSS
-        driver_title = st.text_input("Driver:", value=titulo_default, key=f"header_{key_suffix}")
+        driver_title = st.text_input(f"Título {i+1}", f"Secondary Driver {i+1}", key=f"t{i}")
         st.markdown(f"<div class='header-naranja'>{driver_title}</div>", unsafe_allow_html=True)
-        
-        st.text_input("Cliente:", key=f"cli_{key_suffix}")
-        st.number_input("Score:", min_value=0, max_value=10, key=f"sco_{key_suffix}")
-        st.text_area("Comentario:", key=f"com_{key_suffix}", height=100)
-        st.text_input("Camión:", key=f"cam_{key_suffix}")
-
-render_tarjeta(col_t1, "1", "Secondary Driver 1:")
-render_tarjeta(col_t2, "2", "Secondary Driver 2:")
-render_tarjeta(col_t3, "3", "Secondary Driver 3:")
+        st.text_input("Cliente:", key=f"cli{i}")
+        st.number_input("Score:", 0, 10, key=f"sc{i}")
+        st.text_area("Comentario:", key=f"com{i}", height=120)
+        st.text_input("Camión:", key=f"cam{i}")
