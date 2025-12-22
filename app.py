@@ -44,53 +44,55 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO CENTRADO */
-    .landing-title {{
+    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS */
+    .landing-title-container {{
         position: absolute;
-        top: 40%;
+        top: 45%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 100%;
         text-align: center;
-        font-family: 'Arial Black', sans-serif;
-        font-size: 65px;
-        font-weight: 900;
-        color: #FFFFFF;
-        text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        letter-spacing: 2px;
         z-index: 5;
     }}
-
-    /* CONTENEDOR DE BOTONES CENTRADOS */
-    .landing-buttons {{
-        position: absolute;
-        bottom: 15%;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 50px;
-        z-index: 10;
+    .landing-title-line1 {{
+        font-family: 'Arial Black', sans-serif;
+        font-size: 60px;
+        font-weight: 900;
+        color: #FFFFFF;
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
+        margin: 0;
+        line-height: 1;
+    }}
+    .landing-title-line2 {{
+        font-family: 'Arial Black', sans-serif;
+        font-size: 80px;
+        font-weight: 900;
+        color: #FFFFFF;
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: 5px;
     }}
 
-    /* ESTILO ESTÉTICO DE BOTONES LANDING */
+    /* ESTILO ESTÉTICO DE BOTONES LANDING (AMARILLOS SIN BORDE) */
     div.stButton > button {{
         width: 320px !important;
-        height: 80px !important;
+        height: 75px !important;
         background-color: #FFFF00 !important;
         color: #000000 !important;
         font-weight: 900 !important;
         font-size: 20px !important;
-        border-radius: 15px !important;
-        border: 4px solid #000000 !important;
-        box-shadow: 0px 8px 25px rgba(0,0,0,0.5);
+        border-radius: 10px !important;
+        border: none !important; /* Eliminado el borde */
+        box-shadow: 0px 8px 20px rgba(0,0,0,0.6);
         text-transform: uppercase;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.3s ease;
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.1);
-        box-shadow: 0px 12px 30px rgba(255, 255, 0, 0.4);
+        transform: scale(1.05);
+        box-shadow: 0px 10px 25px rgba(255, 255, 0, 0.3);
     }}
 
     /* ESTILOS DEL DASHBOARD INTERNO */
@@ -138,17 +140,19 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    # Capa de imagen y título estético
+    # Capa de imagen y título en dos líneas
     st.markdown(f'''
         <div class="landing-wrapper">
-            <div class="landing-title">NET PROMOTER SCORE PERFORMANCE</div>
+            <div class="landing-title-container">
+                <p class="landing-title-line1">NET PROMOTER SCORE</p>
+                <p class="landing-title-line2">PERFORMANCE</p>
+            </div>
         </div>
     ''', unsafe_allow_html=True)
     
-    # Botones centrados proporcionalmente
-    # Usamos margen superior alto para posicionarlos sobre los cuadros amarillos de la imagen
+    # Botones centrados
     st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
-    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.5, 3, 1.5])
+    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.4, 3, 1.5])
     
     with col_btn1:
         if st.button("MONTHLY EVOLUTION", key="btn_evo"):
@@ -164,18 +168,19 @@ if st.session_state.page == 'landing':
 # VISTA: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
+    st.markdown("<div style='padding: 20px;'>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
     st.title("📈 MONTHLY EVOLUTION")
     st.info("Esta sección se encuentra en desarrollo.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # VISTA: CURRENT MONTH (ANÁLISIS COMPLETO)
 # ==========================================
 elif st.session_state.page == 'current':
-    # Padding de navegación
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='padding: 20px;'>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
@@ -189,7 +194,7 @@ elif st.session_state.page == 'current':
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
         with col_g1:
-            st.markdown('<p style="font-size:22px; font-weight:bold; margin-left:20px;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
+            st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
             fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, legend=dict(font=dict(color="white")))
@@ -203,7 +208,7 @@ elif st.session_state.page == 'current':
             fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333', title=None))
             st.plotly_chart(fig2, use_container_width=True)
 
-        st.markdown("<div style='margin: 0 20px;'><hr style='border: 1px solid #333;'></div>", unsafe_allow_html=True)
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         
         c_f1, c_f2 = st.columns(2)
         with c_f1:
@@ -248,7 +253,7 @@ elif st.session_state.page == 'current':
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font':{'color':'white', 'size':22}}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(range=[max(0, v_min - 0.6), 10.6], gridcolor='#333333', title=None), xaxis=dict(title=None), height=500)
             st.plotly_chart(fig5, use_container_width=True)
 
-        st.markdown("<div style='margin: 0 20px;'><hr style='border: 1px solid #333;'><p style='color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;'>CHOSEN COMMENTS </p></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 30px;'><hr style='border: 1px solid #333;'><p style='color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;'>CHOSEN COMMENTS </p></div>", unsafe_allow_html=True)
         col_t1, col_t2, col_t3 = st.columns(3)
         def render_dynamic_card(col, key_id, default_title):
             with col:
@@ -261,3 +266,4 @@ elif st.session_state.page == 'current':
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
         render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
         render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+    st.markdown("</div>", unsafe_allow_html=True)
