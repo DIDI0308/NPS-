@@ -47,21 +47,17 @@ st.markdown(f"""
         letter-spacing: 2px; z-index: 5; line-height: 1.1;
     }}
 
-    /* BOTONES FIJOS POR POSICIÓN ABSOLUTA EN PANTALLA */
-    /* Botón Izquierdo (Monthly Evolution) */
-    div.stButton:nth-of-type(1) > button {{
-        position: fixed !important;
-        bottom: 15% !important;
-        left: 20% !important;
-        z-index: 1000 !important;
-    }}
-
-    /* Botón Derecho (Current Month) */
-    div.stButton:nth-of-type(2) > button {{
-        position: fixed !important;
-        bottom: 15% !important;
-        right: 20% !important;
-        z-index: 1000 !important;
+    /* CONTENEDOR FIJO Y CENTRADO PARA BOTONES */
+    .fixed-button-container {{
+        position: fixed;
+        bottom: 15%;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 30px;
+        z-index: 1000;
+        width: auto;
+        justify-content: center;
     }}
 
     div.stButton > button {{
@@ -135,14 +131,18 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Los botones ahora se renderizan directamente. El CSS se encarga de fijarlos.
-    if st.button("MONTHLY EVOLUTION", key="btn_evo"):
-        st.session_state.page = 'evolution'
-        st.rerun()
-
-    if st.button("CURRENT MONTH", key="btn_curr"):
-        st.session_state.page = 'current'
-        st.rerun()
+    # Encapsulamos los botones en un div con clase fixed-button-container
+    st.markdown('<div class="fixed-button-container">', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("MONTHLY EVOLUTION", key="btn_evo"):
+            st.session_state.page = 'evolution'
+            st.rerun()
+    with col2:
+        if st.button("CURRENT MONTH", key="btn_curr"):
+            st.session_state.page = 'current'
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
 # VISTA: MONTHLY EVOLUTION
