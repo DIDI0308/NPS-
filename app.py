@@ -47,17 +47,21 @@ st.markdown(f"""
         letter-spacing: 2px; z-index: 5; line-height: 1.1;
     }}
 
-    /* CONTENEDOR FIJO Y CENTRADO PARA BOTONES */
+    /* CONTENEDOR FIJO Y CENTRADO EN LA PARTE INFERIOR */
     .fixed-button-container {{
         position: fixed;
-        bottom: 15%;
-        left: 50%;
-        transform: translateX(-50%);
+        bottom: 12%; /* Ajuste de altura desde el fondo */
+        left: 0;
+        right: 0;
         display: flex;
-        gap: 30px;
-        z-index: 1000;
-        width: auto;
         justify-content: center;
+        gap: 40px;
+        z-index: 9999;
+        pointer-events: none; /* Permite clics solo en los hijos (botones) */
+    }}
+
+    .fixed-button-container div.stButton {{
+        pointer-events: auto;
     }}
 
     div.stButton > button {{
@@ -131,7 +135,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Encapsulamos los botones en un div con clase fixed-button-container
+    # Contenedor para botones centrados e inferiores
     st.markdown('<div class="fixed-button-container">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
