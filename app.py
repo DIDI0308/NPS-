@@ -60,8 +60,13 @@ st.markdown("""
 def load_data():
     df = pd.read_excel('Base bruta dic.xlsx')
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
+    
+    # Estandarizar Primary Driver y Score
     df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
     df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+    
+    # --- FILTRO CRÍTICO: Excluir N/A de las visualizaciones ---
+    df_filtrado = df[df['Primary Driver'] != 'N/A'].copy()
     
     mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
     traducciones = {
@@ -70,7 +75,7 @@ def load_data():
         'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
         'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
     }
-    return df, traducciones.get(mes_nombre, mes_nombre)
+    return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
 
 df, mes_base = load_data()
 
@@ -112,9 +117,8 @@ with col1:
     fig_pie.update_layout(
         height=400,
         paper_bgcolor='rgba(0,0,0,0)', 
-        # Leyenda al costado derecho
-        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.0),
-        margin=dict(t=20, b=20, l=10, r=100) # Espacio a la derecha para la leyenda
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+        margin=dict(t=20, b=20, l=10, r=120) 
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -122,7 +126,7 @@ with col2:
     st.markdown("<p style='text-align:center; font-weight:bold;'>2. Average Score Per Primary Driver</p>", unsafe_allow_html=True)
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     
-    # Aplicar saltos de línea a los nombres del eje X (aprox cada 12 caracteres)
+    # Aplicar saltos de línea a los nombres del eje X
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
 
     fig_lineas = px.line(
@@ -146,8 +150,9 @@ with col2:
         height=400,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        yaxis=dict(range=[5.5, 10.5], gridcolor='#333333', title=None),
-        xaxis=dict(title=None, tickangle=0), # Texto horizontal
-        margin=dict(t=20, b=80, l=10, r=10) # Margen inferior para las 2 líneas de texto
+        yaxis=dict(range=[min(data_lineas['Score']) - 0.5, 10.5], gridcolor='#333333', title=None),
+        xaxis=dict(title=None, tickangle=0),
+        margin=dict(t=20, b=80, l=10, r=10)
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
+    
