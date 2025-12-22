@@ -8,7 +8,6 @@ import textwrap
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS Dashboard 2025", layout="wide", initial_sidebar_state="collapsed")
 
-# Gestión de navegación entre pestañas
 if 'page' not in st.session_state:
     st.session_state.page = 'landing'
 
@@ -20,7 +19,7 @@ def get_base64(bin_file):
     except:
         return None
 
-# --- ESTILO CSS REFINADO ---
+# --- ESTILO CSS ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -56,13 +55,13 @@ st.markdown(f"""
     color: #FFFFFF;
     text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
     letter-spacing: 2px;
-    z-index: 5;
     line-height: 1.1;
+    z-index: 5;
 }}
 
 .landing-buttons {{
     position: fixed;
-    bottom: 15%;
+    bottom: 8%;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -104,7 +103,7 @@ div.stButton > button:hover {{
 }}
 .emoji-solid-yellow {{
     font-size: 110px; text-align: center; color: #FFFF00;
-    text-shadow: 0 0 0 #FFFF00; line-height: 1; margin-bottom: 15px; display: block;
+    line-height: 1; margin-bottom: 15px; display: block;
 }}
 label {{ color: #FFFF00 !important; font-weight: bold !important; }}
 .stTextInput input, .stTextArea textarea, .stNumberInput input {{
@@ -131,7 +130,7 @@ def load_data():
 df, mes_base = load_data()
 
 # ==========================================
-# VISTA: LANDING PAGE
+# LANDING
 # ==========================================
 if st.session_state.page == 'landing':
     st.markdown("""
@@ -139,9 +138,9 @@ if st.session_state.page == 'landing':
         <div class="landing-title">
             NET PROMOTER SCORE<br>PERFORMANCE
         </div>
+        <div class="landing-buttons">
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="landing-buttons">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         if st.button("MONTHLY EVOLUTION"):
@@ -151,10 +150,11 @@ if st.session_state.page == 'landing':
         if st.button("CURRENT MONTH"):
             st.session_state.page = 'current'
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# VISTA: MONTHLY EVOLUTION
+# MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
     if st.button("⬅ VOLVER AL INICIO"):
@@ -164,7 +164,7 @@ elif st.session_state.page == 'evolution':
     st.info("Esta sección se encuentra en desarrollo.")
 
 # ==========================================
-# VISTA: CURRENT MONTH
+# CURRENT MONTH
 # ==========================================
 elif st.session_state.page == 'current':
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
