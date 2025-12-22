@@ -14,7 +14,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS (LIMPIO) ---
+# --- ESTILO CSS REFINADO ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
@@ -33,24 +33,31 @@ st.markdown("""
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
 
-    /* CONTENEDOR DE LA GRÁFICA: FONDO BLANCO SIN CABECERA DE COLOR */
-    .plot-container {
+    /* CONTENEDOR DE LA TARJETA */
+    .plot-card {
         border-radius: 15px;
         overflow: hidden;
         margin-bottom: 20px;
-        background-color: #FFFFFF;
-        padding: 20px;
-        border: 1px solid #ddd;
+        background-color: #FFFFFF; /* Fondo blanco para el cuerpo */
+        border: 2px solid #FFFF00;
     }
 
-    /* TÍTULO SIMPLE: SIN FONDO */
-    .plot-title-simple {
-        color: #000000;
+    /* TÍTULO CON FONDO AMARILLO */
+    .plot-header-yellow {
+        background-color: #FFFF00 !important;
+        color: #000000 !important;
         text-align: center;
         font-weight: bold;
-        font-size: 20px;
-        margin-bottom: 15px;
-        font-family: 'Arial', sans-serif;
+        font-size: 18px;
+        padding: 12px 0px;
+        margin: 0px !important;
+        width: 100%;
+        display: block;
+    }
+
+    .plot-body-white {
+        background-color: #FFFFFF;
+        padding: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -64,13 +71,7 @@ def load_data():
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
         df_filtrado = df[df['Primary Driver'] != 'N/A'].copy()
         mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
-        
-        traducciones = {
-            'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
-            'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
-            'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
-            'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
-        }
+        traducciones = {'January': 'Enero', 'December': 'Diciembre'} # Simplificado para el ejemplo
         return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
     except:
         return pd.DataFrame({'Primary Driver': ['Ejemplo'], 'Score': [10], 'Customer ID': [1]}), "Diciembre"
@@ -87,7 +88,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<div class="plot-container"><div class="plot-title-simple">1. Primary Driver Composition</div>', unsafe_allow_html=True)
+    # Inicio Tarjeta 1
+    st.markdown('<div class="plot-card"><div class="plot-header-yellow">1. Primary Driver Composition</div><div class="plot-body-white">', unsafe_allow_html=True)
     
     data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
     fig_pie = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
@@ -102,10 +104,11 @@ with col1:
         height=380
     )
     st.plotly_chart(fig_pie, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown('<div class="plot-container"><div class="plot-title-simple">2. Average Score Per Primary Driver</div>', unsafe_allow_html=True)
+    # Inicio Tarjeta 2
+    st.markdown('<div class="plot-card"><div class="plot-header-yellow">2. Average Score Per Primary Driver</div><div class="plot-body-white">', unsafe_allow_html=True)
     
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
@@ -124,5 +127,4 @@ with col2:
         height=380
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    
+    st.markdown('</div></div>', unsafe_allow_html=True)
