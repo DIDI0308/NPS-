@@ -14,7 +14,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS REFINADO (ELIMINA MÁRGENES) ---
+# --- ESTILO CSS (LIMPIO) ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
@@ -33,42 +33,30 @@ st.markdown("""
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
 
-    /* CONTENEDOR PRINCIPAL DE LA GRÁFICA */
+    /* CONTENEDOR DE LA GRÁFICA: FONDO BLANCO SIN CABECERA DE COLOR */
     .plot-container {
         border-radius: 15px;
         overflow: hidden;
         margin-bottom: 20px;
-        border: 2px solid #FFFF00;
         background-color: #FFFFFF;
+        padding: 20px;
+        border: 1px solid #ddd;
     }
 
-    /* ESTILO DEL TÍTULO: Sin márgenes y ocupando el 100% */
-    .plot-header-yellow {
-        background-color: #FFFF00 !important;
-        color: #000000 !important;
+    /* TÍTULO SIMPLE: SIN FONDO */
+    .plot-title-simple {
+        color: #000000;
         text-align: center;
         font-weight: bold;
-        font-size: 18px;
-        padding: 15px 0px; 
-        margin: 0px !important;
-        width: 100%;
-        display: block;
-        border-bottom: 1px solid #E6E600;
-    }
-
-    /* ELIMINA ESPACIOS DE STREAMLIT DENTRO DEL CONTENEDOR */
-    div.stBlock { padding: 0px !important; }
-    
-    .plot-body-white {
-        background-color: #FFFFFF;
-        padding: 15px;
+        font-size: 20px;
+        margin-bottom: 15px;
+        font-family: 'Arial', sans-serif;
     }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    # Usamos un try-except por si el archivo no está en el entorno actual
     try:
         df = pd.read_excel('Base bruta dic.xlsx')
         df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
@@ -85,9 +73,7 @@ def load_data():
         }
         return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
     except:
-        # Data de ejemplo en caso de error para que visualices el diseño
-        d = {'Primary Driver': ['Logística', 'Producto'], 'Score': [9, 8], 'Customer ID': [10, 5]}
-        return pd.DataFrame(d), "Diciembre"
+        return pd.DataFrame({'Primary Driver': ['Ejemplo'], 'Score': [10], 'Customer ID': [1]}), "Diciembre"
 
 df, mes_base = load_data()
 
@@ -101,7 +87,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<div class="plot-container"><div class="plot-header-yellow">1. Primary Driver Composition</div><div class="plot-body-white">', unsafe_allow_html=True)
+    st.markdown('<div class="plot-container"><div class="plot-title-simple">1. Primary Driver Composition</div>', unsafe_allow_html=True)
     
     data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
     fig_pie = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
@@ -116,10 +102,10 @@ with col1:
         height=380
     )
     st.plotly_chart(fig_pie, use_container_width=True)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown('<div class="plot-container"><div class="plot-header-yellow">2. Average Score Per Primary Driver</div><div class="plot-body-white">', unsafe_allow_html=True)
+    st.markdown('<div class="plot-container"><div class="plot-title-simple">2. Average Score Per Primary Driver</div>', unsafe_allow_html=True)
     
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
@@ -138,4 +124,5 @@ with col2:
         height=380
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
