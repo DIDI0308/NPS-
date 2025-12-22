@@ -14,13 +14,11 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS REFINADO ---
+# --- ESTILO CSS REFINADO (ELIMINA MÁRGENES) ---
 st.markdown("""
     <style>
-    /* Fondo general negro */
     .stApp { background-color: #000000; color: #FFFFFF; }
     
-    /* Banner Principal */
     .banner-amarillo {
         background-color: #FFFF00;
         padding: 15px;
@@ -35,49 +33,61 @@ st.markdown("""
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
 
-    /* ESTILO DE LAS TARJETAS */
+    /* CONTENEDOR PRINCIPAL DE LA GRÁFICA */
     .plot-container {
         border-radius: 15px;
         overflow: hidden;
         margin-bottom: 20px;
-        border: 2px solid #FFFF00; /* Borde amarillo para dar continuidad */
-        background-color: #FFFFFF; /* Fondo base blanco */
+        border: 2px solid #FFFF00;
+        background-color: #FFFFFF;
     }
+
+    /* ESTILO DEL TÍTULO: Sin márgenes y ocupando el 100% */
     .plot-header-yellow {
-        background-color: #FFFF00; /* Fondo amarillo sólido */
-        color: #000000;
+        background-color: #FFFF00 !important;
+        color: #000000 !important;
         text-align: center;
         font-weight: bold;
         font-size: 18px;
-        padding: 12px 0px; /* Padding vertical */
-        margin: 0px;
+        padding: 15px 0px; 
+        margin: 0px !important;
         width: 100%;
         display: block;
+        border-bottom: 1px solid #E6E600;
     }
+
+    /* ELIMINA ESPACIOS DE STREAMLIT DENTRO DEL CONTENEDOR */
+    div.stBlock { padding: 0px !important; }
+    
     .plot-body-white {
-        background-color: #FFFFFF; /* Fondo blanco solo para el área del gráfico */
-        padding: 10px;
-        margin: 0;
+        background-color: #FFFFFF;
+        padding: 15px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 @st.cache_data
 def load_data():
-    df = pd.read_excel('Base bruta dic.xlsx')
-    df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
-    df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-    df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-    df_filtrado = df[df['Primary Driver'] != 'N/A'].copy()
-    mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
-    
-    traducciones = {
-        'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
-        'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
-        'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
-        'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
-    }
-    return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
+    # Usamos un try-except por si el archivo no está en el entorno actual
+    try:
+        df = pd.read_excel('Base bruta dic.xlsx')
+        df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
+        df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+        df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+        df_filtrado = df[df['Primary Driver'] != 'N/A'].copy()
+        mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
+        
+        traducciones = {
+            'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
+            'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
+            'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
+            'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+        }
+        return df_filtrado, traducciones.get(mes_nombre, mes_nombre)
+    except:
+        # Data de ejemplo en caso de error para que visualices el diseño
+        d = {'Primary Driver': ['Logística', 'Producto'], 'Score': [9, 8], 'Customer ID': [10, 5]}
+        return pd.DataFrame(d), "Diciembre"
 
 df, mes_base = load_data()
 
@@ -129,4 +139,3 @@ with col2:
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
-    
