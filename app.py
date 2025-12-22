@@ -24,13 +24,12 @@ def set_full_screen_ui(bin_file):
         width: 100vw;
     }}
 
-    /* Eliminar headers y paddings de Streamlit */
     header {{visibility: hidden;}}
     .block-container {{
         padding: 0 !important;
     }}
 
-    /* Título en el centro exacto de la pantalla */
+    /* Título y Mensajes en el centro */
     .main-title {{
         position: fixed;
         top: 50%;
@@ -49,7 +48,7 @@ def set_full_screen_ui(bin_file):
     /* Contenedor de botones en la PARTE INFERIOR */
     .stHorizontalBlock {{
         position: fixed;
-        bottom: 10%; /* Distancia desde el borde inferior */
+        bottom: 10%; 
         left: 50%;
         transform: translateX(-50%);
         width: 50% !important;
@@ -58,14 +57,13 @@ def set_full_screen_ui(bin_file):
 
     /* Estilo de botones Amarillos */
     div.stButton > button {{
-        background-color: #FFFF00 !important; /* Amarillo puro */
+        background-color: #FFFF00 !important;
         color: black !important;
         font-weight: bold !important;
         font-size: 18px !important;
         border: none !important;
         padding: 15px 30px !important;
         border-radius: 10px !important;
-        transition: 0.3s;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
     }}
     
@@ -83,16 +81,32 @@ try:
 except FileNotFoundError:
     st.error("Error: 'logo3.png' no encontrado.")
 
-# 2. Título en el centro
-st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
+# Inicializar el estado de la sesión para saber si se hizo clic
+if 'clicked' not in st.session_state:
+    st.session_state.clicked = False
 
-# 3. Botones en la parte inferior (usando columnas para centrar el bloque)
-col1, col2 = st.columns(2)
+# 2. Lógica de visualización
+if not st.session_state.clicked:
+    # Mostrar Título
+    st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
 
-with col1:
-    if st.button("MONTHLY EVOLUTION", use_container_width=True):
-        st.toast("Cargando Evolución Mensual...")
-
-with col2:
-    if st.button("CURRENT MONTH", use_container_width=True):
-        st.toast("Cargando Mes Actual...")
+    # Mostrar Botones en la parte inferior
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("MONTHLY EVOLUTION", use_container_width=True):
+            st.session_state.clicked = True
+            st.rerun()
+    with col2:
+        if st.button("CURRENT MONTH", use_container_width=True):
+            st.session_state.clicked = True
+            st.rerun()
+else:
+    # Mensaje de "Aún trabajando" en el centro
+    st.markdown('<div class="main-title">AÚN TRABAJANDO...</div>', unsafe_allow_html=True)
+    
+    # Botón opcional para volver atrás
+    cols = st.columns([2,1,2])
+    with cols[1]:
+        if st.button("VOLVER"):
+            st.session_state.clicked = False
+            st.rerun()
