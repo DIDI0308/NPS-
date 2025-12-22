@@ -140,10 +140,7 @@ df, mes_base = load_data()
 if st.session_state.page == 'landing':
     # Capa de imagen y título estético
     st.markdown(f'''
-        <div class="landing-wrapper">
-            <div class="landing-title">NET PROMOTER SCORE 
-            PERFORMANCE</div>
-        </div>
+               </div>
     ''', unsafe_allow_html=True)
     
     # Botones centrados proporcionalmente
