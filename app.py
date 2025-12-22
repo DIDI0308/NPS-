@@ -6,7 +6,7 @@ import base64
 import textwrap
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Performance 2025", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NPS Dashboard 2025", layout="wide", initial_sidebar_state="collapsed")
 
 # Gestión de navegación entre pestañas
 if 'page' not in st.session_state:
@@ -19,7 +19,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS REFINADO (MÁXIMO IMPACTO VISUAL) ---
+# --- ESTILO CSS REFINADO (TAMAÑO MASIVO) ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -44,66 +44,61 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO MONUMENTAL Y ESTÉTICO */
+    /* TÍTULO MONUMENTAL (USANDO VW PARA MÁXIMO TAMAÑO) */
     .landing-title-container {{
         position: absolute;
-        top: 42%;
+        top: 45%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 100%;
+        width: 100vw;
         text-align: center;
-        z-index: 5;
-        user-select: none;
+        z-index: 10;
+        pointer-events: none;
     }}
     
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 150px; 
+        font-size: 10vw; /* 10% del ancho de la pantalla */
         font-weight: 900;
         color: #FFFFFF;
         margin: 0;
         line-height: 0.8;
         letter-spacing: -2px;
-        /* Efecto de brillo sutil */
-        filter: drop-shadow(0px 15px 15px rgba(0,0,0,0.9));
-        background: linear-gradient(180deg, #FFFFFF 30%, #CCCCCC 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-text-stroke: 2px black; /* Borde para resaltar */
+        filter: drop-shadow(0px 15px 15px rgba(0,0,0,1));
     }}
     
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 190px; 
+        font-size: 12vw; /* 12% del ancho de la pantalla */
         font-weight: 900;
         margin: 0;
         line-height: 1.0;
-        letter-spacing: 25px;
+        letter-spacing: 1.5vw;
         text-transform: uppercase;
-        /* Color Amarillo Vibrante con degradado */
         background: linear-gradient(180deg, #FFFF00 0%, #FFCC00 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        -webkit-text-stroke: 2px black;
         filter: drop-shadow(0px 20px 30px rgba(0,0,0,1));
     }}
 
-    /* BOTONES TOTALMENTE FIJOS (SISTEMA DE ANCLAJE) */
+    /* BOTONES FIJOS */
     .stButton {{
         position: fixed;
         bottom: 12vh;
         z-index: 100;
     }}
     
-    /* Anclaje exacto para Botón Izquierdo */
     div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
         left: 20vw;
     }}
     
-    /* Anclaje exacto para Botón Derecho */
     div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
         right: 20vw;
     }}
 
-    /* ESTILO BOTONES (AMARILLO PURO, SIN BORDE) */
+    /* ESTILO BOTONES AMARILLOS */
     div.stButton > button {{
         width: 350px !important;
         height: 90px !important;
@@ -115,35 +110,11 @@ st.markdown(f"""
         border: none !important;
         box-shadow: 0px 15px 35px rgba(0,0,0,0.8);
         text-transform: uppercase;
-        transition: all 0.2s ease-in-out;
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.05) translateY(-5px);
-        box-shadow: 0px 20px 45px rgba(255, 255, 0, 0.4);
-    }}
-
-    /* ESTILOS DASHBOARD INTERNO */
-    .banner-amarillo {{
-        background-color: #FFFF00; padding: 15px; display: flex;
-        justify-content: space-between; align-items: center;
-        border-radius: 5px; margin: 20px;
-    }}
-    .titulo-texto {{ text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }}
-    .titulo-texto h1 {{ margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }}
-
-    .card-transparent {{
-        background-color: rgba(255, 255, 255, 0.05);
-        border: none; border-radius: 15px; padding: 15px; margin-bottom: 20px;
-    }}
-    .emoji-solid-yellow {{
-        font-size: 110px; text-align: center; color: #FFFF00;
-        text-shadow: 0 0 0 #FFFF00; line-height: 1; margin-bottom: 15px; display: block;
-    }}
-    label {{ color: #FFFF00 !important; font-weight: bold !important; }}
-    .stTextInput input, .stTextArea textarea, .stNumberInput input {{
-        background-color: #1A1A1A !important; color: white !important; border: 1px solid #333 !important;
+        transform: scale(1.05);
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -169,6 +140,7 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
+    # Capa de título masivo
     st.markdown(f'''
         <div class="landing-wrapper">
             <div class="landing-title-container">
@@ -178,7 +150,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Grid de botones anclados por CSS
+    # Contenedor de botones (anclados por CSS)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
@@ -211,7 +183,16 @@ elif st.session_state.page == 'current':
 
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
-        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
+        st.markdown(f'''
+            <div style="background-color:#FFFF00; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:5px; margin:20px;">
+                <img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;">
+                <div style="text-align:center; flex-grow:1; color:#000000; font-family:'Arial Black';">
+                    <h1 style="margin:0; font-size:50px; font-weight:900;">NPS 2025</h1>
+                    <h2 style="margin:0;">{mes_base}</h2>
+                </div>
+                <img src="data:image/png;base64,{b64_logo}" style="max-height:80px;">
+            </div>
+        ''', unsafe_allow_html=True)
 
     if not df.empty:
         col_g1, col_g2 = st.columns(2)
