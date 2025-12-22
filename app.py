@@ -24,36 +24,57 @@ st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
     
-    /* Estilos para la Landing Page (Imagen logo3.png) */
-    .landing-container {
-        position: relative;
-        text-align: center;
-        width: 100%;
+    /* LANDING FULL SCREEN */
+    .landing-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 999;
+        background-color: black;
     }
-    .main-bg {
+    
+    .main-bg-full {
         width: 100%;
-        max-width: 1200px;
-        border-radius: 15px;
+        height: 100%;
+        object-fit: cover; /* Cubre la pantalla completa sin deformar */
+        position: absolute;
     }
 
-    /* Estilo de los Botones sobre la imagen */
+    /* CONTENEDOR DE BOTONES SOBRE LA IMAGEN */
+    .button-container-overlay {
+        position: absolute;
+        bottom: 12%; /* Ajustado para estar sobre los recuadros amarillos */
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 120px; /* Espaciado estético entre botones */
+        z-index: 1000;
+    }
+
+    /* ESTILO ESTÉTICO DE BOTONES LANDING */
     div.stButton > button {
-        width: 100%;
-        height: 60px;
+        width: 280px !important;
+        height: 80px !important;
         background-color: #FFFF00 !important;
         color: #000000 !important;
-        font-weight: bold !important;
-        font-size: 18px !important;
-        border-radius: 10px !important;
-        border: none !important;
-        transition: 0.3s;
+        font-weight: 900 !important;
+        font-size: 20px !important;
+        border-radius: 12px !important;
+        border: 2px solid #000 !important;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+        text-transform: uppercase;
+        transition: all 0.3s ease;
     }
+
     div.stButton > button:hover {
         background-color: #FFEA00 !important;
         transform: scale(1.05);
+        box-shadow: 0px 6px 20px rgba(255, 255, 0, 0.4);
     }
 
-    /* Estilos del Dashboard */
+    /* ESTILOS DEL DASHBOARD (ANÁLISIS) */
     .banner-amarillo {
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
@@ -108,33 +129,36 @@ def load_data():
 df, mes_base = load_data()
 
 # ==========================================
-# VISTA: LANDING PAGE (INICIO)
+# VISTA: LANDING PAGE (FULL SCREEN)
 # ==========================================
 if st.session_state.page == 'landing':
     b64_bg = get_base64('logo3.png')
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    col_l, col_main, col_r = st.columns([1, 10, 1])
-    
-    with col_main:
-        if b64_bg:
-            st.markdown(f'<div class="landing-container"><img src="data:image/png;base64,{b64_bg}" class="main-bg"></div>', unsafe_allow_html=True)
-        else:
-            st.error("Archivo 'logo3.png' no encontrado.")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        # Botones alineados con los recuadros de la imagen
-        col_btn1, col_space, col_btn2 = st.columns([4, 2, 4])
+    if b64_bg:
+        # Imagen de fondo que cubre toda la pantalla
+        st.markdown(f'''
+            <div class="landing-wrapper">
+                <img src="data:image/png;base64,{b64_bg}" class="main-bg-full">
+            </div>
+        ''', unsafe_allow_html=True)
+        
+        # Botones posicionados estratégicamente
+        # Usamos columnas vacías para centrar los botones en la rejilla de Streamlit que coincida con la imagen
+        col_l, col_btn1, col_spacer, col_btn2, col_r = st.columns([2, 3, 1, 3, 2])
         
         with col_btn1:
+            st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True) # Empuja el botón hacia abajo
             if st.button("MONTHLY EVOLUTION"):
                 st.session_state.page = 'evolution'
                 st.rerun()
         
         with col_btn2:
+            st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True) # Empuja el botón hacia abajo
             if st.button("CURRENT MONTH"):
                 st.session_state.page = 'current'
                 st.rerun()
+    else:
+        st.error("Archivo 'logo3.png' no encontrado.")
 
 # ==========================================
 # VISTA: MONTHLY EVOLUTION
@@ -154,13 +178,11 @@ elif st.session_state.page == 'current':
         st.session_state.page = 'landing'
         st.rerun()
 
-    # --- HEADER / BANNER ---
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
@@ -179,7 +201,6 @@ elif st.session_state.page == 'current':
             fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333', title=None))
             st.plotly_chart(fig2, use_container_width=True)
 
-        # --- PANEL INTERACTIVO ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         c_f1, c_f2 = st.columns(2)
         with c_f1:
@@ -224,7 +245,6 @@ elif st.session_state.page == 'current':
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font':{'color':'white', 'size':22}}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(range=[max(0, v_min - 0.6), 10.6], gridcolor='#333333', title=None), xaxis=dict(title=None), height=500)
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- CHOSEN COMMENTS ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;">CHOSEN COMMENTS </p>', unsafe_allow_html=True)
         col_t1, col_t2, col_t3 = st.columns(3)
