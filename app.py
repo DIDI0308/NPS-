@@ -44,7 +44,7 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ENORME CON INTERLINEADO 1.0 */
+    /* TÍTULO MONUMENTAL CON INTERLINEADO 1.0 */
     .landing-title-container {{
         position: absolute;
         top: 40%;
@@ -56,42 +56,40 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 400px; 
+        font-size: 200px;  /* ESCALA MÁXIMA */
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 8px 8px 30px rgba(0,0,0,1);
+        text-shadow: 10px 10px 40px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1.5; /* Interlineado 1.0 solicitado */
+        line-height: 1.0;
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 180px; 
+        font-size: 230px;  /* ESCALA MÁXIMA */
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 8px 8px 30px rgba(0,0,0,1);
+        text-shadow: 10px 10px 40px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1.0; /* Interlineado 1.0 solicitado */
-        letter-spacing: 15px;
+        line-height: 1.0;
+        letter-spacing: 20px;
     }}
 
-    /* BOTONES TOTALMENTE FIJOS (SISTEMA DE ANCLAJE) */
+    /* BOTONES TOTALMENTE FIJOS */
     .stButton {{
         position: fixed;
         bottom: 12vh;
         z-index: 100;
     }}
     
-    /* Anclaje exacto para Botón Izquierdo */
     div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
         left: 20vw;
     }}
     
-    /* Anclaje exacto para Botón Derecho */
     div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
         right: 20vw;
     }}
 
-    /* ESTILO BOTONES (AMARILLO PURO, SIN BORDE) */
+    /* ESTILO BOTONES AMARILLOS SIN BORDE */
     div.stButton > button {{
         width: 350px !important;
         height: 90px !important;
@@ -103,7 +101,7 @@ st.markdown(f"""
         border: none !important;
         box-shadow: 0px 15px 35px rgba(0,0,0,0.8);
         text-transform: uppercase;
-        transition: all 0.2s ease-in-out;
+        transition: 0.2s ease-in-out;
     }}
 
     div.stButton > button:hover {{
@@ -111,7 +109,7 @@ st.markdown(f"""
         transform: scale(1.05);
     }}
 
-    /* DASHBOARD INTERNO */
+    /* ESTILOS DASHBOARD INTERNO */
     .banner-amarillo {{
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
@@ -165,7 +163,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Grid de botones (Fijos por CSS)
+    # Grid de botones anclados por CSS
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
