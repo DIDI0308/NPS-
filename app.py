@@ -6,7 +6,7 @@ import base64
 import textwrap
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Dashboard 2025", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="NPS Performance 2025", layout="wide", initial_sidebar_state="collapsed")
 
 # Gestión de navegación entre pestañas
 if 'page' not in st.session_state:
@@ -19,7 +19,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS REFINADO ---
+# --- ESTILO CSS REFINADO (MÁXIMO IMPACTO) ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -44,10 +44,10 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO ENORME (FONT 120) */
+    /* TÍTULO GIGANTE Y VISTOSO (FONT 150) */
     .landing-title-container {{
         position: absolute;
-        top: 40%;
+        top: 42%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 100%;
@@ -56,57 +56,62 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 110px; 
+        font-size: 130px; 
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 5px 5px 20px rgba(0,0,0,1);
+        text-shadow: 6px 6px 25px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1;
+        line-height: 0.9;
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 130px; /* Tamaño máximo para impacto */
+        font-size: 150px; /* Tamaño máximo */
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 5px 5px 20px rgba(0,0,0,1);
+        text-shadow: 6px 6px 25px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1.1;
-        letter-spacing: 10px;
+        line-height: 1;
+        letter-spacing: 12px;
     }}
 
-    /* POSICIONAMIENTO FIJO DE BOTONES (NO SE MUEVEN) */
-    .button-fixed-container {{
-        position: absolute;
-        bottom: 15%;
-        left: 0;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        gap: 80px; /* Espaciado entre los recuadros amarillos */
-        z-index: 10;
+    /* BOTONES FIJOS (NO SE MUEVEN) */
+    .stButton {{
+        position: fixed;
+        bottom: 12vh; /* Altura fija desde abajo */
+        z-index: 100;
+    }}
+    
+    /* Posición específica botón 1 */
+    div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
+        left: 20vw;
+    }}
+    
+    /* Posición específica botón 2 */
+    div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
+        right: 20vw;
     }}
 
-    /* ESTILO ESTÉTICO DE BOTONES AMARILLOS SIN BORDE */
+    /* ESTILO ESTÉTICO DE BOTONES (AMARILLOS LIMPIOS) */
     div.stButton > button {{
-        width: 320px !important;
-        height: 80px !important;
+        width: 350px !important;
+        height: 90px !important;
         background-color: #FFFF00 !important;
         color: #000000 !important;
         font-weight: 900 !important;
-        font-size: 22px !important;
-        border-radius: 10px !important;
+        font-size: 24px !important;
+        border-radius: 12px !important;
         border: none !important;
-        box-shadow: 0px 10px 25px rgba(0,0,0,0.7);
+        box-shadow: 0px 15px 35px rgba(0,0,0,0.8);
         text-transform: uppercase;
         transition: all 0.3s ease;
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.05);
+        transform: translateY(-5px) scale(1.05);
     }}
 
-    /* ESTILOS DEL DASHBOARD INTERNO */
+    /* DASHBOARD INTERNO */
     .banner-amarillo {{
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
@@ -151,7 +156,6 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    # Imagen y Título Enorme
     st.markdown(f'''
         <div class="landing-wrapper">
             <div class="landing-title-container">
@@ -161,9 +165,8 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Contenedor de botones fijo sobre los recuadros
-    st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
-    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.4, 3, 1.5])
+    # Grid de botones (ahora bloqueados por CSS)
+    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
         if st.button("MONTHLY EVOLUTION", key="btn_evo"):
@@ -179,19 +182,16 @@ if st.session_state.page == 'landing':
 # VISTA: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
-    st.markdown("<div style='padding: 20px;'>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
     st.title("📈 MONTHLY EVOLUTION")
     st.info("Sección en desarrollo.")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# VISTA: CURRENT MONTH (ANÁLISIS)
+# VISTA: CURRENT MONTH
 # ==========================================
 elif st.session_state.page == 'current':
-    st.markdown("<div style='padding: 20px;'>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
@@ -201,7 +201,6 @@ elif st.session_state.page == 'current':
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        # Gráfica 1 y 2
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
         with col_g1:
@@ -217,21 +216,3 @@ elif st.session_state.page == 'current':
             fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
             fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333', title=None))
             st.plotly_chart(fig2, use_container_width=True)
-
-        # Gráfica 3, 4, 5 y Comentarios (Resto del Dashboard...)
-        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        # [Insertar resto del código de filtros y gráficos aquí...]
-        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS </p>', unsafe_allow_html=True)
-        col_t1, col_t2, col_t3 = st.columns(3)
-        def render_dynamic_card(col, key_id, title):
-            with col:
-                st.markdown(f'''<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>''', unsafe_allow_html=True)
-                st.text_input("Secondary Driver:", value=title, key=f"title_{key_id}")
-                st.text_input("Cliente:", key=f"client_{key_id}")
-                st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
-                st.text_area("Comentario:", key=f"comment_{key_id}", height=120)
-                st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
-        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
-        render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
-        render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    st.markdown("</div>", unsafe_allow_html=True)
