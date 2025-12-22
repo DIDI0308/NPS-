@@ -44,57 +44,66 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO MONUMENTAL ESTÉTICO */
+    /* TÍTULO MONUMENTAL Y ESTÉTICO */
     .landing-title-container {{
         position: absolute;
-        top: 45%;
+        top: 42%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 95%;
+        width: 100%;
         text-align: center;
         z-index: 5;
+        user-select: none;
     }}
+    
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 140px; 
-        font-weight: 900;
-        /* Efecto de degradado amarillo a blanco */
-        background: linear-gradient(to bottom, #FFFF00 0%, #FFFFFF 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.8));
-        margin: 0;
-        line-height: 0.85; /* Cerrar espacio entre líneas */
-        letter-spacing: -5px; /* Aspecto de bloque masivo */
-    }}
-    .landing-title-line2 {{
-        font-family: 'Arial Black', sans-serif;
-        font-size: 180px; 
+        font-size: 150px; 
         font-weight: 900;
         color: #FFFFFF;
-        filter: drop-shadow(0px 15px 30px rgba(0,0,0,1));
+        margin: 0;
+        line-height: 0.8;
+        letter-spacing: -2px;
+        /* Efecto de brillo sutil */
+        filter: drop-shadow(0px 15px 15px rgba(0,0,0,0.9));
+        background: linear-gradient(180deg, #FFFFFF 30%, #CCCCCC 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }}
+    
+    .landing-title-line2 {{
+        font-family: 'Arial Black', sans-serif;
+        font-size: 190px; 
+        font-weight: 900;
         margin: 0;
         line-height: 1.0;
-        letter-spacing: 15px;
+        letter-spacing: 25px;
         text-transform: uppercase;
+        /* Color Amarillo Vibrante con degradado */
+        background: linear-gradient(180deg, #FFFF00 0%, #FFCC00 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0px 20px 30px rgba(0,0,0,1));
     }}
 
-    /* BOTONES TOTALMENTE FIJOS */
+    /* BOTONES TOTALMENTE FIJOS (SISTEMA DE ANCLAJE) */
     .stButton {{
         position: fixed;
         bottom: 12vh;
         z-index: 100;
     }}
     
+    /* Anclaje exacto para Botón Izquierdo */
     div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
         left: 20vw;
     }}
     
+    /* Anclaje exacto para Botón Derecho */
     div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
         right: 20vw;
     }}
 
-    /* ESTILO BOTONES AMARILLOS SIN BORDE */
+    /* ESTILO BOTONES (AMARILLO PURO, SIN BORDE) */
     div.stButton > button {{
         width: 350px !important;
         height: 90px !important;
@@ -111,7 +120,8 @@ st.markdown(f"""
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.05);
+        transform: scale(1.05) translateY(-5px);
+        box-shadow: 0px 20px 45px rgba(255, 255, 0, 0.4);
     }}
 
     /* ESTILOS DASHBOARD INTERNO */
@@ -168,7 +178,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Grid de botones anclados por CSS (No se moverán)
+    # Grid de botones anclados por CSS
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
