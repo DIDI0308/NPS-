@@ -14,13 +14,13 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS (SÓLO NEGRO) ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
-    /* Fondo general negro absoluto */
+    /* Fondo general de la web negro */
     .stApp { background-color: #000000; color: #FFFFFF; }
     
-    /* Banner Principal */
+    /* Banner Principal Amarillo */
     .banner-amarillo {
         background-color: #FFFF00;
         padding: 15px;
@@ -35,20 +35,23 @@ st.markdown("""
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
 
-    /* TÍTULOS DE GRÁFICAS */
-    .plot-title-negro {
+    /* TÍTULOS DE GRÁFICAS (Texto Blanco sobre Negro) */
+    .plot-title-white {
         color: #FFFFFF;
         text-align: left;
         font-weight: bold;
         font-size: 20px;
-        margin-bottom: 5px;
+        margin-bottom: 10px;
+        padding-left: 5px;
     }
 
-    /* ELIMINACIÓN DE CONTENEDORES BLANCOS */
-    .plot-body-dark {
-        background-color: transparent; 
-        padding: 0px;
-        margin-bottom: 20px;
+    /* RECUADRO BLANCO PARA LAS GRÁFICAS */
+    .plot-card-white {
+        background-color: #FFFFFF; 
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #ddd;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -60,6 +63,8 @@ def load_data():
         df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
         df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+        
+        # Filtro: Excluir N/A
         df_filt = df[df['Primary Driver'] != 'N/A'].copy()
         
         mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
@@ -71,59 +76,67 @@ def load_data():
         }
         return df_filt, traducciones.get(mes_nombre, mes_nombre)
     except:
-        # Data de respaldo para visualización
-        return pd.DataFrame({'Primary Driver': ['A','B'], 'Score': [10,8], 'Customer ID': [1,2]}), "Diciembre"
+        return pd.DataFrame({'Primary Driver': ['A','B'], 'Score': [10,8], 'Customer ID': [1,2]}), "Mes"
 
 df, mes_base = load_data()
 
-# --- HEADER / BANNER ---
+# --- ENCABEZADO / BANNER ---
 b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
 if b64_logo and b64_logo2:
-    st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" class="logo-img"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" class="logo-img"></div>', unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class="banner-amarillo">
+            <img src="data:image/png;base64,{b64_logo2}" class="logo-img">
+            <div class="titulo-texto">
+                <h1>NPS 2025</h1>
+                <h2>{mes_base}</h2>
+            </div>
+            <img src="data:image/png;base64,{b64_logo}" class="logo-img">
+        </div>
+        """, unsafe_allow_html=True)
 
-# --- SECCIÓN DE GRÁFICAS ---
+# --- SECCIÓN DE GRÁFICAS GLOBALES ---
 st.markdown("<br>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<p class="plot-title-negro">1. Primary Driver Composition</p>', unsafe_allow_html=True)
-    data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
+    st.markdown('<p class="plot-title-white">1. Primary Driver Composition</p>', unsafe_allow_html=True)
+    st.markdown('<div class="plot-card-white">', unsafe_allow_html=True)
     
+    data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
     fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
                   color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D'])
     
     fig1.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', # Fondo transparente
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color="white"),      # Texto en blanco
+        paper_bgcolor='#FFFFFF',
+        plot_bgcolor='#FFFFFF',
+        font=dict(color="black"),
         legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
         margin=dict(t=10, b=10, l=10, r=120),
-        height=400
+        height=380
     )
     st.plotly_chart(fig1, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown('<p class="plot-title-negro">2. Average Score Per Primary Driver</p>', unsafe_allow_html=True)
+    st.markdown('<p class="plot-title-white">2. Average Score Per Primary Driver</p>', unsafe_allow_html=True)
+    st.markdown('<div class="plot-card-white">', unsafe_allow_html=True)
+    
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
     
     fig2 = px.line(data_lineas, x='Primary Driver Wrap', y='Score', markers=True)
-    
-    fig2.update_traces(
-        line_color='#FFD700', 
-        marker=dict(size=10, color='#FFD700'),
-        text=data_lineas['Score'].map('{:.2f}'.format), 
-        textposition="top center", 
-        mode='lines+markers+text'
-    )
+    fig2.update_traces(line_color='#FF8C00', marker=dict(size=10, color='#FF8C00'),
+                       text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
     
     fig2.update_layout(
-        paper_bgcolor='rgba(0,0,0,0)', # Fondo transparente
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color="white"),      # Texto en blanco
-        yaxis=dict(gridcolor='#333333', title=None), # Grilla sutil oscura
+        paper_bgcolor='#FFFFFF',
+        plot_bgcolor='#FFFFFF',
+        font=dict(color="black"),
+        yaxis=dict(gridcolor='#EEEEEE', title=None),
         xaxis=dict(title=None),
-        margin=dict(t=40, b=80, l=10, r=10),
-        height=400
+        margin=dict(t=40, b=60, l=10, r=10),
+        height=380
     )
     st.plotly_chart(fig2, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+    
