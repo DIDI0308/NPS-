@@ -16,76 +16,73 @@ st.markdown("""
         text-align: center;
         color: #FFD700;
         font-family: 'Arial Black', Gadget, sans-serif;
-        font-size: 50px;
-        margin-bottom: 0px;
-    }
-    .sub-info {
-        text-align: center;
-        color: #FFFFFF;
-        font-size: 20px;
-        margin-bottom: 30px;
+        font-size: 42px;
+        line-height: 1.2;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. CARGA Y EXTRACCIÓN DEL MES ---
+# --- 1. CARGA DE DATOS Y EXTRACCIÓN DEL MES ---
 @st.cache_data
-def load_data_and_get_month():
-    # Cargamos el archivo
+def load_data():
+    # Asegúrate de que el archivo Excel esté en la misma carpeta
     df = pd.read_excel('Base bruta dic.xlsx')
-    
-    # Limpieza y conversión de fechas
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
-    
-    # Extraemos el nombre del mes en español (o inglés según tu sistema)
-    # Tomamos el mes de la primera fila disponible
+    # Obtenemos el mes dinámico
     mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
     
-    # Traducción manual rápida si es necesario (opcional)
+    # Traducción rápida a español
     traducciones = {
         'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
         'April': 'Abril', 'May': 'Mayo', 'June': 'Junio', 
         'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre', 
         'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
     }
-    mes_final = traducciones.get(mes_nombre, mes_nombre)
-    
-    return df, mes_final
+    return df, traducciones.get(mes_nombre, mes_nombre)
 
-# Ejecutar carga
-df, mes_base = load_data_and_get_month()
+df, mes_base = load_data()
 
-# --- 2. TÍTULO CON ICONOS ---
-# Usamos HTML para combinar el texto, el mes dinámico y los iconos
-st.markdown(f"""
-    <div class="titulo-nps">
-        📊 NPS 2025 - {mes_base} 📈
-    </div>
-    <div class="sub-info">
-        Análisis Operativo de Satisfacción del Cliente
-    </div>
-    """, unsafe_allow_html=True)
+# --- 2. ENCABEZADO CON LOGOS EN LAS ESQUINAS ---
+# Creamos 3 columnas: [Izquierda (Logo2), Centro (Título), Derecha (Logo1)]
+col_izq, col_centro, col_der = st.columns([1, 4, 1])
+
+with col_izq:
+    # Muestra logo2.png a la izquierda
+    try:
+        st.image("logo2.png", width=120)
+    except:
+        st.warning("No se encontró logo2.png")
+
+with col_centro:
+    # Título dinámico sin iconos
+    st.markdown(f'<div class="titulo-nps">NPS 2025 - {mes_base}</div>', unsafe_allow_html=True)
+
+with col_der:
+    # Muestra logo.png a la derecha
+    try:
+        st.image("logo.png", width=120)
+    except:
+        st.warning("No se encontró logo.png")
 
 # --- 3. PRIMERA GRÁFICA (ANILLO) ---
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 st.subheader("1. Primary Driver Composition")
 
-data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
-data_anillo.columns = ['Primary Driver', 'Total Customers']
-colores_amarillos = ['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D', '#F4D03F']
 
+
+data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
 fig_pie = px.pie(
     data_anillo, 
-    values='Total Customers', 
+    values='Customer ID', 
     names='Primary Driver',
     hole=0.6,
-    color_discrete_sequence=colores_amarillos
+    color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D']
 )
 
 fig_pie.update_layout(
     paper_bgcolor='rgba(0,0,0,0)', 
-    plot_bgcolor='rgba(0,0,0,0)',
-    legend_font_color="white"
+    legend_font_color="white",
+    margin=dict(t=0, b=0, l=0, r=0)
 )
 
 st.plotly_chart(fig_pie, use_container_width=True)
