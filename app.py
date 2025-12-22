@@ -151,10 +151,10 @@ if not df.empty:
         st.plotly_chart(fig5, use_container_width=True)
 
 # ==========================================
-# SECCIÓN: COMMENTS CHOSEN (TARJETAS LIMPIAS)
+# SECCIÓN: CHOSEN COMMENTS  (TARJETAS LIMPIAS)
 # ==========================================
 st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;">COMMENTS CHOSEN</p>', unsafe_allow_html=True)
+st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;">CHOSEN COMMENTS </p>', unsafe_allow_html=True)
 
 col_t1, col_t2, col_t3 = st.columns(3)
 
