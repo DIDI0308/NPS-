@@ -20,36 +20,51 @@ def get_base64(bin_file):
 if 'page' not in st.session_state:
     st.session_state.page = "home"
 
-# --- VISTA 1: HOME (FONDO LOGO3.PNG) ---
+# --- VISTA 1: HOME (FONDO LOGO3.PNG CON BOTONES ABAJO) ---
 if st.session_state.page == "home":
     bin_str = get_base64('logo3.png')
     style_home = f'''
     <style>
+    /* Fondo y bloqueo de scroll */
     .stApp {{
         background-image: url("data:image/png;base64,{bin_str}");
         background-size: cover;
         background-position: center;
+        background-repeat: no-repeat;
         overflow: hidden; 
         height: 100vh;
+        width: 100vw;
     }}
     header {{visibility: hidden;}}
     .block-container {{padding: 0 !important;}}
+
+    /* Título en el centro exacto */
     .main-title {{
         position: fixed;
-        top: 50%; left: 50%;
+        top: 50%;
+        left: 50%;
         transform: translate(-50%, -50%);
-        color: white; font-size: 4rem; font-weight: 800;
-        text-align: center; width: 100%;
+        color: white;
+        font-size: 4rem;
+        font-weight: 800;
+        text-align: center;
+        width: 100%;
         text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        z-index: 1000; letter-spacing: 2px;
+        z-index: 1000;
+        letter-spacing: 2px;
     }}
-    .button-container {{
+
+    /* Botones en la PARTE INFERIOR como antes */
+    .stHorizontalBlock {{
         position: fixed;
-        bottom: 10%; left: 50%;
+        bottom: 10%; 
+        left: 50%;
         transform: translateX(-50%);
-        display: flex; gap: 20px;
+        width: 50% !important;
         z-index: 1001;
     }}
+
+    /* Estilo botones Amarillos */
     div.stButton > button {{
         background-color: #FFFF00 !important;
         color: black !important;
@@ -60,12 +75,17 @@ if st.session_state.page == "home":
         border-radius: 10px !important;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
     }}
+    div.stButton > button:hover {{
+        background-color: #FFEA00 !important;
+        transform: scale(1.05);
+    }}
     </style>
     '''
     st.markdown(style_home, unsafe_allow_html=True)
     st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
     
-    col_spacer1, col1, col2, col_spacer2 = st.columns([1, 1, 1, 1])
+    # Contenedor de botones (ubicados por CSS en la parte inferior)
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
             st.toast("Aún trabajando...")
@@ -74,11 +94,11 @@ if st.session_state.page == "home":
             st.session_state.page = "dashboard"
             st.rerun()
 
-# --- VISTA 2: DASHBOARD (FONDO NEGRO / DATOS) ---
+# --- VISTA 2: DASHBOARD (TU CÓDIGO CURRENT MONTH) ---
 elif st.session_state.page == "dashboard":
     st.markdown("""
         <style>
-        .stApp { background-color: #000000; color: #FFFFFF; }
+        .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
         .banner-amarillo {
             background-color: #FFFF00; padding: 15px; display: flex;
             justify-content: space-between; align-items: center;
@@ -117,7 +137,7 @@ elif st.session_state.page == "dashboard":
 
     df, mes_base = load_data()
 
-    # Botón para volver al inicio
+    # Botón discreto para volver al inicio en el sidebar
     if st.sidebar.button("⬅ Volver al Inicio"):
         st.session_state.page = "home"
         st.rerun()
