@@ -20,7 +20,7 @@ def get_base64(bin_file):
 if 'page' not in st.session_state:
     st.session_state.page = "home"
 
-# --- VISTA 1: HOME ---
+# --- VISTA 1: HOME (FONDO LOGO3.PNG) ---
 if st.session_state.page == "home":
     bin_str = get_base64('logo3.png')
     style_home = f'''
@@ -69,37 +69,36 @@ if st.session_state.page == "home":
     
     col1, col2 = st.columns(2)
     with col1:
-        st.button("MONTHLY EVOLUTION", use_container_width=True, on_click=lambda: st.toast("Aún trabajando..."))
+        if st.button("MONTHLY EVOLUTION", use_container_width=True):
+            st.toast("Aún trabajando...")
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
             st.session_state.page = "dashboard"
             st.rerun()
 
-# --- VISTA 2: DASHBOARD ---
+# --- VISTA 2: DASHBOARD (FONDO NEGRO) ---
 elif st.session_state.page == "dashboard":
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
         
-        /* Contenedor del Banner */
+        /* Estilo Botón Volver (Amarillo con texto Negro) */
+        div[data-testid="stButton"] button[kind="secondary"] {
+            background-color: #FFFF00 !important;
+            color: #000000 !important;
+            border: none !important;
+            font-weight: bold !important;
+            padding: 0.5rem 1rem !important;
+        }
+
         .banner-amarillo {
-            background-color: #FFFF00; padding: 10px 20px; 
-            display: flex; justify-content: space-between; align-items: center;
-            border-radius: 5px; margin-bottom: 25px;
+            background-color: #FFFF00; padding: 15px; display: flex;
+            justify-content: space-between; align-items: center;
+            border-radius: 5px; margin-top: 10px; margin-bottom: 25px;
         }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
-        .titulo-texto h1 { margin: 0; font-size: 40px; font-weight: 900; line-height: 1; }
-        .titulo-texto h2 { margin: 0; font-size: 20px; }
-
-        /* Botón Volver específico */
-        .stButton > button.back-btn {
-            background-color: #000000 !important;
-            color: #FFFF00 !important;
-            border: 2px solid #000000 !important;
-            border-radius: 5px !important;
-            font-weight: bold !important;
-        }
-
+        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
+        
         .card-transparent {
             background-color: rgba(255, 255, 255, 0.02);
             border-radius: 15px; padding: 10px; margin-bottom: 20px; color: #FFFFFF;
@@ -115,27 +114,8 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
-    # --- HEADER CON BOTÓN INTEGRADO ---
-    b64_logo2 = get_base64('logo2.png')
-    b64_logo = get_base64('logo.png')
-    
-    # Usamos columnas de Streamlit para el Header para poder meter el botón real de Streamlit
-    head_col1, head_col2, head_col3, head_col4, head_col5 = st.columns([1, 1, 4, 1, 1])
-    
-    with st.container():
-        # Fondo amarillo simulado con CSS para el contenedor del header
-        st.markdown(f'''
-            <div class="banner-amarillo">
-                <img src="data:image/png;base64,{b64_logo2}" style="max-height:60px;">
-                <div class="titulo-texto">
-                    <h1>NPS 2025</h1>
-                </div>
-                <img src="data:image/png;base64,{b64_logo}" style="max-height:60px;">
-            </div>
-        ''', unsafe_allow_html=True)
-    
-    # Botón de volver justo arriba o en una fila superior limpia
-    if st.button("⬅ VOLVER AL INICIO", key="back_home"):
+    # Botón Volver en la parte superior
+    if st.button("⬅ VOLVER AL INICIO", key="back_btn"):
         st.session_state.page = "home"
         st.rerun()
 
@@ -153,6 +133,11 @@ elif st.session_state.page == "dashboard":
 
     df = load_data()
 
+    # --- HEADER / BANNER ---
+    b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
+    if b64_logo and b64_logo2:
+        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
+
     if not df.empty:
         # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
@@ -162,7 +147,7 @@ elif st.session_state.page == "dashboard":
             st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, showlegend=True)
+            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400)
             st.plotly_chart(fig1, use_container_width=True)
 
         with col_g2:
@@ -170,7 +155,7 @@ elif st.session_state.page == "dashboard":
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
             fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
-            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333'))
+            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
             st.plotly_chart(fig2, use_container_width=True)
 
         # --- PANEL INTERACTIVO ---
@@ -236,4 +221,4 @@ elif st.session_state.page == "dashboard":
         render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
         render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
     else:
-        st.warning("Por favor, asegúrate de que el archivo 'Base bruta dic.xlsx' esté en la carpeta.")
+        st.warning("Asegúrate de tener el archivo Excel cargado.")
