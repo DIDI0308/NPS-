@@ -19,7 +19,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS DEFINITIVO (MÁXIMA ESCALA Y BOTONES FIJOS) ---
+# --- ESTILO CSS REFINADO (MÁXIMO IMPACTO VISUAL) ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -44,34 +44,39 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO MONUMENTAL CON INTERLINEADO 1.0 */
+    /* TÍTULO MONUMENTAL ESTÉTICO */
     .landing-title-container {{
         position: absolute;
-        top: 40%;
+        top: 45%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 100%;
+        width: 95%;
         text-align: center;
         z-index: 5;
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 200px;  /* ESCALA MÁXIMA */
+        font-size: 140px; 
         font-weight: 900;
-        color: #FFFFFF;
-        text-shadow: 10px 10px 40px rgba(0,0,0,1);
+        /* Efecto de degradado amarillo a blanco */
+        background: linear-gradient(to bottom, #FFFF00 0%, #FFFFFF 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.8));
         margin: 0;
-        line-height: 1.0;
+        line-height: 0.85; /* Cerrar espacio entre líneas */
+        letter-spacing: -5px; /* Aspecto de bloque masivo */
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 230px;  /* ESCALA MÁXIMA */
+        font-size: 180px; 
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 10px 10px 40px rgba(0,0,0,1);
+        filter: drop-shadow(0px 15px 30px rgba(0,0,0,1));
         margin: 0;
         line-height: 1.0;
-        letter-spacing: 20px;
+        letter-spacing: 15px;
+        text-transform: uppercase;
     }}
 
     /* BOTONES TOTALMENTE FIJOS */
@@ -101,7 +106,7 @@ st.markdown(f"""
         border: none !important;
         box-shadow: 0px 15px 35px rgba(0,0,0,0.8);
         text-transform: uppercase;
-        transition: 0.2s ease-in-out;
+        transition: all 0.2s ease-in-out;
     }}
 
     div.stButton > button:hover {{
@@ -163,7 +168,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Grid de botones anclados por CSS
+    # Grid de botones anclados por CSS (No se moverán)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
