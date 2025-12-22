@@ -9,55 +9,82 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-def set_png_as_page_bg(bin_file):
+def set_custom_style(bin_file):
     bin_str = get_base64_of_bin_file(bin_file)
-    page_bg_img = f'''
+    style = f'''
     <style>
+    /* Fondo de pantalla completa */
     .stApp {{
         background-image: url("data:image/png;base64,{bin_str}");
         background-size: cover;
         background-position: center;
-        background-attachment: fixed;
-    }}
-    
-    /* Estilo para que el título sea legible sobre el fondo */
-    h1 {{
-        color: white;
-        text-shadow: 2px 2px 4px #000000;
-        padding-top: 50px;
+        background-repeat: no-repeat;
     }}
 
-    /* Contenedor inferior para los botones */
-    .button-container {{
+    /* Título centrado vertical y horizontalmente */
+    .main-title {{
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+    }}
+
+    /* Contenedor de botones en la parte inferior */
+    .button-footer {{
         position: fixed;
-        bottom: 10%;
+        bottom: 50px;
         left: 0;
-        right: 0;
-        padding: 0 10%;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        padding: 0 20px;
+    }}
+
+    /* Estilo para los botones amarillos */
+    div.stButton > button {{
+        background-color: #FFD700 !important; /* Amarillo */
+        color: black !important;
+        font-weight: bold !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 5px !important;
+        width: 100% !important;
+    }}
+    
+    div.stButton > button:hover {{
+        background-color: #FFC400 !important; /* Amarillo más oscuro al pasar el mouse */
+        color: black !important;
     }}
     </style>
     '''
-    st.markdown(page_bg_img, unsafe_allow_html=True)
+    st.markdown(style, unsafe_allow_html=True)
 
-# 1. Aplicar el fondo (asegúrate de que logo3.png esté en la misma carpeta)
+# 1. Aplicar estilos y fondo
 try:
-    set_png_as_page_bg('logo3.png')
+    set_custom_style('logo3.png')
 except FileNotFoundError:
-    st.error("No se encontró el archivo logo3.png. Asegúrate de que esté en la misma carpeta que este script.")
+    st.error("No se encontró 'logo3.png'. Verifica el nombre del archivo.")
 
-# 2. Título principal centrado
-st.markdown("<h1 style='text-align: center;'>NET PROMOTER SCORE PERFORMANCE</h1>", unsafe_allow_html=True)
+# 2. Renderizar Título en el centro
+st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
 
-# 3. Espaciador para empujar los botones hacia abajo
-st.markdown("<div style='height: 60vh;'></div>", unsafe_allow_html=True)
+# 3. Renderizar Botones en la parte inferior usando columnas de Streamlit
+# Ponemos un espaciador para empujar el layout hacia abajo
+st.markdown("<div style='height: 80vh;'></div>", unsafe_allow_html=True)
 
-# 4. Botones en la parte inferior
-col1, col2 = st.columns(2)
-
-with col1:
-    if st.button("MONTHLY EVOLUTION", use_container_width=True):
-        st.write("Has seleccionado Evolución Mensual")
+col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
 
 with col2:
-    if st.button("CURRENT MONTH", use_container_width=True):
-        st.write("Has seleccionado Mes Actual")
+    if st.button("MONTHLY EVOLUTION"):
+        st.write("Cargando Evolución...")
+
+with col3:
+    if st.button("CURRENT MONTH"):
+        st.write("Cargando Mes Actual...")
