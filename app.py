@@ -28,20 +28,21 @@ st.markdown("""
     .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
 
-    /* ESTILO TARJETAS DE COMENTARIOS (AHORA SIN FONDO BLANCO) */
+    /* ESTILO TARJETAS DE COMENTARIOS (SIN MARGEN AMARILLO) */
     .card-transparent {
-        background-color: rgba(255, 255, 255, 0.05);
-        border: 1px solid #FFFF00;
+        background-color: rgba(255, 255, 255, 0.02);
+        border: none; /* Eliminado el margen amarillo */
         border-radius: 15px;
-        padding: 20px;
+        padding: 10px;
         margin-bottom: 20px;
         color: #FFFFFF;
     }
     .emoji-solid-yellow {
-        font-size: 85px;
+        font-size: 110px; /* Tamaño aumentado */
         text-align: center;
         color: #FFFF00;
-        filter: drop-shadow(0 0 5px rgba(255, 255, 0, 0.5));
+        /* Técnica para hacer la carita triste rellena de color */
+        text-shadow: 0 0 0 #FFFF00; 
         line-height: 1;
         margin-bottom: 15px;
         display: block;
@@ -150,7 +151,7 @@ if not df.empty:
         st.plotly_chart(fig5, use_container_width=True)
 
 # ==========================================
-# SECCIÓN: COMMENTS CHOSEN (TARJETAS TRANSPARENTES)
+# SECCIÓN: COMMENTS CHOSEN (TARJETAS LIMPIAS)
 # ==========================================
 st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
 st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;">COMMENTS CHOSEN</p>', unsafe_allow_html=True)
@@ -161,7 +162,7 @@ def render_dynamic_card(col, key_id, default_title):
     with col:
         st.markdown(f'''
             <div class="card-transparent">
-                <div class="emoji-solid-yellow">☻</div>
+                <div class="emoji-solid-yellow">☹</div>
             </div>
         ''', unsafe_allow_html=True)
         
