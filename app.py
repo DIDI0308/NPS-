@@ -110,7 +110,7 @@ if not df.empty:
         selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
     with c_f2:
         opciones_cat = sorted([cat for cat in df['Category'].unique() if cat != 'N/A'])
-        selector_cat = st.multiselect('Category (Filtra Volumen y Score):', opciones_cat, default=opciones_cat)
+        selector_cat = st.multiselect('Category:', opciones_cat, default=opciones_cat)
 
     df_filt3 = df.copy()
     if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
