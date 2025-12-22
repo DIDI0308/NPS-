@@ -15,7 +15,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS (DARK MODE) ---
+# --- ESTILO CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
@@ -50,13 +50,7 @@ def load_data():
         traducciones = {'January': 'Enero', 'December': 'Diciembre'}
         return df, traducciones.get(mes_nombre, mes_nombre)
     except:
-        data = {
-            'Primary Driver': ['Logística', 'Producto', 'Atención'],
-            'Secondary Driver': ['Tiempo', 'Calidad', 'Cordialidad'],
-            'Category': ['Promoter', 'Detractor', 'Passive'],
-            'Score': [10, 5, 8], 'Customer ID': [1, 2, 3]
-        }
-        return pd.DataFrame(data), "Diciembre"
+        return pd.DataFrame(), "Mes"
 
 df, mes_base = load_data()
 
@@ -65,7 +59,7 @@ b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
 if b64_logo and b64_logo2:
     st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" class="logo-img"><div class="titulo-texto"><h1>NPS 2025</h1><h2>{mes_base}</h2></div><img src="data:image/png;base64,{b64_logo}" class="logo-img"></div>', unsafe_allow_html=True)
 
-# --- GRÁFICAS ESTÁTICAS ---
+# --- GRÁFICAS ESTÁTICAS (SUPERIORES) ---
 st.markdown("<br>", unsafe_allow_html=True)
 df_global = df[df['Primary Driver'] != 'N/A'].copy()
 col_g1, col_g2 = st.columns(2)
@@ -91,17 +85,21 @@ c_f1, c_f2 = st.columns(2)
 with c_f1:
     selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
 with c_f2:
-    selector_cat = st.multiselect('Category:', sorted([cat for cat in df['Category'].unique() if cat != 'N/A']), default=sorted([cat for cat in df['Category'].unique() if cat != 'N/A']))
+    selector_cat = st.multiselect('Category (Solo afecta a Graf 4):', sorted([cat for cat in df['Category'].unique() if cat != 'N/A']), default=sorted([cat for cat in df['Category'].unique() if cat != 'N/A']))
 
-df_filt = df.copy()
-if selector_driver != 'All': df_filt = df_filt[df_filt['Primary Driver'] == selector_driver]
-df_filt = df_filt[df_filt['Category'].isin(selector_cat)]
+# LÓGICA DE FILTRADO SEPARADA
+# df_filt3: Solo Driver (No responde a Category)
+df_filt3 = df.copy()
+if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
+
+# df_filt4: Driver + Category
+df_filt4 = df_filt3[df_filt3['Category'].isin(selector_cat)]
 
 col_d1, col_d2 = st.columns([1, 2])
 
 with col_d1:
-    # --- GRÁFICA 3: CATEGORY COMPOSITION ---
-    df_visual_cat = df_filt[df_filt['Category'] != 'N/A']
+    # --- GRÁFICA 3: CATEGORY COMPOSITION (IGNORA CATEGORY FILTER) ---
+    df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
     if not df_visual_cat.empty:
         conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
         orden = ['Detractor', 'Passive', 'Promoter']
@@ -120,15 +118,15 @@ with col_d1:
         st.plotly_chart(fig_stack, use_container_width=True)
 
 with col_d2:
-    # --- GRÁFICA 4: SECONDARY DRIVER (TÍTULO MÁS CERCA) ---
-    if not df_filt.empty:
-        data_sec = df_filt.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values('Score')
+    # --- GRÁFICA 4: SECONDARY DRIVER (RESPONDE A TODO) ---
+    if not df_filt4.empty:
+        data_sec = df_filt4.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values('Score')
         fig_sec = px.bar(data_sec, x='Score', y='Secondary Driver', orientation='h', text_auto='.2f')
         fig_sec.update_traces(marker_color='#FFD700', textfont=dict(color='black'))
         fig_sec.update_layout(
             title={'text': f"4. Score por Secondary Driver: {selector_driver}", 'y': 0.98, 'x': 0.5, 'xanchor': 'center', 'font': {'color': 'white', 'size': 20}},
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"),
             xaxis=dict(gridcolor='#333333', title=None), yaxis=dict(title=None),
-            height=500, margin=dict(t=60, b=50) # 't=60' pega el título a la gráfica
+            height=500, margin=dict(t=60, b=50)
         )
         st.plotly_chart(fig_sec, use_container_width=True)
