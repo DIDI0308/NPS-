@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import base64
+import textwrap
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS Dashboard 2025", layout="wide")
@@ -60,7 +61,6 @@ def load_data():
     df = pd.read_excel('Base bruta dic.xlsx')
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
     df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-    # Asegurar que el score sea numérico
     df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
     
     mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
@@ -110,21 +110,24 @@ with col1:
         template="plotly_dark"
     )
     fig_pie.update_layout(
-        height=350, # Altura ajustada
+        height=400,
         paper_bgcolor='rgba(0,0,0,0)', 
-        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-        margin=dict(t=20, b=20, l=10, r=10)
+        # Leyenda al costado derecho
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.0),
+        margin=dict(t=20, b=20, l=10, r=100) # Espacio a la derecha para la leyenda
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col2:
     st.markdown("<p style='text-align:center; font-weight:bold;'>2. Average Score Per Primary Driver</p>", unsafe_allow_html=True)
-    # Agrupar y resetear índice para asegurar que Plotly vea todas las columnas
     data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     
+    # Aplicar saltos de línea a los nombres del eje X (aprox cada 12 caracteres)
+    data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
+
     fig_lineas = px.line(
         data_lineas, 
-        x='Primary Driver', 
+        x='Primary Driver Wrap', 
         y='Score', 
         markers=True,
         template="plotly_dark"
@@ -140,11 +143,11 @@ with col2:
     )
     
     fig_lineas.update_layout(
-        height=350, # Altura ajustada
+        height=400,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         yaxis=dict(range=[5.5, 10.5], gridcolor='#333333', title=None),
-        xaxis=dict(title=None, tickangle=45), # Inclinación para que se lea
-        margin=dict(t=20, b=100, l=10, r=10) # Margen inferior amplio para el eje X
+        xaxis=dict(title=None, tickangle=0), # Texto horizontal
+        margin=dict(t=20, b=80, l=10, r=10) # Margen inferior para las 2 líneas de texto
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
