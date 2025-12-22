@@ -14,13 +14,11 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS (SOLO NEGRO) ---
+# --- ESTILO CSS (DARK MODE PURO) ---
 st.markdown("""
     <style>
-    /* Fondo general negro absoluto */
     .stApp { background-color: #000000; color: #FFFFFF; }
     
-    /* Banner Principal Amarillo */
     .banner-amarillo {
         background-color: #FFFF00;
         padding: 15px;
@@ -35,7 +33,6 @@ st.markdown("""
     .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
     .titulo-texto h2 { margin: 5px 0 0 0; font-size: 20px; text-transform: uppercase; }
 
-    /* TÍTULOS DE GRÁFICAS (TEXTO BLANCO SOBRE NEGRO) */
     .plot-title-solo-texto {
         color: #FFFFFF;
         text-align: left;
@@ -63,7 +60,7 @@ def load_data():
         }
         return df_filt, traducciones.get(mes_nombre, mes_nombre)
     except:
-        return pd.DataFrame({'Primary Driver': ['A', 'B'], 'Score': [9.2, 8.5], 'Customer ID': [50, 30]}), "Diciembre"
+        return pd.DataFrame({'Primary Driver': ['Ejemplo A', 'Ejemplo B'], 'Score': [9.2, 8.5], 'Customer ID': [50, 30]}), "Diciembre"
 
 df, mes_base = load_data()
 
@@ -88,15 +85,23 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown('<p class="plot-title-solo-texto">1. Primary Driver Composition</p>', unsafe_allow_html=True)
     data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
+    
     fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6,
                   color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00', '#FDDA0D'])
     
-    # FONDO TRANSPARENTE Y TEXTO BLANCO
     fig1.update_layout(
         paper_bgcolor='rgba(0,0,0,0)', 
         plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color="white"),
-        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02),
+        # CONFIGURACIÓN DE LEYENDA EN BLANCO
+        legend=dict(
+            font=dict(color="white"), # Texto de la leyenda en blanco
+            orientation="v", 
+            yanchor="middle", 
+            y=0.5, 
+            xanchor="left", 
+            x=1.02
+        ),
+        font=dict(color="white"), # Asegura que otros textos (si los hay) sean blancos
         margin=dict(t=10, b=10, l=0, r=120),
         height=400
     )
@@ -108,22 +113,21 @@ with col2:
     data_lineas['Primary Driver Wrap'] = data_lineas['Primary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=12)))
     
     fig2 = px.line(data_lineas, x='Primary Driver Wrap', y='Score', markers=True)
-    
     fig2.update_traces(
         line_color='#FFD700', 
         marker=dict(size=10, color='#FFD700'),
         text=data_lineas['Score'].map('{:.2f}'.format), 
         textposition="top center", 
-        mode='lines+markers+text'
+        mode='lines+markers+text',
+        textfont=dict(color="white") # Texto de los scores en blanco
     )
     
-    # FONDO TRANSPARENTE Y TEXTO BLANCO
     fig2.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color="white"),
-        yaxis=dict(gridcolor='#333333', title=None), # Grilla sutil oscura
-        xaxis=dict(title=None),
+        yaxis=dict(gridcolor='#333333', title=None, tickfont=dict(color="white")),
+        xaxis=dict(title=None, tickfont=dict(color="white")),
         margin=dict(t=40, b=80, l=0, r=10),
         height=400
     )
