@@ -82,7 +82,6 @@ elif st.session_state.page == "dashboard":
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
         
-        /* Estilo Botón Volver (Amarillo con texto Negro) */
         div[data-testid="stButton"] button[kind="secondary"] {
             background-color: #FFFF00 !important;
             color: #000000 !important;
@@ -114,7 +113,6 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
-    # Botón Volver en la parte superior
     if st.button("⬅ VOLVER AL INICIO", key="back_btn"):
         st.session_state.page = "home"
         st.rerun()
@@ -139,23 +137,30 @@ elif st.session_state.page == "dashboard":
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
+        # Títulos Configuración Común
+        font_style = dict(color="white", size=22)
+
         # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
         with col_g1:
-            st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400)
+            fig1.update_layout(
+                title={'text': "1. Primary Driver Composition", 'x': 0.5, 'font': font_style},
+                paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400
+            )
             st.plotly_chart(fig1, use_container_width=True)
 
         with col_g2:
-            st.markdown('<p style="font-size:22px; font-weight:bold;">2. Average Score Per Primary Driver</p>', unsafe_allow_html=True)
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
             fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
-            fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+            fig2.update_layout(
+                title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'font': font_style},
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333')
+            )
             st.plotly_chart(fig2, use_container_width=True)
 
         # --- PANEL INTERACTIVO ---
@@ -182,7 +187,10 @@ elif st.session_state.page == "dashboard":
                 for cat in orden:
                     val = conteo_cat.get(cat, 0)
                     fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else ""))
-                fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450)
+                fig3.update_layout(
+                    title={'text':"3. Category Composition", 'x':0.5, 'font': font_style},
+                    barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450
+                )
                 st.plotly_chart(fig3, use_container_width=True)
 
         with col_d2:
@@ -190,7 +198,10 @@ elif st.session_state.page == "dashboard":
                 data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
                 fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
                 fig4.update_traces(marker_color='#FFEA00')
-                fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450)
+                fig4.update_layout(
+                    title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'font': font_style},
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450
+                )
                 st.plotly_chart(fig4, use_container_width=True)
 
         # --- SCORE PROMEDIO ---
@@ -200,7 +211,10 @@ elif st.session_state.page == "dashboard":
             data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
             fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
             fig5.update_traces(marker_color='#FFD700', textposition='outside')
-            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=500)
+            fig5.update_layout(
+                title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font': font_style},
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=500
+            )
             st.plotly_chart(fig5, use_container_width=True)
 
         # --- SECCIÓN: COMMENTS CHOSEN ---
