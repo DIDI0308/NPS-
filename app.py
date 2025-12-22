@@ -44,10 +44,10 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO CENTRADO */
+    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS */
     .landing-title {{
         position: absolute;
-        top: 40%;
+        top: 35%; /* Ajustado ligeramente para acomodar dos líneas */
         left: 50%;
         transform: translate(-50%, -50%);
         width: 100%;
@@ -59,17 +59,18 @@ st.markdown(f"""
         text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
         letter-spacing: 2px;
         z-index: 5;
+        line-height: 1.1;
     }}
 
-    /* CONTENEDOR DE BOTONES CENTRADOS */
-    .landing-buttons {{
-        position: absolute;
+    /* CONTENEDOR DE BOTONES FIJOS (NO MÓVILES) */
+    .landing-buttons-container {{
+        position: fixed;
         bottom: 15%;
         left: 50%;
         transform: translateX(-50%);
         display: flex;
         gap: 50px;
-        z-index: 10;
+        z-index: 999; /* Asegura que esté por encima de todo */
     }}
 
     /* ESTILO ESTÉTICO DE BOTONES LANDING */
@@ -138,15 +139,17 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    # Capa de imagen y título estético
+    # Capa de imagen y título estético en DOS LÍNEAS
     st.markdown(f'''
         <div class="landing-wrapper">
-            <div class="landing-title">NET PROMOTER SCORE PERFORMANCE</div>
+            <div class="landing-title">
+                NET PROMOTER SCORE<br>PERFORMANCE
+            </div>
         </div>
     ''', unsafe_allow_html=True)
     
-    # Botones centrados proporcionalmente
-    # Usamos margen superior alto para posicionarlos sobre los cuadros amarillos de la imagen
+    # Contenedor de botones con columnas Streamlit
+    # El uso de fixed en el CSS anterior asegura que se mantengan en su sitio
     st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.5, 3, 1.5])
     
@@ -174,7 +177,7 @@ elif st.session_state.page == 'evolution':
 # VISTA: CURRENT MONTH (ANÁLISIS COMPLETO)
 # ==========================================
 elif st.session_state.page == 'current':
-    # Padding de navegación
+    # (El resto del código de análisis se mantiene exactamente igual...)
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
