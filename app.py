@@ -24,11 +24,11 @@ b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
     <style>
-    /* ELIMINAR MÁRGENES Y SCROLL DE STREAMLIT EN LANDING */
+    /* ELIMINAR MÁRGENES DE STREAMLIT */
     [data-testid="stAppViewContainer"] > section:nth-child(2) > div:nth-child(1) {{
         padding: 0px;
     }}
-    .stApp {{ background-color: #000000; color: #FFFFFF; overflow: hidden; }}
+    .stApp {{ background-color: #000000; color: #FFFFFF; }}
     
     /* LANDING FULL SCREEN */
     .landing-wrapper {{
@@ -44,51 +44,53 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* BOTONES TOTALMENTE INMÓVILES Y CENTRADOS EN LANDING */
-    .stButton {{
-        position: fixed;
-        bottom: 15vh; /* Altura fija desde el fondo */
-        z-index: 100;
+    /* TÍTULO ESTÉTICO CENTRADO */
+    .landing-title {{
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%;
+        text-align: center;
+        font-family: 'Arial Black', sans-serif;
+        font-size: 65px;
+        font-weight: 900;
+        color: #FFFFFF;
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
+        letter-spacing: 2px;
+        z-index: 5;
     }}
 
-    /* Botón Izquierdo centrado respecto al eje */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(2) .stButton {{
-        left: 50vw;
-        transform: translateX(-110%); /* Desplazado a la izquierda del centro */
+    /* CONTENEDOR DE BOTONES CENTRADOS */
+    .landing-buttons {{
+        position: absolute;
+        bottom: 15%;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 50px;
+        z-index: 10;
     }}
 
-    /* Botón Derecho centrado respecto al eje */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(4) .stButton {{
-        left: 50vw;
-        transform: translateX(10%); /* Desplazado a la derecha del centro */
-    }}
-
-    /* BOTÓN VOLVER AL INICIO FIJO EN DASHBOARD */
-    .back-btn-container .stButton {{
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        z-index: 999;
-    }}
-
-    /* ESTILO ESTÉTICO DE BOTONES LANDING (AMARILLOS SIN BORDE) */
+    /* ESTILO ESTÉTICO DE BOTONES LANDING */
     div.stButton > button {{
-        width: 300px !important;
+        width: 320px !important;
         height: 80px !important;
         background-color: #FFFF00 !important;
         color: #000000 !important;
         font-weight: 900 !important;
         font-size: 20px !important;
-        border-radius: 12px !important;
-        border: none !important;
-        box-shadow: 0px 10px 25px rgba(0,0,0,0.7);
+        border-radius: 15px !important;
+        border: 4px solid #000000 !important;
+        box-shadow: 0px 8px 25px rgba(0,0,0,0.5);
         text-transform: uppercase;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.05);
+        transform: scale(1.1);
+        box-shadow: 0px 12px 30px rgba(255, 255, 0, 0.4);
     }}
 
     /* ESTILOS DEL DASHBOARD INTERNO */
@@ -96,7 +98,6 @@ st.markdown(f"""
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
         border-radius: 5px; margin: 20px;
-        margin-top: 80px; /* Espacio para el botón fijo de volver */
     }}
     .titulo-texto {{ text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }}
     .titulo-texto h1 {{ margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }}
@@ -137,11 +138,17 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    st.markdown(f'<div class="landing-wrapper"></div>', unsafe_allow_html=True)
+    # Capa de imagen y título estético
+    st.markdown(f'''
+        <div class="landing-wrapper">
+            <div class="landing-title">NET PROMOTER SCORE PERFORMANCE</div>
+        </div>
+    ''', unsafe_allow_html=True)
     
-    # Grid para detectar columnas, el CSS se encarga de fijarlos y centrarlos
-    st.markdown('<div style="height: 100vh;"></div>', unsafe_allow_html=True)
-    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 0.5, 4, 1])
+    # Botones centrados proporcionalmente
+    # Usamos margen superior alto para posicionarlos sobre los cuadros amarillos de la imagen
+    st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
+    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.5, 3, 1.5])
     
     with col_btn1:
         if st.button("MONTHLY EVOLUTION", key="btn_evo"):
@@ -157,26 +164,21 @@ if st.session_state.page == 'landing':
 # VISTA: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == 'evolution':
-    st.markdown('<div class="back-btn-container">', unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown("<div style='padding: 20px; margin-top: 80px;'>", unsafe_allow_html=True)
     st.title("📈 MONTHLY EVOLUTION")
     st.info("Esta sección se encuentra en desarrollo.")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # VISTA: CURRENT MONTH (ANÁLISIS COMPLETO)
 # ==========================================
 elif st.session_state.page == 'current':
-    st.markdown('<div class="back-btn-container">', unsafe_allow_html=True)
+    # Padding de navegación
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
@@ -187,7 +189,7 @@ elif st.session_state.page == 'current':
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
         with col_g1:
-            st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
+            st.markdown('<p style="font-size:22px; font-weight:bold; margin-left:20px;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
             fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, legend=dict(font=dict(color="white")))
@@ -201,9 +203,52 @@ elif st.session_state.page == 'current':
             fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333', title=None))
             st.plotly_chart(fig2, use_container_width=True)
 
-        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        # [Resto del código de gráficos y comentarios se mantiene igual]
-        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;">CHOSEN COMMENTS </p>', unsafe_allow_html=True)
+        st.markdown("<div style='margin: 0 20px;'><hr style='border: 1px solid #333;'></div>", unsafe_allow_html=True)
+        
+        c_f1, c_f2 = st.columns(2)
+        with c_f1:
+            selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']), key="sel_drive")
+        with c_f2:
+            opciones_cat = sorted([cat for cat in df['Category'].unique() if cat != 'N/A'])
+            selector_cat = st.multiselect('Category:', opciones_cat, default=opciones_cat, key="sel_cat")
+
+        df_filt3 = df.copy()
+        if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
+        df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+
+        col_d1, col_d2 = st.columns([1, 2])
+        with col_d1:
+            df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
+            if not df_visual_cat.empty:
+                conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
+                orden = ['Detractor', 'Passive', 'Promoter']
+                color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+                fig3 = go.Figure()
+                for cat in orden:
+                    val = conteo_cat.get(cat, 0)
+                    fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textposition='auto'))
+                fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'font':{'color':'white'}}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450, showlegend=True, legend=dict(orientation="h", y=-0.2, x=0.5, xanchor="center"), yaxis=dict(visible=False), margin=dict(t=50, b=100))
+                st.plotly_chart(fig3, use_container_width=True)
+
+        with col_d2:
+            if not df_sec.empty:
+                data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
+                fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
+                fig4.update_traces(marker_color='#FFEA00')
+                fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'font':{'color':'white'}}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), xaxis=dict(visible=False), yaxis=dict(title=None), height=450)
+                st.plotly_chart(fig4, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if not df_sec.empty:
+            data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
+            fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
+            fig5.update_traces(marker_color='#FFD700', textposition='outside', textfont=dict(color='white', size=14))
+            v_min = data_score['Score'].min()
+            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font':{'color':'white', 'size':22}}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(range=[max(0, v_min - 0.6), 10.6], gridcolor='#333333', title=None), xaxis=dict(title=None), height=500)
+            st.plotly_chart(fig5, use_container_width=True)
+
+        st.markdown("<div style='margin: 0 20px;'><hr style='border: 1px solid #333;'><p style='color:#FFFF00; font-size:35px; font-weight:bold; text-align:center; margin-bottom:20px;'>CHOSEN COMMENTS </p></div>", unsafe_allow_html=True)
         col_t1, col_t2, col_t3 = st.columns(3)
         def render_dynamic_card(col, key_id, default_title):
             with col:
@@ -216,3 +261,4 @@ elif st.session_state.page == 'current':
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
         render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
         render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+        
