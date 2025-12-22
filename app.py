@@ -8,7 +8,6 @@ import textwrap
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS Dashboard 2025", layout="wide", initial_sidebar_state="collapsed")
 
-# Gestión de navegación entre pestañas
 if 'page' not in st.session_state:
     st.session_state.page = 'landing'
 
@@ -24,56 +23,47 @@ b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
     <style>
-    /* ELIMINAR MÁRGENES DE STREAMLIT */
     [data-testid="stAppViewContainer"] > section:nth-child(2) > div:nth-child(1) {{
         padding: 0px;
     }}
     .stApp {{ background-color: #000000; color: #FFFFFF; }}
     
-    /* LANDING FULL SCREEN */
     .landing-wrapper {{
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        top: 0; left: 0; width: 100vw; height: 100vh;
         z-index: 0;
         {" background-image: url('data:image/png;base64," + b64_bg + "');" if b64_bg else ""}
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+        background-size: cover; background-position: center; background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS */
     .landing-title {{
-        position: absolute;
-        top: 35%; /* Ajustado ligeramente para acomodar dos líneas */
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        text-align: center;
-        font-family: 'Arial Black', sans-serif;
-        font-size: 65px;
-        font-weight: 900;
-        color: #FFFFFF;
-        text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        letter-spacing: 2px;
-        z-index: 5;
-        line-height: 1.1;
-    }}
-
-    /* CONTENEDOR DE BOTONES FIJOS (NO MÓVILES) */
-    .landing-buttons-container {{
         position: fixed;
-        bottom: 15%;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 50px;
-        z-index: 999; /* Asegura que esté por encima de todo */
+        top: 35%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100%; text-align: center;
+        font-family: 'Arial Black', sans-serif;
+        font-size: 65px; font-weight: 900;
+        color: #FFFFFF; text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
+        letter-spacing: 2px; z-index: 5; line-height: 1.1;
     }}
 
-    /* ESTILO ESTÉTICO DE BOTONES LANDING */
+    /* BOTONES FIJOS POR POSICIÓN ABSOLUTA EN PANTALLA */
+    /* Botón Izquierdo (Monthly Evolution) */
+    div.stButton:nth-of-type(1) > button {{
+        position: fixed !important;
+        bottom: 15% !important;
+        left: 20% !important;
+        z-index: 1000 !important;
+    }}
+
+    /* Botón Derecho (Current Month) */
+    div.stButton:nth-of-type(2) > button {{
+        position: fixed !important;
+        bottom: 15% !important;
+        right: 20% !important;
+        z-index: 1000 !important;
+    }}
+
     div.stButton > button {{
         width: 320px !important;
         height: 80px !important;
@@ -85,16 +75,15 @@ st.markdown(f"""
         border: 4px solid #000000 !important;
         box-shadow: 0px 8px 25px rgba(0,0,0,0.5);
         text-transform: uppercase;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.3s ease;
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: scale(1.1);
-        box-shadow: 0px 12px 30px rgba(255, 255, 0, 0.4);
+        transform: scale(1.05) !important;
     }}
 
-    /* ESTILOS DEL DASHBOARD INTERNO */
+    /* Estilos dashboard interno */
     .banner-amarillo {{
         background-color: #FFFF00; padding: 15px; display: flex;
         justify-content: space-between; align-items: center;
@@ -102,7 +91,6 @@ st.markdown(f"""
     }}
     .titulo-texto {{ text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }}
     .titulo-texto h1 {{ margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }}
-
     .card-transparent {{
         background-color: rgba(255, 255, 255, 0.05);
         border: none; border-radius: 15px; padding: 15px; margin-bottom: 20px;
@@ -139,7 +127,6 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
-    # Capa de imagen y título estético en DOS LÍNEAS
     st.markdown(f'''
         <div class="landing-wrapper">
             <div class="landing-title">
@@ -148,20 +135,14 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Contenedor de botones con columnas Streamlit
-    # El uso de fixed en el CSS anterior asegura que se mantengan en su sitio
-    st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
-    col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.5, 3, 1.5])
-    
-    with col_btn1:
-        if st.button("MONTHLY EVOLUTION", key="btn_evo"):
-            st.session_state.page = 'evolution'
-            st.rerun()
-    
-    with col_btn2:
-        if st.button("CURRENT MONTH", key="btn_curr"):
-            st.session_state.page = 'current'
-            st.rerun()
+    # Los botones ahora se renderizan directamente. El CSS se encarga de fijarlos.
+    if st.button("MONTHLY EVOLUTION", key="btn_evo"):
+        st.session_state.page = 'evolution'
+        st.rerun()
+
+    if st.button("CURRENT MONTH", key="btn_curr"):
+        st.session_state.page = 'current'
+        st.rerun()
 
 # ==========================================
 # VISTA: MONTHLY EVOLUTION
@@ -177,7 +158,6 @@ elif st.session_state.page == 'evolution':
 # VISTA: CURRENT MONTH (ANÁLISIS COMPLETO)
 # ==========================================
 elif st.session_state.page == 'current':
-    # (El resto del código de análisis se mantiene exactamente igual...)
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
     if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = 'landing'
