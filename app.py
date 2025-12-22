@@ -137,8 +137,9 @@ elif st.session_state.page == "dashboard":
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        # Títulos Configuración Común
-        font_style = dict(color="white", size=22)
+        # Configuración de estilo global para Plotly
+        font_main = dict(color="white", size=22)
+        font_axes = dict(color="white", size=14)
 
         # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
@@ -148,18 +149,26 @@ elif st.session_state.page == "dashboard":
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
             fig1.update_layout(
-                title={'text': "1. Primary Driver Composition", 'x': 0.5, 'font': font_style},
-                paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400
+                title={'text': "1. Primary Driver Composition", 'x': 0.5, 'font': font_main},
+                paper_bgcolor='rgba(0,0,0,0)', 
+                legend=dict(font=dict(color="white", size=14)),
+                font=dict(color="white"), height=400
             )
             st.plotly_chart(fig1, use_container_width=True)
 
         with col_g2:
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
-            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='lines+markers+text')
+            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), 
+                               text=data_lineas['Score'].map('{:.2f}'.format), 
+                               textposition="top center", mode='lines+markers+text',
+                               textfont=dict(color="white", size=14))
             fig2.update_layout(
-                title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'font': font_style},
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), yaxis=dict(gridcolor='#333333')
+                title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'font': font_main},
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'),
+                yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'),
+                font=dict(color="white")
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -186,10 +195,13 @@ elif st.session_state.page == "dashboard":
                 fig3 = go.Figure()
                 for cat in orden:
                     val = conteo_cat.get(cat, 0)
-                    fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else ""))
+                    fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textfont=dict(color="white")))
                 fig3.update_layout(
-                    title={'text':"3. Category Composition", 'x':0.5, 'font': font_style},
-                    barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450
+                    title={'text':"3. Category Composition", 'x':0.5, 'font': font_main},
+                    barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                    xaxis=dict(tickfont=font_axes),
+                    legend=dict(font=dict(color="white", size=12)),
+                    font=dict(color="white"), height=450
                 )
                 st.plotly_chart(fig3, use_container_width=True)
 
@@ -197,10 +209,13 @@ elif st.session_state.page == "dashboard":
             if not df_sec.empty:
                 data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
                 fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
-                fig4.update_traces(marker_color='#FFEA00')
+                fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
                 fig4.update_layout(
-                    title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'font': font_style},
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=450
+                    title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'font': font_main},
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                    xaxis=dict(visible=False),
+                    yaxis=dict(title=None, tickfont=font_axes),
+                    font=dict(color="white"), height=450
                 )
                 st.plotly_chart(fig4, use_container_width=True)
 
@@ -210,10 +225,13 @@ elif st.session_state.page == "dashboard":
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
             fig5 = px.bar(data_score, x='Label', y='Score', text=data_score['Score'].map('{:.2f}'.format))
-            fig5.update_traces(marker_color='#FFD700', textposition='outside')
+            fig5.update_traces(marker_color='#FFD700', textposition='outside', textfont=dict(color="white", size=14))
             fig5.update_layout(
-                title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font': font_style},
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=500
+                title={'text': "5. Avg Score by Secondary Driver", 'x':0.5, 'font': font_main},
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                xaxis=dict(title=None, tickfont=font_axes),
+                yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'),
+                font=dict(color="white"), height=500
             )
             st.plotly_chart(fig5, use_container_width=True)
 
