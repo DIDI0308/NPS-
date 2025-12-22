@@ -19,7 +19,7 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- ESTILO CSS REFINADO (MÁXIMO IMPACTO) ---
+# --- ESTILO CSS DEFINITIVO (MÁXIMA ESCALA Y BOTONES FIJOS) ---
 b64_bg = get_base64('logo3.png')
 
 st.markdown(f"""
@@ -44,10 +44,10 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO GIGANTE Y VISTOSO (FONT 150) */
+    /* TÍTULO ENORME CON INTERLINEADO 1.0 */
     .landing-title-container {{
         position: absolute;
-        top: 42%;
+        top: 40%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 100%;
@@ -56,42 +56,42 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 130px; 
+        font-size: 140px; 
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 6px 6px 25px rgba(0,0,0,1);
+        text-shadow: 8px 8px 30px rgba(0,0,0,1);
         margin: 0;
-        line-height: 0.9;
+        line-height: 1.0; /* Interlineado 1.0 solicitado */
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 150px; /* Tamaño máximo */
+        font-size: 180px; 
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 6px 6px 25px rgba(0,0,0,1);
+        text-shadow: 8px 8px 30px rgba(0,0,0,1);
         margin: 0;
-        line-height: 1;
-        letter-spacing: 12px;
+        line-height: 1.0; /* Interlineado 1.0 solicitado */
+        letter-spacing: 15px;
     }}
 
-    /* BOTONES FIJOS (NO SE MUEVEN) */
+    /* BOTONES TOTALMENTE FIJOS (SISTEMA DE ANCLAJE) */
     .stButton {{
         position: fixed;
-        bottom: 12vh; /* Altura fija desde abajo */
+        bottom: 12vh;
         z-index: 100;
     }}
     
-    /* Posición específica botón 1 */
+    /* Anclaje exacto para Botón Izquierdo */
     div[data-testid="stVerticalBlock"] > div:nth-child(2) .stButton {{
         left: 20vw;
     }}
     
-    /* Posición específica botón 2 */
+    /* Anclaje exacto para Botón Derecho */
     div[data-testid="stVerticalBlock"] > div:nth-child(4) .stButton {{
         right: 20vw;
     }}
 
-    /* ESTILO ESTÉTICO DE BOTONES (AMARILLOS LIMPIOS) */
+    /* ESTILO BOTONES (AMARILLO PURO, SIN BORDE) */
     div.stButton > button {{
         width: 350px !important;
         height: 90px !important;
@@ -103,12 +103,12 @@ st.markdown(f"""
         border: none !important;
         box-shadow: 0px 15px 35px rgba(0,0,0,0.8);
         text-transform: uppercase;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease-in-out;
     }}
 
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
-        transform: translateY(-5px) scale(1.05);
+        transform: scale(1.05);
     }}
 
     /* DASHBOARD INTERNO */
@@ -165,7 +165,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
-    # Grid de botones (ahora bloqueados por CSS)
+    # Grid de botones (Fijos por CSS)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1, 4, 1, 4, 1])
     
     with col_btn1:
@@ -189,7 +189,7 @@ elif st.session_state.page == 'evolution':
     st.info("Sección en desarrollo.")
 
 # ==========================================
-# VISTA: CURRENT MONTH
+# VISTA: CURRENT MONTH (ANÁLISIS COMPLETO)
 # ==========================================
 elif st.session_state.page == 'current':
     if st.button("⬅ VOLVER AL INICIO"):
