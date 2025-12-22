@@ -56,7 +56,7 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 140px; 
+        font-size: 230px; 
         font-weight: 900;
         color: #FFFFFF;
         text-shadow: 8px 8px 30px rgba(0,0,0,1);
