@@ -18,19 +18,23 @@ def get_base64(bin_file):
         return base64.b64encode(data).decode()
     except: return None
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
+# --- CONEXIÓN A GOOGLE SHEETS (HOJA 1) ---
 @st.cache_data(ttl=300)
 def load_data_google_sheets(spreadsheet_url):
     try:
-        # Transformamos el link de edición a link de exportación CSV
-        csv_url = spreadsheet_url.replace('/edit?usp=sharing', '/export?format=csv')
+        # gid=0 suele ser el ID de la primera hoja (Hoja 1)
+        # Transformamos el link para exportar como CSV asegurando la Hoja 1
+        base_url = spreadsheet_url.split('/edit')[0]
+        csv_url = f"{base_url}/export?format=csv&gid=0"
+        
         response = requests.get(csv_url)
         response.raise_for_status()
         
         # Leer el CSV
         df = pd.read_csv(StringIO(response.text))
         
-        # Limpieza de datos (basada en tu estructura anterior)
+        # Mapeo y Limpieza de columnas (ajustado a tu estructura)
+        # Si los nombres de columnas en el Google Sheet varían, asegúrate de que coincidan aquí
         df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
         df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
         df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
@@ -39,7 +43,7 @@ def load_data_google_sheets(spreadsheet_url):
         
         return df
     except Exception as e:
-        st.error(f"Error al conectar con Google Sheets: {e}")
+        st.error(f"Error al conectar con la Hoja 1 de Google Sheets: {e}")
         return pd.DataFrame()
 
 # URL de tu hoja de Google
@@ -84,7 +88,7 @@ if st.session_state.page == "home":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
-            st.toast("Aún trabajando...")
+            st.toast("Cargando datos históricos...")
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
             st.session_state.page = "dashboard"
@@ -95,7 +99,7 @@ elif st.session_state.page == "dashboard":
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
-        div[data-testid="stButton"] button[kind="secondary"] {
+        div[data-testid="stButton"] button[key="back_btn"] {
             background-color: #FFFF00 !important; color: #000000 !important;
             border: none !important; font-weight: bold !important; padding: 0.5rem 1rem !important;
         }
@@ -106,9 +110,9 @@ elif st.session_state.page == "dashboard":
         }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
         .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
-        .card-transparent { background-color: rgba(255, 255, 255, 0.02); border-radius: 15px; padding: 10px; margin-bottom: 20px; color: #FFFFFF; }
-        .emoji-solid-yellow { font-size: 110px; text-align: center; color: #FFFF00; text-shadow: 0 0 0 #FFFF00; line-height: 1; margin-bottom: 15px; display: block; }
         label { color: #FFFF00 !important; font-weight: bold !important; }
+        .card-transparent { background-color: rgba(255, 255, 255, 0.02); border-radius: 15px; padding: 10px; margin-bottom: 20px; }
+        .emoji-solid-yellow { font-size: 110px; text-align: center; color: #FFFF00; line-height: 1; margin-bottom: 15px; display: block; }
         .stTextInput input, .stTextArea textarea, .stNumberInput input { background-color: #1A1A1A !important; color: white !important; border: 1px solid #333 !important; }
         </style>
         """, unsafe_allow_html=True)
@@ -117,7 +121,7 @@ elif st.session_state.page == "dashboard":
         st.session_state.page = "home"
         st.rerun()
 
-    # Carga de datos desde Google Sheets
+    # Carga de datos
     df = load_data_google_sheets(SHEET_URL)
 
     # HEADER
@@ -130,7 +134,7 @@ elif st.session_state.page == "dashboard":
         font_main = dict(color="white", size=22)
         font_axes = dict(color="white", size=14)
 
-        # GRÁFICAS GLOBALES
+        # --- GRÁFICAS ---
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
@@ -147,7 +151,7 @@ elif st.session_state.page == "dashboard":
             fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white"))
             st.plotly_chart(fig2, use_container_width=True)
 
-        # PANEL INTERACTIVO
+        # FILTROS
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         c_f1, c_f2 = st.columns(2)
         with c_f1:
@@ -156,13 +160,14 @@ elif st.session_state.page == "dashboard":
             opciones_cat = sorted([cat for cat in df['Category'].unique() if cat != 'N/A'])
             selector_cat = st.multiselect('Category:', opciones_cat, default=opciones_cat)
 
-        df_filt3 = df.copy()
-        if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
-        df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+        df_filt = df.copy()
+        if selector_driver != 'All': df_filt = df_filt[df_filt['Primary Driver'] == selector_driver]
+        df_sec = df_filt[df_filt['Category'].isin(selector_cat)].copy()
 
+        # MÁS GRÁFICAS
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
-            df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
+            df_visual_cat = df_filt[df_filt['Category'] != 'N/A']
             if not df_visual_cat.empty:
                 conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
                 orden = ['Detractor', 'Passive', 'Promoter']
@@ -210,4 +215,4 @@ elif st.session_state.page == "dashboard":
         render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
         render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
     else:
-        st.warning("No se encontraron datos en la hoja de Google Sheets.")
+        st.warning("No se encontraron datos en la Hoja 1 de Google Sheets. Revisa el link y los permisos.")
