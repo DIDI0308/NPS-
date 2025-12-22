@@ -19,47 +19,40 @@ def set_full_screen_ui(bin_file):
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        overflow: hidden; /* Elimina el scroll */
+        overflow: hidden; 
         height: 100vh;
         width: 100vw;
     }}
 
-    /* Eliminar headers y paddings sobrantes de Streamlit */
+    /* Eliminar elementos de Streamlit */
     header {{visibility: hidden;}}
     .block-container {{
         padding: 0 !important;
     }}
 
-    /* Título en el centro exacto */
-    .main-title {{
+    /* Contenedor central para Título + Botones */
+    .content-container {{
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+        text-align: center;
+        width: 100%;
+        z-index: 1000;
+    }}
+
+    .main-title {{
         color: white;
         font-size: 4rem;
         font-weight: 800;
-        text-align: center;
-        width: 100%;
+        margin-bottom: 30px; /* Espacio exacto entre título y botones */
         text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
-        z-index: 1000;
         letter-spacing: 2px;
-    }}
-
-    /* Contenedor de botones en el centro inferior */
-    .bottom-container {{
-        position: fixed;
-        bottom: 80px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 20px;
-        z-index: 1001;
     }}
 
     /* Estilo de botones Amarillos */
     div.stButton > button {{
-        background-color: #FFFF00 !important; /* Amarillo puro */
+        background-color: #FFFF00 !important;
         color: black !important;
         font-weight: bold !important;
         font-size: 18px !important;
@@ -73,7 +66,6 @@ def set_full_screen_ui(bin_file):
     div.stButton > button:hover {{
         background-color: #FFEA00 !important;
         transform: scale(1.05);
-        box-shadow: 0px 6px 20px rgba(0,0,0,0.4);
     }}
     </style>
     '''
@@ -85,12 +77,12 @@ try:
 except FileNotFoundError:
     st.error("Error: 'logo3.png' no encontrado.")
 
-# 2. Título (HTML para control total de posición)
+# 2. Renderizado de elementos dentro de un contenedor centrado
+st.markdown('<div class="content-container">', unsafe_allow_html=True)
 st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
 
-# 3. Botones (Usamos columnas dentro de un contenedor fijo simulado)
-# Nota: Streamlit necesita que los widgets estén en el flujo, pero el CSS los posicionará
-col_spacer1, col1, col2, col_spacer2 = st.columns([1, 1, 1, 1])
+# Creamos columnas para centrar los botones horizontalmente
+col_space, col1, col2, col_space2 = st.columns([1, 1.5, 1.5, 1])
 
 with col1:
     if st.button("MONTHLY EVOLUTION", use_container_width=True):
@@ -99,3 +91,5 @@ with col1:
 with col2:
     if st.button("CURRENT MONTH", use_container_width=True):
         st.toast("Cargando Mes Actual...")
+
+st.markdown('</div>', unsafe_allow_html=True)
