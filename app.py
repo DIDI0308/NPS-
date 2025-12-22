@@ -22,7 +22,6 @@ st.markdown("""
         background-color: #000000;
         color: #FFFFFF;
     }
-    /* Contenedor del Banner Amarillo */
     .banner-amarillo {
         background-color: #FFFF00;
         padding: 15px;
@@ -33,7 +32,7 @@ st.markdown("""
         margin-bottom: 20px;
     }
     .logo-img {
-        max-height: 90px;
+        max-height: 80px;
     }
     .titulo-texto {
         text-align: center;
@@ -43,15 +42,14 @@ st.markdown("""
     }
     .titulo-texto h1 {
         margin: 0;
-        font-size: 55px;
+        font-size: 50px;
         font-weight: 900;
         line-height: 1;
     }
     .titulo-texto h2 {
         margin: 5px 0 0 0;
-        font-size: 22px;
+        font-size: 20px;
         text-transform: uppercase;
-        letter-spacing: 2px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -59,13 +57,12 @@ st.markdown("""
 # --- 1. CARGA DE DATOS ---
 @st.cache_data
 def load_data():
-    # El archivo debe estar en la misma carpeta en GitHub
     df = pd.read_excel('Base bruta dic.xlsx')
     df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
     df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+    # Asegurar que el score sea numérico
     df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
     
-    # Obtener mes de la base
     mes_nombre = df['Survey Completed Date'].dt.month_name().iloc[0]
     traducciones = {
         'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 
@@ -93,18 +90,15 @@ if b64_logo and b64_logo2:
         </div>
         """, unsafe_allow_html=True)
 else:
-    st.warning("⚠️ Sube 'logo.png' y 'logo2.png' a GitHub para activar el banner.")
-    st.markdown(f"<h1 style='text-align:center; background-color:yellow; color:black; padding:20px;'>NPS 2025 - {mes_base}</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align:center; background-color:yellow; color:black; padding:20px; border-radius:5px;'>NPS 2025 - {mes_base}</h1>", unsafe_allow_html=True)
 
-# --- 3. SECCIÓN DE GRÁFICAS GLOBALES (FILA 1) ---
+# --- 3. SECCIÓN DE GRÁFICAS (FILA 1) ---
 st.markdown("<br>", unsafe_allow_html=True)
-st.subheader("📊 Resumen Global de Satisfacción")
 
-# Layout de dos columnas
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("#### 1. Primary Driver Composition")
+    st.markdown("<p style='text-align:center; font-weight:bold;'>1. Primary Driver Composition</p>", unsafe_allow_html=True)
     data_anillo = df.groupby('Primary Driver')['Customer ID'].count().reset_index()
     
     fig_pie = px.pie(
@@ -116,21 +110,22 @@ with col1:
         template="plotly_dark"
     )
     fig_pie.update_layout(
+        height=350, # Altura ajustada
         paper_bgcolor='rgba(0,0,0,0)', 
-        legend_font_color="white",
-        margin=dict(t=30, b=0, l=0, r=0)
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(t=20, b=20, l=10, r=10)
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col2:
-    st.markdown("#### 2. Average Score Per Primary Driver")
-    data_lineas = df.groupby('Primary Driver')['Score'].mean().sort_values(ascending=False).reset_index()
+    st.markdown("<p style='text-align:center; font-weight:bold;'>2. Average Score Per Primary Driver</p>", unsafe_allow_html=True)
+    # Agrupar y resetear índice para asegurar que Plotly vea todas las columnas
+    data_lineas = df.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
     
     fig_lineas = px.line(
         data_lineas, 
         x='Primary Driver', 
         y='Score', 
-        text=data_lineas['Score'].apply(lambda x: f'{x:.2f}'),
         markers=True,
         template="plotly_dark"
     )
@@ -138,17 +133,18 @@ with col2:
     fig_lineas.update_traces(
         line_color='#FFD700', 
         line_width=3,
-        marker=dict(size=12, color='#FFD700'),
+        marker=dict(size=10, color='#FFD700'),
+        text=data_lineas['Score'].map('{:.2f}'.format),
         textposition="top center",
-        textfont=dict(color="white", size=13)
+        mode='lines+markers+text'
     )
     
     fig_lineas.update_layout(
+        height=350, # Altura ajustada
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        yaxis=dict(range=[6, 10], gridcolor='#333333', title="Avg Score"),
-        xaxis=dict(tickangle=45, title="Primary Driver"),
-        margin=dict(t=30, b=0, l=0, r=0)
+        yaxis=dict(range=[5.5, 10.5], gridcolor='#333333', title=None),
+        xaxis=dict(title=None, tickangle=45), # Inclinación para que se lea
+        margin=dict(t=20, b=100, l=10, r=10) # Margen inferior amplio para el eje X
     )
     st.plotly_chart(fig_lineas, use_container_width=True)
-    
