@@ -44,7 +44,7 @@ st.markdown(f"""
         background-repeat: no-repeat;
     }}
 
-    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS (MÁS GRANDE) */
+    /* TÍTULO ESTÉTICO CENTRADO EN DOS LÍNEAS (TAMAÑO AUMENTADO) */
     .landing-title-container {{
         position: absolute;
         top: 45%;
@@ -56,22 +56,22 @@ st.markdown(f"""
     }}
     .landing-title-line1 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 80px; /* Aumentado */
+        font-size: 85px; /* Aumentado */
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 4px 4px 20px rgba(0,0,0,1);
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
         margin: 0;
         line-height: 1;
     }}
     .landing-title-line2 {{
         font-family: 'Arial Black', sans-serif;
-        font-size: 100px; /* Aumentado */
+        font-size: 110px; /* Aumentado */
         font-weight: 900;
         color: #FFFFFF;
-        text-shadow: 4px 4px 20px rgba(0,0,0,1);
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.9);
         margin: 0;
         line-height: 1.1;
-        letter-spacing: 8px;
+        letter-spacing: 5px;
     }}
 
     /* ESTILO ESTÉTICO DE BOTONES LANDING (AMARILLOS SIN BORDE) */
@@ -140,6 +140,7 @@ df, mes_base = load_data()
 # VISTA: LANDING PAGE
 # ==========================================
 if st.session_state.page == 'landing':
+    # Capa de imagen y título en dos líneas
     st.markdown(f'''
         <div class="landing-wrapper">
             <div class="landing-title-container">
@@ -149,6 +150,7 @@ if st.session_state.page == 'landing':
         </div>
     ''', unsafe_allow_html=True)
     
+    # Botones centrados
     st.markdown('<div style="height: 75vh;"></div>', unsafe_allow_html=True)
     col_l, col_btn1, col_gap, col_btn2, col_r = st.columns([1.5, 3, 0.4, 3, 1.5])
     
@@ -192,7 +194,7 @@ elif st.session_state.page == 'current':
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
         with col_g1:
-            st.markdown('<p style="font-size:22px; font-weight:bold; margin-left:20px;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
+            st.markdown('<p style="font-size:22px; font-weight:bold;">1. Primary Driver Composition</p>', unsafe_allow_html=True)
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
             fig1.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=400, legend=dict(font=dict(color="white")))
