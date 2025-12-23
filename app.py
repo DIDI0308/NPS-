@@ -1,96 +1,78 @@
 import streamlit as st
+import pandas as pd
 import plotly.graph_objects as go
+import requests
+from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="Monthly Evolution NPS", layout="wide")
+st.set_page_config(page_title="NPS Monthly Evolution", layout="wide")
+st.markdown("<style>.stApp { background-color: black; color: white; }</style>", unsafe_allow_html=True)
 
-# --- DATOS EXTRAÍDOS ---
-meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+# --- CONEXIÓN DINÁMICA A GOOGLE SHEETS ---
+@st.cache_data(ttl=60)  # Se actualiza cada 60 segundos
+def load_sheet_data(spreadsheet_url):
+    try:
+        # Exportamos la Hoja 1 (gid=0) como CSV
+        base_url = spreadsheet_url.split('/edit')[0]
+        csv_url = f"{base_url}/export?format=csv&gid=0"
+        response = requests.get(csv_url)
+        response.raise_for_status()
+        
+        # Leemos el CSV y limpiamos nombres de columnas
+        df = pd.read_csv(StringIO(response.text))
+        df.columns = [str(c).strip() for c in df.columns]
+        return df
+    except Exception as e:
+        st.error(f"Error al conectar con Google Sheets: {e}")
+        return pd.DataFrame()
 
-# Datos NPS
-ytd_2025 = [47, 56, 57, 58, 54, 59, 59, 60, 65, 61, 65, 64]
-ytd_bu = [54] * 12  # Representa el BGT (Budget) constante en 54
-ytd_2024 = [40, 32, 50, 57, 45, 46, 47, 49, 53, 49, 45, 55]
+# URL de tu archivo
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
-# --- CREACIÓN DE LA GRÁFICA ---
-fig = go.Figure()
+# --- PROCESAMIENTO DE DATOS ---
+df_raw = load_sheet_data(SHEET_URL)
 
-# 1. Línea YTD 2025 (Azul - con parte punteada para proyecciones/actual)
-# Nota: Plotly dibuja líneas continuas, para el efecto punteado de la imagen:
-fig.add_trace(go.Scatter(
-    x=meses, y=ytd_2025,
-    mode='lines+markers+text',
-    name='YTD 2025',
-    line=dict(color='#005587', width=3),
-    text=ytd_2025,
-    textposition="top center",
-    textfont=dict(color="white")
-))
+if not df_raw.empty:
+    # Definimos los meses y extraemos las filas correspondientes según tu estructura
+    meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+    
+    # Extraemos los datos reales del Sheet
+    # Fila 0: YTD 2025 | Fila 1: YTD BU | Fila 2: YTD 2024
+    ytd_2025 = df_raw.iloc[0][meses].tolist()
+    ytd_bu = df_raw.iloc[1][meses].tolist()
+    ytd_2024 = df_raw.iloc[2][meses].tolist()
+    
+    # Datos para las barras YTD (columna 'YTD')
+    val_ytd_25 = df_raw.iloc[0]['YTD']
+    val_ytd_bu = df_raw.iloc[1]['YTD']
+    val_ytd_24 = df_raw.iloc[2]['YTD']
 
-# 2. Línea BGT (Verde - Constante)
-fig.add_trace(go.Scatter(
-    x=meses, y=ytd_bu,
-    mode='lines+text',
-    name='BGT',
-    line=dict(color='#006A4D', width=3),
-    text=[54 if m == "ENE" else "" for m in meses], # Etiqueta solo al inicio para limpieza
-    textposition="middle left",
-    textfont=dict(color="white")
-))
+    # --- DISEÑO DE INTERFAZ ---
+    col_main, col_side = st.columns([3, 1])
 
-# 3. Línea YTD 2024 (Naranja)
-fig.add_trace(go.Scatter(
-    x=meses, y=ytd_2024,
-    mode='lines+markers+text',
-    name='YTD 2024',
-    line=dict(color='#E87722', width=3),
-    text=ytd_2024,
-    textposition="bottom center",
-    textfont=dict(color="white")
-))
+    # 1. Gráfica de Líneas (Evolución Mensual)
+    with col_main:
+        fig_line = go.Figure()
+        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2025, mode='lines+markers+text', name='YTD 2025',
+                                     line=dict(color='#005587', width=3), text=ytd_2025, textposition="top center"))
+        fig_line.add_trace(go.Scatter(x=meses, y=ytd_bu, mode='lines', name='BGT',
+                                     line=dict(color='#006A4D', width=2, dash='dash')))
+        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2024, mode='lines+markers+text', name='YTD 2024',
+                                     line=dict(color='#E87722', width=3), text=ytd_2024, textposition="bottom center"))
 
-# --- DISEÑO DEL LAYOUT (Fondo Negro) ---
-fig.update_layout(
-    title=dict(
-        text="NPS",
-        x=0.5,
-        font=dict(color="white", size=24)
-    ),
-    paper_bgcolor='black',
-    plot_bgcolor='black',
-    xaxis=dict(
-        showgrid=False,
-        tickfont=dict(color="white"),
-        linecolor='white',
-        mirror=True
-    ),
-    yaxis=dict(
-        showgrid=True,
-        gridcolor='#333333',
-        tickfont=dict(color="white"),
-        range=[min(ytd_2024)-5, max(ytd_2025)+10],
-        showticklabels=False # En tu imagen no se ven los números del eje Y
-    ),
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.02,
-        xanchor="center",
-        x=0.5,
-        font=dict(color="white")
-    ),
-    margin=dict(l=20, r=20, t=100, b=20),
-    height=500
-)
+        fig_line.update_layout(title="NPS MONTHLY EVOLUTION", paper_bgcolor='black', plot_bgcolor='black', 
+                              font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False))
+        st.plotly_chart(fig_line, use_container_width=True)
 
-# --- MOSTRAR EN STREAMLIT ---
-st.title("Monthly Evolution Performance")
-st.plotly_chart(fig, use_container_width=True)
-
-# Tabla de datos inferior (Opcional, para imitar el formato de la imagen)
-st.write("### Resumen de Datos")
-data_resumen = {
-    "Métrica": ["YTD 2025", "BGT", "YTD 2024"],
-    **{m: [y25, b, y24] for m, y25, b, y24 in zip(meses, ytd_2025, ytd_bu, ytd_2024)}
-}
-st.table(data_resumen)
+    # 2. Gráfica de Barras (Comparativo YTD)
+    with col_side:
+        fig_bar = go.Figure()
+        fig_bar.add_trace(go.Bar(x=['YTD 2024', 'BGT', 'YTD 2025'], y=[val_ytd_24, val_ytd_bu, val_ytd_25], 
+                                 marker_color=['#E87722', '#006A4D', '#005587'], 
+                                 text=[val_ytd_24, val_ytd_bu, val_ytd_25], textposition='auto'))
+        
+        fig_bar.update_layout(title="YTD PERFORMANCE", paper_bgcolor='black', plot_bgcolor='black', 
+                              font=dict(color="white"), yaxis=dict(visible=False))
+        st.plotly_chart(fig_bar, use_container_width=True)
+else:
+    st.warning("No se detectaron datos. Asegúrate de que el Google Sheet tenga permisos de lectura.")
