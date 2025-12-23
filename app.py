@@ -20,7 +20,7 @@ def load_live_data(spreadsheet_url):
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
-        # Fila 3=2, Fila 4=3, Fila 5=4 en Python
+        # Estructura: Fila 3=índice 2, Fila 4=índice 3, Fila 5=índice 4
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
@@ -47,11 +47,10 @@ if not df_raw.empty:
     label_bu = str(df_raw.iloc[3, 1])
     label_24 = str(df_raw.iloc[4, 1])
 
-    # 3. CÁLCULOS DE CRECIMIENTO
+    # 3. CÁLCULOS DE DELTAS
     delta_25 = val_25 - val_bu
     delta_24 = val_24 - val_bu
 
-    # --- RENDERIZADO ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
     with col_evol:
@@ -67,7 +66,6 @@ if not df_raw.empty:
         st.markdown("<h3 style='text-align: center; color: #FFFF00;'>YTD COMPARISON</h3>", unsafe_allow_html=True)
         
         fig_bar = go.Figure()
-        # Barras
         fig_bar.add_trace(go.Bar(
             x=[label_24, label_bu, label_25],
             y=[val_24, val_bu, val_25],
@@ -75,32 +73,34 @@ if not df_raw.empty:
             textposition='auto',
             marker_color=['#F4D03F', '#FFD700', '#FFFF00'],
             width=0.5,
-            # CORRECCIÓN: Se cambió 'fontfamily' por 'family'
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # FLECHA Y CÍRCULO: BU a 2025
+        # CORRECCIÓN DE ANOTACIONES (FLECHAS Y CÍRCULOS SIMULADOS)
+        # BU a 2025
         fig_bar.add_annotation(
-            x=label_25, y=val_25, xref="x", yref="y",
-            ax=label_bu, ay=val_bu, axref="x", ayref="y",
+            x=label_25, y=val_25, ax=label_bu, ay=val_bu,
+            xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
+        # Círculo con el % de crecimiento
         fig_bar.add_annotation(
             x=1.5, y=(val_bu + val_25)/2, text=f"<b>{delta_25:+.1f}</b>",
             showarrow=False, font=dict(color="black", size=12),
-            bbox=dict(boxstyle="circle", fc="#FFFF00", ec="white", lw=2)
+            bgcolor="#FFFF00", bordercolor="white", borderwidth=2, borderpad=6 # Simulamos el círculo con borderpad
         )
 
-        # FLECHA Y CÍRCULO: BU a 2024
+        # BU a 2024
         fig_bar.add_annotation(
-            x=label_24, y=val_24, xref="x", yref="y",
-            ax=label_bu, ay=val_bu, axref="x", ayref="y",
+            x=label_24, y=val_24, ax=label_bu, ay=val_bu,
+            xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
+        # Círculo con el % de decrecimiento
         fig_bar.add_annotation(
             x=0.5, y=(val_bu + val_24)/2, text=f"<b>{delta_24:.1f}</b>",
             showarrow=False, font=dict(color="black", size=12),
-            bbox=dict(boxstyle="circle", fc="#F4D03F", ec="white", lw=2)
+            bgcolor="#F4D03F", bordercolor="white", borderwidth=2, borderpad=6
         )
 
         fig_bar.update_layout(
