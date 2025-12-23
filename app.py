@@ -101,7 +101,15 @@ if not df_raw.empty:
         fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_line, textposition="top center", textfont=dict(color="white")))
         fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
         fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_line, textposition="bottom center", textfont=dict(color="white")))
-        fig_line.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False), legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"), height=400)
+        fig_line.update_layout(
+            paper_bgcolor='black', 
+            plot_bgcolor='black', 
+            font=dict(color="white"), 
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")), 
+            yaxis=dict(visible=False), 
+            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white")), # Texto de leyenda blanco
+            height=400
+        )
         st.plotly_chart(fig_line, use_container_width=True)
 
     with col_ytd:
@@ -112,7 +120,14 @@ if not df_raw.empty:
         fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 0,{y_top} L 0,{val_24}", line=dict(color="white", width=2))
         fig_bar.add_annotation(x=1.5, y=y_top, text=f"<b>{pct_25_vs_bu:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if pct_25_vs_bu >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
         fig_bar.add_annotation(x=0.5, y=y_top, text=f"<b>{pct_24_vs_bu:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if pct_24_vs_bu >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-        fig_bar.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_top + 15]), height=400)
+        fig_bar.update_layout(
+            paper_bgcolor='black', 
+            plot_bgcolor='black', 
+            font=dict(color="white"), 
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")), 
+            yaxis=dict(visible=False, range=[0, y_top + 15]),
+            height=400
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     # --- SECCIÓN EDITABLE DE CUADROS INFERIORES ---
