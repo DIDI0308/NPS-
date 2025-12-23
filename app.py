@@ -16,6 +16,7 @@ st.markdown("""
 def load_live_data(spreadsheet_url):
     try:
         base_url = spreadsheet_url.split('/edit')[0]
+        # Sincronización en tiempo real saltando el caché del navegador
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
@@ -26,6 +27,7 @@ def load_live_data(spreadsheet_url):
         st.error(f"Error de conexión: {e}")
         return pd.DataFrame()
 
+# URL de tu Google Sheet
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
 df_raw = load_live_data(SHEET_URL)
@@ -50,9 +52,6 @@ if not df_raw.empty:
     pct_25_vs_bu = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
     pct_24_vs_bu = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
-    # Altura máxima para posicionar flechas por encima de las barras
-    max_y = max(val_25, val_bu, val_24)
-
     # --- RENDERIZADO ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
@@ -69,7 +68,6 @@ if not df_raw.empty:
         st.markdown("<h3 style='text-align: center; color: #FFFF00;'>YTD COMPARISON</h3>", unsafe_allow_html=True)
         
         fig_bar = go.Figure()
-        # Gráfico de Barras
         fig_bar.add_trace(go.Bar(
             x=[label_24, label_bu, label_25],
             y=[val_24, val_bu, val_25],
@@ -80,32 +78,29 @@ if not df_raw.empty:
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # POSICIONES DE LAS FLECHAS (RECTAS Y POR ENCIMA)
-        y_arrow_25 = max_y + 8   # Altura para flecha BU -> 2025
-        y_arrow_24 = max_y + 16  # Altura para flecha BU -> 2024 (más arriba para no chocar)
-
-        # FLECHA RECTA: BU -> 2025
+        # FLECHAS RECTAS QUE CONECTAN LAS BARRAS
+        # Conexión BU -> 2025 (Horizontal al nivel del BU)
         fig_bar.add_annotation(
-            x=label_25, y=y_arrow_25, ax=label_bu, ay=y_arrow_25,
+            x=label_25, y=val_bu, ax=label_bu, ay=val_bu,
             xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
-        # CÍRCULO %: BU -> 2025
+        # Círculo % en medio de BU y 2025
         fig_bar.add_annotation(
-            x=1.5, y=y_arrow_25, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
+            x=1.5, y=val_bu, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
             showarrow=False, font=dict(color="black", size=11),
             bgcolor="#FFFF00", bordercolor="white", borderwidth=2, borderpad=6
         )
 
-        # FLECHA RECTA: BU -> 2024
+        # Conexión BU -> 2024 (Horizontal al nivel del BU)
         fig_bar.add_annotation(
-            x=label_24, y=y_arrow_24, ax=label_bu, ay=y_arrow_24,
+            x=label_24, y=val_bu, ax=label_bu, ay=val_bu,
             xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
-        # CÍRCULO %: BU -> 2024
+        # Círculo % en medio de BU y 2024
         fig_bar.add_annotation(
-            x=0.5, y=y_arrow_24, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
+            x=0.5, y=val_bu, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
             showarrow=False, font=dict(color="black", size=11),
             bgcolor="#F4D03F", bordercolor="white", borderwidth=2, borderpad=6
         )
@@ -113,7 +108,7 @@ if not df_raw.empty:
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, max_y + 30]), # Rango ampliado para las flechas superiores
+            yaxis=dict(visible=False, range=[0, max(val_25, val_bu, val_24) + 15]),
             height=500, margin=dict(t=50, b=20)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
