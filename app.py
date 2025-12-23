@@ -35,10 +35,13 @@ df_raw = load_live_data(SHEET_URL)
 if not df_raw.empty:
     # 1. PROCESAMIENTO DE DATOS
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+    
+    # Datos mensuales (Filas 3, 4, 5 -> Indices 2, 3, 4)
     y25_line = pd.to_numeric(df_raw.iloc[2, 3:15], errors='coerce').tolist()
     bgt_line = pd.to_numeric(df_raw.iloc[3, 3:15], errors='coerce').tolist()
     y24_line = pd.to_numeric(df_raw.iloc[4, 3:15], errors='coerce').tolist()
 
+    # Datos YTD (Columna C -> Indice 2)
     val_25 = pd.to_numeric(df_raw.iloc[2, 2], errors='coerce')
     val_bu = pd.to_numeric(df_raw.iloc[3, 2], errors='coerce')
     val_24 = pd.to_numeric(df_raw.iloc[4, 2], errors='coerce')
@@ -47,15 +50,28 @@ if not df_raw.empty:
     label_bu = str(df_raw.iloc[3, 1])
     label_24 = str(df_raw.iloc[4, 1])
 
-    # Crecimiento %
+    # --- LÓGICA PARA TÍTULO DINÁMICO ---
+    # Encontrar el último mes con datos en 2025 para determinar el "Mes Actual"
+    valid_data_2025 = [i for i, v in enumerate(y25_line) if pd.notnull(v) and v != 0]
+    last_idx = valid_data_2025[-1] if valid_data_2025 else 0
+    
+    mes_actual_nombre = meses[last_idx]
+    val_actual_2025 = int(y25_line[last_idx]) if pd.notnull(y25_line[last_idx]) else 0
+    val_actual_2024 = int(y24_line[last_idx]) if pd.notnull(y24_line[last_idx]) else 0
+    val_actual_bgt = int(bgt_line[last_idx]) if pd.notnull(bgt_line[last_idx]) else 0
+    
+    # Valores YTD sin decimales para el título
+    ytd_25_int = int(val_25) if pd.notnull(val_25) else 0
+    ytd_bu_int = int(val_bu) if pd.notnull(val_bu) else 0
+
+    # Crecimiento % para la gráfica de barras
     pct_25_vs_bu = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
     pct_24_vs_bu = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
-    # --- TÍTULO UNIFICADO ---
-    # Nota: El título usa el formato solicitado abarcando ambas gráficas
+    # --- TÍTULO UNIFICADO DINÁMICO ---
     st.markdown(f"""
-        <h2 style='text-align: center; color: #FFFF00; padding-bottom: 20px;'>
-            NPS CD EL ALTO | ({label_25}) – ({label_24}) LY ({label_bu}) | ({label_25}) YTD vs (BU) BGT YTD
+        <h2 style='text-align: center; color: #FFFF00; padding-bottom: 20px; font-size: 20px;'>
+            NPS CD EL ALTO | ({val_actual_2025}) ({mes_actual_nombre}) – ({val_actual_2024}) LY ({val_actual_bgt}) BGT (BU) | ({ytd_25_int}) YTD vs ({ytd_bu_int}) BGT YTD
         </h2>
     """, unsafe_allow_html=True)
 
@@ -64,14 +80,11 @@ if not df_raw.empty:
 
     with col_evol:
         fig_line = go.Figure()
-        # 2025
         fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name=label_25, 
                                      line=dict(color='#FFFF00', width=4), text=y25_line, 
                                      textposition="top center", textfont=dict(color="white")))
-        # BGT
         fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name=label_bu, 
                                      line=dict(color='#FFD700', width=2, dash='dash')))
-        # 2024
         fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name=label_24, 
                                      line=dict(color='#F4D03F', width=2), text=y24_line, 
                                      textposition="bottom center", textfont=dict(color="white")))
@@ -98,18 +111,15 @@ if not df_raw.empty:
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # Altura única para las líneas de conexión
         y_top = max(val_25, val_bu, val_24) + 12
         color_25 = "#00FF00" if pct_25_vs_bu >= 0 else "#FF0000"
         color_24 = "#00FF00" if pct_24_vs_bu >= 0 else "#FF0000"
 
-        # Conexiones en ángulo recto (misma altura)
         fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 2,{y_top} L 2,{val_25}",
                           line=dict(color="white", width=2))
         fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 0,{y_top} L 0,{val_24}",
                           line=dict(color="white", width=2))
 
-        # Círculos de porcentaje con color condicional
         fig_bar.add_annotation(x=1.5, y=y_top, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
                                showarrow=False, bgcolor=color_25, font=dict(color="black"),
                                bordercolor="white", borderwidth=1, borderpad=5)
@@ -127,5 +137,5 @@ if not df_raw.empty:
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    if st.button("🔄 ACTUALIZAR DATOS"):
+    if st.button("ACTUALIZAR DATOS"):
         st.rerun()
