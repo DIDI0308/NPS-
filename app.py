@@ -16,9 +16,11 @@ st.markdown("""
 def load_live_data(spreadsheet_url):
     try:
         base_url = spreadsheet_url.split('/edit')[0]
+        # Sincronización en tiempo real saltando el caché
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
+        # Fila 3=2, Fila 4=3, Fila 5=4 en Python
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
@@ -45,7 +47,7 @@ if not df_raw.empty:
     label_bu = str(df_raw.iloc[3, 1])
     label_24 = str(df_raw.iloc[4, 1])
 
-    # 3. CÁLCULOS DE DELTAS
+    # 3. CÁLCULOS DE CRECIMIENTO
     delta_25 = val_25 - val_bu
     delta_24 = val_24 - val_bu
 
@@ -73,19 +75,28 @@ if not df_raw.empty:
             textposition='auto',
             marker_color=['#F4D03F', '#FFD700', '#FFFF00'],
             width=0.5,
-            textfont=dict(color="black", size=14, fontfamily="Arial Black")
+            # CORRECCIÓN: Se cambió 'fontfamily' por 'family'
+            textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # FLECHA Y CÍRCULO: BU a 2025 (Crecimiento)
-        fig_bar.add_annotation(x=label_bu, y=val_bu, xref="x", yref="y", text="", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white", ax=label_25, ay=val_25)
+        # FLECHA Y CÍRCULO: BU a 2025
+        fig_bar.add_annotation(
+            x=label_25, y=val_25, xref="x", yref="y",
+            ax=label_bu, ay=val_bu, axref="x", ayref="y",
+            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
+        )
         fig_bar.add_annotation(
             x=1.5, y=(val_bu + val_25)/2, text=f"<b>{delta_25:+.1f}</b>",
             showarrow=False, font=dict(color="black", size=12),
             bbox=dict(boxstyle="circle", fc="#FFFF00", ec="white", lw=2)
         )
 
-        # FLECHA Y CÍRCULO: BU a 2024 (Decrecimiento)
-        fig_bar.add_annotation(x=label_bu, y=val_bu, xref="x", yref="y", text="", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white", ax=label_24, ay=val_24)
+        # FLECHA Y CÍRCULO: BU a 2024
+        fig_bar.add_annotation(
+            x=label_24, y=val_24, xref="x", yref="y",
+            ax=label_bu, ay=val_bu, axref="x", ayref="y",
+            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
+        )
         fig_bar.add_annotation(
             x=0.5, y=(val_bu + val_24)/2, text=f"<b>{delta_24:.1f}</b>",
             showarrow=False, font=dict(color="black", size=12),
@@ -95,10 +106,10 @@ if not df_raw.empty:
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, max(val_25, val_bu)+20]),
+            yaxis=dict(visible=False, range=[0, max(val_25, val_bu, val_24)+25]),
             height=500, margin=dict(t=50, b=20)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    if st.button("🔄 SINCRONIZAR DATOS"):
+    if st.button("🔄 ACTUALIZAR DATOS"):
         st.rerun()
