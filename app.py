@@ -85,7 +85,7 @@ if st.session_state.page == "home":
             st.rerun()
 
 # ==========================================
-# VISTA 2: DASHBOARD (CURRENT MONTH)
+# VISTA 2: CURRENT MONTH (DASHBOARD)
 # ==========================================
 elif st.session_state.page == "dashboard":
     st.markdown("""
@@ -102,18 +102,19 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
+    # BOTONES DE NAVEGACIÓN Y ACTUALIZACIÓN
     col_nav1, col_nav2 = st.columns([1, 5])
     with col_nav1:
-        if st.button("⬅ INICIO"):
+        if st.button("⬅ INICIO", key="back_dashboard"):
             st.session_state.page = "home"
             st.rerun()
     with col_nav2:
-        if st.button("🔄 ACTUALIZAR DATOS"):
+        if st.button("🔄 ACTUALIZAR DATOS", key="update_dashboard"):
             st.cache_data.clear()
             st.rerun()
 
     @st.cache_data(ttl=600)
-    def load_data_current(url):
+    def load_data_from_sheets(url):
         try:
             base_url = url.split('/edit')[0]
             csv_url = f"{base_url}/export?format=csv&cache_bust=" + str(pd.Timestamp.now().timestamp())
@@ -128,7 +129,7 @@ elif st.session_state.page == "dashboard":
         except: return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
-    df = load_data_current(SHEET_URL_CURRENT)
+    df = load_data_from_sheets(SHEET_URL_CURRENT)
 
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
@@ -199,9 +200,14 @@ elif st.session_state.page == "dashboard":
             with col:
                 st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
                 st.text_input("Secondary Driver:", value=default_title, key=f"t_{key_id}")
-                st.text_input("Cliente:", key=f"cl_{key_id}"); st.number_input("Score:", 0, 10, 1, key=f"sc_{key_id}")
-                st.text_area("Comentario:", key=f"cm_{key_id}", height=120); st.text_input("Unidad:", key=f"tr_{key_id}")
-        render_card(col_t1, "c1", "Secondary Driver 1:"); render_card(col_t2, "c2", "Secondary Driver 2:"); render_card(col_t3, "c3", "Secondary Driver 3:")
+                st.text_input("Cliente:", key=f"cl_{key_id}")
+                st.number_input("Score:", 0, 10, 1, key=f"sc_{key_id}")
+                st.text_area("Comentario:", key=f"cm_{key_id}", height=120)
+                st.text_input("Unidad:", key=f"tr_{key_id}")
+        render_card(col_t1, "c1", "Secondary Driver 1:")
+        render_card(col_t2, "c2", "Secondary Driver 2:")
+        render_card(col_t3, "c3", "Secondary Driver 3:")
+    else: st.warning("Conectando con Google Sheets...")
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
@@ -239,7 +245,6 @@ elif st.session_state.page == "monthly":
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
         
-        # CORRECCIÓN DE pd.to_numeric con 'coerce' en lugar de 0
         v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
         vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
         v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
