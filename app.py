@@ -30,6 +30,17 @@ st.markdown("""
         text-align: center;
         flex-grow: 1;
     }
+    /* Estilo para las franjas amarillas de los títulos de cada gráfica */
+    .section-banner {
+        background-color: #FFFF00;
+        color: black !important;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
     .logo-img { height: 70px; }
     div.stButton > button {
         background-color: #FFFF00;
@@ -86,7 +97,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJ
 df_raw = load_live_data(SHEET_URL)
 
 def render_nps_block(df, row_start_idx, title_prefix):
-    """Función para renderizar bloques de gráficas con visibilidad mejorada"""
+    """Función para renderizar bloques de gráficas con visibilidad mejorada y franja de título"""
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
     # Extracción de datos según índice de fila
@@ -107,11 +118,13 @@ def render_nps_block(df, row_start_idx, title_prefix):
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
     
-    # Título dinámico con YTD BU en paréntesis
+    # TÍTULO CON FRANJA AMARILLA Y TEXTO NEGRO
     st.markdown(f"""
-        <h2 style='text-align: center; color: #FFFF00; padding: 15px 0; font-size: 20px;'>
-            {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD
-        </h2>
+        <div class="section-banner">
+            <h2 style='color: black; margin: 0; font-size: 20px;'>
+                {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD
+            </h2>
+        </div>
     """, unsafe_allow_html=True)
 
     # Límites del eje Y
@@ -129,7 +142,7 @@ def render_nps_block(df, row_start_idx, title_prefix):
         fig_l.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), # Eje Y con 3cm extra
+            yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]),
             legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")),
             height=500, margin=dict(t=50)
         )
@@ -157,13 +170,13 @@ def render_nps_block(df, row_start_idx, title_prefix):
         st.plotly_chart(fig_b, use_container_width=True)
 
 if not df_raw.empty:
-    # SECCIÓN 1: Filas 3-5 (Indices 2, 3, 4)
+    # SECCIÓN 1: Filas 3-5
     render_nps_block(df_raw, 2, "NPS CD EL ALTO")
 
-    # SECCIÓN 2: Filas 8-10 (Indices 7, 8, 9)
+    # SECCIÓN 2: Filas 8-10
     render_nps_block(df_raw, 7, "NPS EA")
 
-    # SECCIÓN 3: Filas 12-14 (Indices 11, 12, 13)
+    # SECCIÓN 3: Filas 12-14
     render_nps_block(df_raw, 11, "NPS LP")
 
     # --- RECUADROS EDITABLES INFERIORES ---
