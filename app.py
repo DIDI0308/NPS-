@@ -14,7 +14,6 @@ st.markdown("""
     <style>
     .stApp { background-color: black; color: white; }
     
-    /* Franja Amarilla Principal Superior */
     .header-banner {
         background-color: #FFFF00;
         padding: 10px 30px;
@@ -33,7 +32,6 @@ st.markdown("""
         flex-grow: 1;
     }
     
-    /* Franja Amarilla de Títulos de Sección */
     .section-banner {
         background-color: #FFFF00;
         color: black !important;
@@ -47,15 +45,19 @@ st.markdown("""
     
     .logo-img { height: 70px; }
     
-    /* Botón de actualización */
     div.stButton > button {
         background-color: #FFFF00;
         color: black;
         border: None;
         font-weight: bold;
     }
+    
+    .stTextArea label {
+        color: #FFFF00 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
 
-    /* Estilo para la Tabla de Detractores (FONDO BLANCO) */
     .detractores-table {
         width: 100%;
         border-collapse: collapse;
@@ -83,35 +85,6 @@ st.markdown("""
         width: 25%;
         font-weight: bold;
     }
-
-    /* Estilo para los Círculos Indicadores */
-    .circle-container {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        margin: 20px 0;
-        text-align: center;
-    }
-    .kpi-circle {
-        width: 120px;
-        height: 120px;
-        background-color: #FFFF00;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: black;
-        font-size: 32px;
-        font-weight: bold;
-        margin: 0 auto 10px auto;
-        border: 3px solid white;
-    }
-    .kpi-label {
-        font-size: 14px;
-        font-weight: bold;
-        color: #FFFF00;
-        max-width: 200px;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -125,7 +98,6 @@ def get_base64_image(image_path):
 img_logo_izq = get_base64_image("logo2.png")
 img_logo_der = get_base64_image("logo.png")
 
-# --- ENCABEZADO PRINCIPAL ---
 st.markdown(f"""
     <div class="header-banner">
         <img src="data:image/png;base64,{img_logo_izq}" class="logo-img">
@@ -166,18 +138,16 @@ def render_nps_block(df, row_start_idx, title_prefix):
     valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
-    
     st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
                 {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
-
     all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
     max_l = max(all_vals) if all_vals else 100; min_l = min(all_vals) if all_vals else 0
     col_a, col_b = st.columns([3, 1.2])
     with col_a:
         fig_l = go.Figure()
-        fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
+        fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
         fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
-        fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+        fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
         fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
         st.plotly_chart(fig_l, use_container_width=True)
     with col_b:
@@ -198,15 +168,12 @@ if not df_raw.empty:
     render_nps_block(df_raw, 7, "NPS EA")
     render_nps_block(df_raw, 11, "NPS LP")
 
-    # --- TABLA: DETRACTORES ---
-    st.markdown('<div class="section-banner">DETRACTORS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
     rows_det = [18, 20, 22]
     months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-    
     table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
     for m in months: table_html += f'<th>{m}</th>'
     table_html += '</tr></thead><tbody>'
-    
     for r in rows_det:
         text_desc = str(df_raw.iloc[r, 0])
         table_html += f'<tr><td class="text-col">{text_desc}</td>'
@@ -217,20 +184,30 @@ if not df_raw.empty:
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # --- INDICADORES CIRCULARES (C19, C21, C23) ---
-    st.markdown('<div class="circle-container">', unsafe_allow_html=True)
-    for r in rows_det:
-        val_ytd = int(pd.to_numeric(df_raw.iloc[r, 2], errors='coerce')) if pd.notnull(df_raw.iloc[r, 2]) else 0
-        label_text = str(df_raw.iloc[r, 0])
-        st.markdown(f"""
-            <div>
-                <div class="kpi-circle">{val_ytd}</div>
-                <div class="kpi-label">{label_text}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # --- NUEVA SECCIÓN: ANILLOS AMARILLOS YTD ---
+    col_a1, col_a2, col_a3 = st.columns(3)
+    indices_ytd = [18, 20, 22] # Filas 19, 21, 23
 
-    # --- RECUADROS EDITABLES INFERIORES ---
+    for idx, col in zip(indices_ytd, [col_a1, col_a2, col_a3]):
+        valor_ytd = df_raw.iloc[idx, 2] # Columna C
+        texto_ytd = df_raw.iloc[idx, 0] # Columna A
+        
+        fig_ring = go.Figure(go.Pie(
+            values=[1], labels=[""], hole=0.8,
+            marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)),
+            showlegend=False, hoverinfo='none'
+        ))
+        fig_ring.add_annotation(
+            text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False,
+            font=dict(color="white", size=45, family="Arial Black") # Número blanco grueso al medio
+        )
+        fig_ring.update_layout(
+            title=dict(text=f"<b>{texto_ytd}</b>", y=0.1, x=0.5, xanchor='center', font=dict(color="white", size=14)),
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(t=10, b=40, l=10, r=10), height=250
+        )
+        col.plotly_chart(fig_ring, use_container_width=True)
+
     st.markdown("---")
     c1, c2, c3 = st.columns([1, 2, 1])
     with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App")
