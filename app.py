@@ -239,7 +239,7 @@ elif st.session_state.page == "monthly":
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
         
-        # CORRECCIÓN DE LA LÍNEA QUE GENERABA EL ERROR
+        # CORRECCIÓN DE pd.to_numeric con 'coerce' en lugar de 0
         v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
         vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
         v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
@@ -272,13 +272,15 @@ elif st.session_state.page == "monthly":
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
         col_a1, col_a2, col_a3 = st.columns(3)
         for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
-            val, txt = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
+            valor_ytd = df_raw.iloc[idx, 2]
+            txt = str(df_raw.iloc[idx, 0])
             txt_f = "<br>".join([txt[:len(txt)//2], txt[len(txt)//2:]])
             fr = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False))
-            fr.add_annotation(text=f"<b>{val}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
+            fr.add_annotation(text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
             fr.add_annotation(text=f"<b>{txt_f}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center')
             fr.update_layout(paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
             col.plotly_chart(fr, use_container_width=True)
+            
         st.markdown("---")
         c1, c2, c3 = st.columns([1, 2, 1])
         with c1:
