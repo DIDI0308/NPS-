@@ -238,7 +238,12 @@ elif st.session_state.page == "monthly":
         y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-        v25, vbu = pd.to_numeric(df.iloc[row_start_idx, 2], 0), pd.to_numeric(df.iloc[row_start_idx + 1, 2], 0)
+        
+        # CORRECCIÓN DE LA LÍNEA QUE GENERABA EL ERROR
+        v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
+        vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
+        v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
+        
         last_idx = ([i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0] or [0])[-1]
         st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>{title_prefix} | {int(y25_m[last_idx])} {meses[last_idx]} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(vbu)}) | {int(v25)} YTD vs {int(vbu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
         ca, cb = st.columns([3, 1.2])
@@ -251,7 +256,7 @@ elif st.session_state.page == "monthly":
             st.plotly_chart(fl, use_container_width=True)
         with cb:
             fb = go.Figure()
-            fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[pd.to_numeric(df.iloc[row_start_idx + 2, 2], 0), vbu, v25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
+            fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[v24, vbu, v25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
             fb.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False))
             st.plotly_chart(fb, use_container_width=True)
 
