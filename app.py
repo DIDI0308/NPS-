@@ -5,7 +5,7 @@ import requests
 from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Growth Analysis", layout="wide")
+st.set_page_config(page_title="NPS Performance Dashboard", layout="wide")
 
 st.markdown("""
     <style>
@@ -16,6 +16,7 @@ st.markdown("""
 def load_live_data(spreadsheet_url):
     try:
         base_url = spreadsheet_url.split('/edit')[0]
+        # Sincronización en tiempo real saltando el caché del navegador
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
@@ -26,6 +27,7 @@ def load_live_data(spreadsheet_url):
         st.error(f"Error de conexión: {e}")
         return pd.DataFrame()
 
+# URL de tu Google Sheet
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
 df_raw = load_live_data(SHEET_URL)
@@ -55,10 +57,23 @@ if not df_raw.empty:
     with col_evol:
         st.markdown("<h3 style='text-align: center; color: #FFFF00;'>NPS MONTHLY EVOLUTION</h3>", unsafe_allow_html=True)
         fig_line = go.Figure()
-        fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_line, textposition="top center", textfont=dict(color="white")))
-        fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
-        fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_line, textposition="bottom center", textfont=dict(color="white")))
-        fig_line.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False), legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"), height=500)
+        # Línea 2025 - Amarillo Brillante
+        fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name=label_25, 
+                                     line=dict(color='#FFFF00', width=4), text=y25_line, 
+                                     textposition="top center", textfont=dict(color="white")))
+        # BGT
+        fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name=label_bu, 
+                                     line=dict(color='#FFD700', width=2, dash='dash')))
+        # Línea 2024 - Amarillo Ámbar
+        fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name=label_24, 
+                                     line=dict(color='#F4D03F', width=2), text=y24_line, 
+                                     textposition="bottom center", textfont=dict(color="white")))
+        
+        fig_line.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), 
+                              xaxis=dict(showgrid=False, tickfont=dict(color="white")), 
+                              yaxis=dict(visible=False), 
+                              legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white")), 
+                              height=500)
         st.plotly_chart(fig_line, use_container_width=True)
 
     with col_ytd:
@@ -72,17 +87,15 @@ if not df_raw.empty:
             textposition='auto',
             marker_color=['#F4D03F', '#FFD700', '#FFFF00'],
             width=0.5,
-            textfont=dict(color="black", size=14, family="Arial Black")
+            textfont=dict(color="black", size=14, family="Arial Black") # Texto dentro de barras en negro para contraste
         ))
 
         # --- LÍNEAS DE CONEXIÓN RECTAS CON COLOR CONDICIONAL ---
-        y_common_top = max(val_25, val_bu, val_24) + 12 # Altura fija para ambas líneas
-
-        # Lógica de Color para Círculos: Verde si >= 0, Rojo si < 0
+        y_common_top = max(val_25, val_bu, val_24) + 12 
         color_circle_25 = "#00FF00" if pct_25_vs_bu >= 0 else "#FF0000"
         color_circle_24 = "#00FF00" if pct_24_vs_bu >= 0 else "#FF0000"
 
-        # Conexión BU a 2025 (Recta)
+        # Conexión BU a 2025
         fig_bar.add_shape(type="path",
             path=f"M 1,{val_bu} L 1,{y_common_top} L 2,{y_common_top} L 2,{val_25}",
             line=dict(color="white", width=2))
@@ -92,7 +105,7 @@ if not df_raw.empty:
             showarrow=False, font=dict(color="black", size=10),
             bgcolor=color_circle_25, bordercolor="white", borderwidth=1, borderpad=5)
 
-        # Conexión BU a 2024 (Recta)
+        # Conexión BU a 2024
         fig_bar.add_shape(type="path",
             path=f"M 1,{val_bu} L 1,{y_common_top} L 0,{y_common_top} L 0,{val_24}",
             line=dict(color="white", width=2))
@@ -104,7 +117,7 @@ if not df_raw.empty:
 
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
-            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")), # Ejes en blanco
             yaxis=dict(visible=False, range=[0, y_common_top + 15]),
             height=500, margin=dict(t=50, b=20)
         )
@@ -112,3 +125,6 @@ if not df_raw.empty:
 
     if st.button("🔄 ACTUALIZAR DATOS"):
         st.rerun()
+
+else:
+    st.info("Sincronizando con Google Sheets...")
