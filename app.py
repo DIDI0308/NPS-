@@ -5,10 +5,10 @@ import requests
 from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Monthly Evolution", layout="wide")
+st.set_page_config(page_title="NPS YTD Performance", layout="wide")
 st.markdown("<style>.stApp { background-color: black; color: white; }</style>", unsafe_allow_html=True)
 
-# --- CONEXIÓN DINÁMICA A GOOGLE SHEETS ---
+# --- FUNCIÓN DE CARGA DE DATOS (GOOGLE SHEETS) ---
 @st.cache_data(ttl=60)
 def load_nps_data(spreadsheet_url):
     try:
@@ -18,94 +18,78 @@ def load_nps_data(spreadsheet_url):
         response = requests.get(csv_url)
         response.raise_for_status()
         
-        # Leemos el CSV
         df = pd.read_csv(StringIO(response.text))
-        # Limpiamos nombres de columnas (quitar espacios en blanco)
+        # Limpieza de nombres de columnas
         df.columns = [str(c).strip() for c in df.columns]
         return df
     except Exception as e:
         st.error(f"Error al conectar con Google Sheets: {e}")
         return pd.DataFrame()
 
-# URL de tu archivo
+# URL de tu archivo proporcionado
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
-# --- PROCESAMIENTO DE DATOS ---
+# --- PROCESAMIENTO ---
 df_raw = load_nps_data(SHEET_URL)
 
 if not df_raw.empty:
-    # Definimos las columnas de los meses
+    # Definimos columnas de meses
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
-    # Jalar info por filas según tu especificación:
-    # Fila 0 (NPS YTD 2025): [47, 56, 57, 58, 54, 59, 59, 60, 65, 61, 65, 64]
-    ytd_2025 = df_raw.iloc[0][meses].values
-    val_bar_25 = df_raw.iloc[0]['YTD']
+    # Jalar datos por filas según tu estructura:
+    # Fila 0: YTD 2025 | Fila 1: YTD BU | Fila 2: YTD 2024
+    ytd_2025_val = df_raw.iloc[0]['YTD']
+    ytd_bu_val = df_raw.iloc[1]['YTD']
+    ytd_2024_val = df_raw.iloc[2]['YTD']
 
-    # Fila 1 (YTD BU / BGT): [54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54]
-    ytd_bu = df_raw.iloc[1][meses].values
-    val_bar_bu = df_raw.iloc[1]['YTD']
+    # --- DISEÑO DE DASHBOARD ---
+    st.markdown("<h2 style='text-align: center;'>NPS YTD PERFORMANCE COMPARISON</h2>", unsafe_allow_html=True)
 
-    # Fila 2 (YTD 2024): [40, 32, 50, 57, 45, 46, 47, 49, 53, 49, 45, 55]
-    ytd_2024 = df_raw.iloc[2][meses].values
-    val_bar_24 = df_raw.iloc[2]['YTD']
+    # 1. Gráfico de Barras Principal (YTD 2025 vs BU vs YTD 2024)
+    fig_ytd = go.Figure()
 
-    # --- DISEÑO DE INTERFAZ ---
-    st.markdown("<h2 style='text-align: center; color: white;'>MONTHLY EVOLUTION PERFORMANCE</h2>", unsafe_allow_html=True)
+    fig_ytd.add_trace(go.Bar(
+        x=['YTD 2024', 'YTD BU (BGT)', 'YTD 2025'],
+        y=[ytd_2024_val, ytd_bu_val, ytd_2025_val],
+        text=[ytd_2024_val, ytd_bu_val, ytd_2025_val],
+        textposition='auto',
+        marker_color=['#E87722', '#006A4D', '#005587'], # Naranja, Verde, Azul
+        textfont=dict(color="white", size=18)
+    ))
+
+    fig_ytd.update_layout(
+        paper_bgcolor='black',
+        plot_bgcolor='black',
+        font=dict(color="white"),
+        xaxis=dict(tickfont=dict(size=14)),
+        yaxis=dict(visible=False, range=[0, max(ytd_2025_val, ytd_bu_val) + 15]),
+        height=500,
+        margin=dict(t=50, b=50)
+    )
+
+    st.plotly_chart(fig_ytd, use_container_width=True)
+
+    # 2. Resumen de Métricas en Tarjetas
+    m1, m2, m3 = st.columns(3)
+    m1.metric(label="YTD 2025", value=ytd_2025_val, delta=f"{ytd_2025_val - ytd_bu_val} vs BGT")
+    m2.metric(label="YTD BU (BGT)", value=ytd_bu_val)
+    m3.metric(label="YTD 2024", value=ytd_2024_val, delta=f"{ytd_2025_val - ytd_2024_val} vs LY", delta_color="normal")
+
+    # 3. Evolución Mensual Detallada (Líneas)
+    st.markdown("---")
+    st.markdown("### Monthly Evolution Details")
     
-    col_evol, col_ytd = st.columns([3, 1])
+    fig_evol = go.Figure()
+    fig_evol.add_trace(go.Scatter(x=meses, y=df_raw.iloc[0][meses], mode='lines+markers+text', name='2025', 
+                                  line=dict(color='#005587', width=3), text=df_raw.iloc[0][meses], textposition="top center"))
+    fig_evol.add_trace(go.Scatter(x=meses, y=df_raw.iloc[1][meses], mode='lines', name='BGT', 
+                                  line=dict(color='#006A4D', width=2, dash='dash')))
+    fig_evol.add_trace(go.Scatter(x=meses, y=df_raw.iloc[2][meses], mode='lines+markers', name='2024', 
+                                  line=dict(color='#E87722', width=2)))
 
-    # 1. Gráfica de Líneas (Izquierda)
-    with col_evol:
-        fig_line = go.Figure()
-        
-        # YTD 2025 (Azul)
-        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2025, mode='lines+markers+text', name='YTD 2025',
-                                     line=dict(color='#005587', width=3), text=ytd_2025, 
-                                     textposition="top center", textfont=dict(color="white")))
-        
-        # BGT (Verde)
-        fig_line.add_trace(go.Scatter(x=meses, y=ytd_bu, mode='lines', name='BGT',
-                                     line=dict(color='#006A4D', width=2), textfont=dict(color="white")))
-        
-        # YTD 2024 (Naranja)
-        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2024, mode='lines+markers+text', name='YTD 2024',
-                                     line=dict(color='#E87722', width=3), text=ytd_2024, 
-                                     textposition="bottom center", textfont=dict(color="white")))
-
-        fig_line.update_layout(
-            paper_bgcolor='black', plot_bgcolor='black',
-            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(showgrid=True, gridcolor='#333333', visible=False),
-            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white")),
-            height=500, margin=dict(l=10, r=10, t=50, b=50)
-        )
-        st.plotly_chart(fig_line, use_container_width=True)
-
-    # 2. Gráfica de Barras (Derecha)
-    with col_ytd:
-        fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(
-            x=['YTD 24', 'BGT', 'YTD 25'],
-            y=[val_bar_24, val_bar_bu, val_bar_25],
-            text=[val_bar_24, val_bar_bu, val_bar_25],
-            textposition='auto',
-            marker_color=['#E87722', '#006A4D', '#005587'],
-            textfont=dict(color="white", size=16)
-        ))
-
-        fig_bar.update_layout(
-            title=dict(text="YTD", x=0.5, font=dict(color="white", size=18)),
-            paper_bgcolor='black', plot_bgcolor='black',
-            xaxis=dict(tickfont=dict(color="white")),
-            yaxis=dict(visible=False),
-            height=500, margin=dict(l=10, r=10, t=80, b=50)
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    # 3. Tabla de Resumen (Inferior)
-    st.write("### Detalle Mensual")
-    st.dataframe(df_raw.iloc[0:3], use_container_width=True)
+    fig_evol.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=400,
+                          xaxis=dict(showgrid=False), yaxis=dict(visible=False))
+    st.plotly_chart(fig_evol, use_container_width=True)
 
 else:
-    st.error("No se pudieron cargar los datos desde la Hoja 1. Revisa los permisos del enlace.")
+    st.warning("No se pudieron cargar los datos. Verifica los permisos de acceso del Google Sheet.")
