@@ -9,10 +9,12 @@ import base64
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS CD EL ALTO Dashboard", layout="wide")
 
-# Estilos CSS (Fondo negro, franja amarilla superior, títulos de recuadros amarillos)
+# Estilos CSS
 st.markdown("""
     <style>
     .stApp { background-color: black; color: white; }
+    
+    /* Franja Amarilla Principal Superior */
     .header-banner {
         background-color: #FFFF00;
         padding: 10px 30px;
@@ -30,24 +32,34 @@ st.markdown("""
         text-align: center;
         flex-grow: 1;
     }
-    /* Estilo para las franjas amarillas de los títulos de cada gráfica */
+    
+    /* FRANJA AMARILLA DE LOS TÍTULOS (Más delgada) */
     .section-banner {
         background-color: #FFFF00;
         color: black !important;
-        padding: 10px;
+        padding: 4px 10px; /* Reducido de 10px a 4px para hacerla más delgada */
         border-radius: 5px;
         text-align: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
+        margin-top: 15px;
+        margin-bottom: 15px;
         font-weight: bold;
     }
+    
     .logo-img { height: 70px; }
+    
+    /* Botón de actualización */
     div.stButton > button {
         background-color: #FFFF00;
         color: black;
         border: None;
         font-weight: bold;
     }
+    div.stButton > button:hover {
+        background-color: #e6e600;
+        color: black;
+    }
+    
+    /* Etiquetas amarillas para recuadros editables */
     .stTextArea label {
         color: #FFFF00 !important;
         font-size: 18px !important;
@@ -97,14 +109,15 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJ
 df_raw = load_live_data(SHEET_URL)
 
 def render_nps_block(df, row_start_idx, title_prefix):
-    """Función para renderizar bloques de gráficas con visibilidad mejorada y franja de título"""
+    """Renderiza bloques de gráficas con título en franja amarilla delgada y eje Y extendido"""
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
-    # Extracción de datos según índice de fila
+    # Datos mensuales
     y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
     bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
     y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
 
+    # Datos YTD
     val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
     val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
     val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
@@ -113,21 +126,21 @@ def render_nps_block(df, row_start_idx, title_prefix):
     label_bu = str(df.iloc[row_start_idx + 1, 1])
     label_24 = str(df.iloc[row_start_idx + 2, 1])
 
-    # Detección dinámica de mes
+    # Mes actual
     valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
     
-    # TÍTULO CON FRANJA AMARILLA Y TEXTO NEGRO
+    # Título en franja amarilla delgada
     st.markdown(f"""
         <div class="section-banner">
-            <h2 style='color: black; margin: 0; font-size: 20px;'>
+            <h2 style='color: black; margin: 0; font-size: 19px; line-height: 1.2;'>
                 {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD
             </h2>
         </div>
     """, unsafe_allow_html=True)
 
-    # Límites del eje Y
+    # Límites Eje Y
     all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
     max_l = max(all_vals) if all_vals else 100
     min_l = min(all_vals) if all_vals else 0
@@ -170,13 +183,13 @@ def render_nps_block(df, row_start_idx, title_prefix):
         st.plotly_chart(fig_b, use_container_width=True)
 
 if not df_raw.empty:
-    # SECCIÓN 1: Filas 3-5
+    # SECCIÓN 1: Filas 3-5 (Índice 2)
     render_nps_block(df_raw, 2, "NPS CD EL ALTO")
 
-    # SECCIÓN 2: Filas 8-10
+    # SECCIÓN 2: Filas 8-10 (Índice 7)
     render_nps_block(df_raw, 7, "NPS EA")
 
-    # SECCIÓN 3: Filas 12-14
+    # SECCIÓN 3: Filas 12-14 (Índice 11)
     render_nps_block(df_raw, 11, "NPS LP")
 
     # --- RECUADROS EDITABLES INFERIORES ---
