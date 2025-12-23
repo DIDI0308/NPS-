@@ -158,13 +158,13 @@ def render_nps_block(df, row_start_idx, title_prefix):
 
 if not df_raw.empty:
     # SECCIÓN 1: Filas 3-5 (Indices 2, 3, 4)
-    render_nps_block(df_raw, 2, "NPS CD EL ALTO - SECCIÓN 1")
+    render_nps_block(df_raw, 2, "NPS CD EL ALTO")
 
     # SECCIÓN 2: Filas 8-10 (Indices 7, 8, 9)
-    render_nps_block(df_raw, 7, "NPS CD EL ALTO - SECCIÓN 2")
+    render_nps_block(df_raw, 7, "NPS EA")
 
     # SECCIÓN 3: Filas 12-14 (Indices 11, 12, 13)
-    render_nps_block(df_raw, 11, "NPS CD EL ALTO - SECCIÓN 3")
+    render_nps_block(df_raw, 11, "NPS LP")
 
     # --- RECUADROS EDITABLES INFERIORES ---
     st.markdown("---")
