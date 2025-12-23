@@ -113,12 +113,11 @@ elif st.session_state.page == "dashboard":
             st.rerun()
 
     @st.cache_data(ttl=600)
-    def load_data_from_sheets(url):
+    def load_data_current(url):
         try:
             base_url = url.split('/edit')[0]
             csv_url = f"{base_url}/export?format=csv&cache_bust=" + str(pd.Timestamp.now().timestamp())
             response = requests.get(csv_url)
-            response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
             df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
             df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
@@ -126,12 +125,10 @@ elif st.session_state.page == "dashboard":
             df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
             df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
             return df
-        except Exception as e:
-            st.error(f"Error: {e}")
-            return pd.DataFrame()
+        except: return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
-    df = load_data_from_sheets(SHEET_URL_CURRENT)
+    df = load_data_current(SHEET_URL_CURRENT)
 
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
@@ -150,7 +147,7 @@ elif st.session_state.page == "dashboard":
         with col_g2:
             data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
-            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
+            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text')
             fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white"))
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -179,7 +176,6 @@ elif st.session_state.page == "dashboard":
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
         if not df_sec.empty:
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
             data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
@@ -206,7 +202,6 @@ elif st.session_state.page == "dashboard":
                 st.text_input("Cliente:", key=f"cl_{key_id}"); st.number_input("Score:", 0, 10, 1, key=f"sc_{key_id}")
                 st.text_area("Comentario:", key=f"cm_{key_id}", height=120); st.text_input("Unidad:", key=f"tr_{key_id}")
         render_card(col_t1, "c1", "Secondary Driver 1:"); render_card(col_t2, "c2", "Secondary Driver 2:"); render_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Conectando con Google Sheets...")
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
@@ -216,11 +211,11 @@ elif st.session_state.page == "monthly":
     
     col_nav_m1, col_nav_m2 = st.columns([1, 5])
     with col_nav_m1:
-        if st.button("⬅ INICIO"):
+        if st.button("⬅ INICIO", key="back_evo"):
             st.session_state.page = "home"
             st.rerun()
     with col_nav_m2:
-        if st.button("🔄 ACTUALIZAR DATOS"):
+        if st.button("🔄 ACTUALIZAR DATOS", key="update_evo"):
             st.cache_data.clear()
             st.rerun()
         
@@ -255,11 +250,15 @@ elif st.session_state.page == "monthly":
             fl.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False, range=[min(y24_m)-15, max(y25_m)+25]))
             st.plotly_chart(fl, use_container_width=True)
         with cb:
-            fb = go.Figure(); fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[pd.to_numeric(df.iloc[row_start_idx + 2, 2], 0), vbu, v25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
-            fb.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False)); st.plotly_chart(fb, use_container_width=True)
+            fb = go.Figure()
+            fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[pd.to_numeric(df.iloc[row_start_idx + 2, 2], 0), vbu, v25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
+            fb.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False))
+            st.plotly_chart(fb, use_container_width=True)
 
     if not df_raw.empty:
-        render_nps_block(df_raw, 2, "NPS CD EL ALTO"); render_nps_block(df_raw, 7, "NPS EA"); render_nps_block(df_raw, 11, "NPS LP")
+        render_nps_block(df_raw, 2, "NPS CD EL ALTO")
+        render_nps_block(df_raw, 7, "NPS EA")
+        render_nps_block(df_raw, 11, "NPS LP")
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
         table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>' + "".join([f'<th>{m}</th>' for m in months]) + '</tr></thead><tbody>'
@@ -273,8 +272,13 @@ elif st.session_state.page == "monthly":
             fr = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False))
             fr.add_annotation(text=f"<b>{val}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
             fr.add_annotation(text=f"<b>{txt_f}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center')
-            fr.update_layout(paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320); col.plotly_chart(fr, use_container_width=True)
-        st.markdown("---"); c1, c2, c3 = st.columns([1, 2, 1])
-        with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
-        with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
-        with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+            fr.update_layout(paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
+            col.plotly_chart(fr, use_container_width=True)
+        st.markdown("---")
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c1:
+            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
+        with c2:
+            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
+        with c3:
+            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
