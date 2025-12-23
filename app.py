@@ -16,18 +16,15 @@ st.markdown("""
 def load_live_data(spreadsheet_url):
     try:
         base_url = spreadsheet_url.split('/edit')[0]
-        # Sincronización en tiempo real saltando el caché del navegador
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
-        # Fila 3=índice 2, Fila 4=índice 3, Fila 5=índice 4
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
         st.error(f"Error de conexión: {e}")
         return pd.DataFrame()
 
-# URL de tu Google Sheet
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
 df_raw = load_live_data(SHEET_URL)
@@ -52,7 +49,6 @@ if not df_raw.empty:
     pct_25_vs_bu = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
     pct_24_vs_bu = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
-    # --- RENDERIZADO ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
     with col_evol:
@@ -78,37 +74,33 @@ if not df_raw.empty:
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # FLECHAS RECTAS QUE CONECTAN LAS BARRAS
-        # Conexión BU -> 2025 (Horizontal al nivel del BU)
-        fig_bar.add_annotation(
-            x=label_25, y=val_bu, ax=label_bu, ay=val_bu,
-            xref="x", yref="y", axref="x", ayref="y",
-            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
-        )
-        # Círculo % en medio de BU y 2025
-        fig_bar.add_annotation(
-            x=1.5, y=val_bu, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
-            showarrow=False, font=dict(color="black", size=11),
-            bgcolor="#FFFF00", bordercolor="white", borderwidth=2, borderpad=6
-        )
+        # --- LÍNEAS DE CONEXIÓN EN ÁNGULO RECTO ---
+        y_top = max(val_25, val_bu, val_24) + 10 # Altura horizontal de referencia
 
-        # Conexión BU -> 2024 (Horizontal al nivel del BU)
+        # Conexión BU a 2025 (Vertical -> Horizontal -> Vertical)
+        fig_bar.add_shape(type="path",
+            path=f"M 1,{val_bu} L 1,{y_top} L 2,{y_top} L 2,{val_25}",
+            line=dict(color="white", width=2))
+        
         fig_bar.add_annotation(
-            x=label_24, y=val_bu, ax=label_bu, ay=val_bu,
-            xref="x", yref="y", axref="x", ayref="y",
-            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
-        )
-        # Círculo % en medio de BU y 2024
+            x=1.5, y=y_top, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
+            showarrow=False, font=dict(color="black", size=10),
+            bgcolor="#FFFF00", bordercolor="white", borderwidth=1, borderpad=4)
+
+        # Conexión BU a 2024 (Vertical -> Horizontal -> Vertical)
+        fig_bar.add_shape(type="path",
+            path=f"M 1,{val_bu} L 1,{y_top+5} L 0,{y_top+5} L 0,{val_24}",
+            line=dict(color="white", width=2))
+        
         fig_bar.add_annotation(
-            x=0.5, y=val_bu, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
-            showarrow=False, font=dict(color="black", size=11),
-            bgcolor="#F4D03F", bordercolor="white", borderwidth=2, borderpad=6
-        )
+            x=0.5, y=y_top+5, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
+            showarrow=False, font=dict(color="black", size=10),
+            bgcolor="#F4D03F", bordercolor="white", borderwidth=1, borderpad=4)
 
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, max(val_25, val_bu, val_24) + 15]),
+            yaxis=dict(visible=False, range=[0, y_top + 15]),
             height=500, margin=dict(t=50, b=20)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
