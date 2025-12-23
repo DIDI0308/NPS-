@@ -52,10 +52,16 @@ st.markdown("""
         font-weight: bold;
     }
     
+    /* TÍTULOS DE RECUADROS: MÁS GRANDES Y CON BORDE */
     .stTextArea label {
         color: #FFFF00 !important;
-        font-size: 18px !important;
+        font-size: 22px !important; /* Aumentado de 18px a 22px */
         font-weight: bold !important;
+        border: 2px solid #FFFF00 !important; /* Borde amarillo añadido */
+        padding: 5px 15px !important;
+        border-radius: 5px !important;
+        display: inline-block !important;
+        margin-bottom: 10px !important;
     }
 
     .detractores-table {
@@ -134,33 +140,28 @@ def render_nps_block(df, row_start_idx, title_prefix):
     val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
     val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
     val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-    label_25 = str(df.iloc[row_start_idx, 1]); label_bu = str(df.iloc[row_start_idx + 1, 1]); label_24 = str(df.iloc[row_start_idx + 2, 1])
+    
     valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
+    
     st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
                 {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+
     all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
     max_l = max(all_vals) if all_vals else 100; min_l = min(all_vals) if all_vals else 0
     col_a, col_b = st.columns([3, 1.2])
     with col_a:
         fig_l = go.Figure()
-        fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
-        fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
-        fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-        fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
+        fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
+        fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', line=dict(color='#FFD700', width=2, dash='dash')))
+        fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+        fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), height=500)
         st.plotly_chart(fig_l, use_container_width=True)
     with col_b:
         fig_b = go.Figure()
-        fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-        y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
-        p25 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
-        p24 = ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
-        fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
-        fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
-        fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-        fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-        fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 30]), height=500, margin=dict(t=50))
+        fig_b.add_trace(go.Bar(x=["LY", "BGT", "ACTUAL"], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[int(val_ytd_24), int(val_ytd_bu), int(val_ytd_25)], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
+        fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), yaxis=dict(visible=False), height=500)
         st.plotly_chart(fig_b, use_container_width=True)
 
 if not df_raw.empty:
@@ -184,43 +185,24 @@ if not df_raw.empty:
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # --- ANILLOS AMARILLOS YTD CON SEPARACIÓN EXTRA ---
     col_a1, col_a2, col_a3 = st.columns(3)
     indices_ytd = [18, 20, 22]
 
     for idx, col in zip(indices_ytd, [col_a1, col_a2, col_a3]):
         valor_ytd = df_raw.iloc[idx, 2]
         texto_original = str(df_raw.iloc[idx, 0])
-        
         palabras = texto_original.split()
         mitad = len(palabras) // 2
         texto_formateado = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
         
-        fig_ring = go.Figure(go.Pie(
-            values=[1], hole=0.8,
-            marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)),
-            showlegend=False, hoverinfo='none'
-        ))
-        
-        fig_ring.add_annotation(
-            text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False,
-            font=dict(color="white", size=45, family="Arial Black")
-        )
-        
-        # Ajuste de separación (y=-0.25)
-        fig_ring.add_annotation(
-            text=f"<b>{texto_formateado}</b>", x=0.5, y=-0.25, showarrow=False,
-            font=dict(color="white", size=14), align='center', xref="paper", yref="paper"
-        )
-        
-        fig_ring.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(t=10, b=100, l=10, r=10), height=320 # Más margen inferior y altura
-        )
+        fig_ring = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False, hoverinfo='none'))
+        fig_ring.add_annotation(text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
+        fig_ring.add_annotation(text=f"<b>{texto_formateado}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center', xref="paper", yref="paper")
+        fig_ring.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
         col.plotly_chart(fig_ring, use_container_width=True)
 
     st.markdown("---")
     c1, c2, c3 = st.columns([1, 2, 1])
-    with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App")
-    with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.")
-    with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time")
+    with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío (SALES)\n• Servicio de Entrega (LOG)\n• Bees App (SALES)")
+    with c2: st.text_area("Plan de Acción", height=150, value="• Se recapacitó en atención al cliente a distribución.\n• Reforzar con Operadores Logísticos.")
+    with c3: st.text_area("Key KPI'S", height=150, value="• Canjes\n• Rechazo\n• On time")
