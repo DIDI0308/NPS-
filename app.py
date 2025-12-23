@@ -33,11 +33,11 @@ st.markdown("""
         flex-grow: 1;
     }
     
-    /* FRANJA AMARILLA DE LOS TÍTULOS (Más delgada) */
+    /* Franja Amarilla de Títulos de Sección */
     .section-banner {
         background-color: #FFFF00;
         color: black !important;
-        padding: 4px 10px; /* Reducido de 10px a 4px para hacerla más delgada */
+        padding: 4px 10px;
         border-radius: 5px;
         text-align: center;
         margin-top: 15px;
@@ -54,16 +54,39 @@ st.markdown("""
         border: None;
         font-weight: bold;
     }
-    div.stButton > button:hover {
-        background-color: #e6e600;
-        color: black;
-    }
     
     /* Etiquetas amarillas para recuadros editables */
     .stTextArea label {
         color: #FFFF00 !important;
         font-size: 18px !important;
         font-weight: bold !important;
+    }
+
+    /* Estilo para la Tabla de Detractores */
+    .detractores-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: white;
+        background-color: #111;
+        margin-bottom: 20px;
+    }
+    .detractores-table th {
+        background-color: #1a3a4a; /* Azul oscuro similar a la imagen */
+        color: white;
+        padding: 10px;
+        border: 1px solid #333;
+        font-size: 12px;
+    }
+    .detractores-table td {
+        padding: 8px;
+        border: 1px solid #333;
+        text-align: center;
+        font-size: 12px;
+    }
+    .detractores-table .text-col {
+        text-align: left;
+        background-color: #000;
+        width: 25%;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -87,7 +110,6 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# Botón de actualización superior izquierdo
 col_btn, _ = st.columns([1, 5])
 with col_btn:
     if st.button("ACTUALIZAR DATOS"):
@@ -109,88 +131,72 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJ
 df_raw = load_live_data(SHEET_URL)
 
 def render_nps_block(df, row_start_idx, title_prefix):
-    """Renderiza bloques de gráficas con título en franja amarilla delgada y eje Y extendido"""
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-    
-    # Datos mensuales
     y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
     bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
     y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-
-    # Datos YTD
     val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
     val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
     val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-    
-    label_25 = str(df.iloc[row_start_idx, 1])
-    label_bu = str(df.iloc[row_start_idx + 1, 1])
-    label_24 = str(df.iloc[row_start_idx + 2, 1])
-
-    # Mes actual
+    label_25 = str(df.iloc[row_start_idx, 1]); label_bu = str(df.iloc[row_start_idx + 1, 1]); label_24 = str(df.iloc[row_start_idx + 2, 1])
     valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
     
-    # Título en franja amarilla delgada
-    st.markdown(f"""
-        <div class="section-banner">
-            <h2 style='color: black; margin: 0; font-size: 19px; line-height: 1.2;'>
-                {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD
-            </h2>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
+                {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
 
-    # Límites Eje Y
     all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
-    max_l = max(all_vals) if all_vals else 100
-    min_l = min(all_vals) if all_vals else 0
-
+    max_l = max(all_vals) if all_vals else 100; min_l = min(all_vals) if all_vals else 0
     col_a, col_b = st.columns([3, 1.2])
     with col_a:
         fig_l = go.Figure()
         fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
         fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
         fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-        
-        fig_l.update_layout(
-            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
-            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]),
-            legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")),
-            height=500, margin=dict(t=50)
-        )
+        fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
         st.plotly_chart(fig_l, use_container_width=True)
-
     with col_b:
         fig_b = go.Figure()
         fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-        
         y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
         p25 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
         p24 = ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
-        
         fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
         fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
         fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
         fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-        
-        fig_b.update_layout(
-            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
-            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, y_t + 30]),
-            height=500, margin=dict(t=50)
-        )
+        fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 30]), height=500, margin=dict(t=50))
         st.plotly_chart(fig_b, use_container_width=True)
 
 if not df_raw.empty:
-    # SECCIÓN 1: Filas 3-5 (Índice 2)
     render_nps_block(df_raw, 2, "NPS CD EL ALTO")
-
-    # SECCIÓN 2: Filas 8-10 (Índice 7)
     render_nps_block(df_raw, 7, "NPS EA")
-
-    # SECCIÓN 3: Filas 12-14 (Índice 11)
     render_nps_block(df_raw, 11, "NPS LP")
+
+    # --- NUEVA TABLA: CANTIDAD DETRACTORES ---
+    st.markdown('<div class="section-banner">CANTIDAD DETRACTORES</div>', unsafe_allow_html=True)
+    
+    # Filas 19, 21, 23 (Indices 18, 20, 22)
+    rows_det = [18, 20, 22]
+    # Columnas D a O (Indices 3 a 14)
+    months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+    
+    table_html = '<table class="detractores-table"><thead><tr><th>CANTIDAD DETRACTORES</th>'
+    for m in months:
+        table_html += f'<th>{m}</th>'
+    table_html += '</tr></thead><tbody>'
+    
+    for r in rows_det:
+        text_desc = str(df_raw.iloc[r, 0]) # Columna A
+        table_html += f'<tr><td class="text-col">{text_desc}</td>'
+        for c in range(3, 15):
+            val = df_raw.iloc[r, c]
+            table_html += f'<td>{val if pd.notnull(val) else "-"}</td>'
+        table_html += '</tr>'
+    table_html += '</tbody></table>'
+    
+    st.markdown(table_html, unsafe_allow_html=True)
 
     # --- RECUADROS EDITABLES INFERIORES ---
     st.markdown("---")
