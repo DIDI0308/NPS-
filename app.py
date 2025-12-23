@@ -175,14 +175,14 @@ if not df_raw.empty:
     render_nps_block(df_raw, 11, "NPS LP")
 
     # --- NUEVA TABLA: CANTIDAD DETRACTORES ---
-    st.markdown('<div class="section-banner">CANTIDAD DETRACTORES</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
     
     # Filas 19, 21, 23 (Indices 18, 20, 22)
     rows_det = [18, 20, 22]
     # Columnas D a O (Indices 3 a 14)
     months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
-    table_html = '<table class="detractores-table"><thead><tr><th>CANTIDAD DETRACTORES</th>'
+    table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
     for m in months:
         table_html += f'<th>{m}</th>'
     table_html += '</tr></thead><tbody>'
