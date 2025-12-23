@@ -8,12 +8,30 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS CD EL ALTO Dashboard", layout="wide")
 
-# Estilo para fondo negro
+# Estilo para fondo negro y personalización del botón (Amarillo con texto negro)
 st.markdown("""
     <style>
     .stApp { background-color: black; color: white; }
+    
+    /* Estilo para el botón de actualización */
+    div.stButton > button {
+        background-color: #FFFF00;
+        color: black;
+        border: None;
+        font-weight: bold;
+    }
+    div.stButton > button:hover {
+        background-color: #e6e600;
+        color: black;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+# Colocamos el botón en la parte superior izquierda
+col_btn, _ = st.columns([1, 5])
+with col_btn:
+    if st.button("ACTUALIZAR DATOS"):
+        st.rerun()
 
 def load_live_data(spreadsheet_url):
     try:
@@ -51,7 +69,6 @@ if not df_raw.empty:
     label_24 = str(df_raw.iloc[4, 1])
 
     # --- LÓGICA PARA TÍTULO DINÁMICO ---
-    # Encontrar el último mes con datos en 2025 para determinar el "Mes Actual"
     valid_data_2025 = [i for i, v in enumerate(y25_line) if pd.notnull(v) and v != 0]
     last_idx = valid_data_2025[-1] if valid_data_2025 else 0
     
@@ -60,11 +77,9 @@ if not df_raw.empty:
     val_actual_2024 = int(y24_line[last_idx]) if pd.notnull(y24_line[last_idx]) else 0
     val_actual_bgt = int(bgt_line[last_idx]) if pd.notnull(bgt_line[last_idx]) else 0
     
-    # Valores YTD sin decimales para el título
     ytd_25_int = int(val_25) if pd.notnull(val_25) else 0
     ytd_bu_int = int(val_bu) if pd.notnull(val_bu) else 0
 
-    # Crecimiento % para la gráfica de barras
     pct_25_vs_bu = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
     pct_24_vs_bu = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
@@ -136,6 +151,3 @@ if not df_raw.empty:
             margin=dict(t=30)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
-
-    if st.button("ACTUALIZAR DATOS"):
-        st.rerun()
