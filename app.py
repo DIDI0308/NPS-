@@ -85,7 +85,7 @@ if st.session_state.page == "home":
             st.rerun()
 
 # ==========================================
-# VISTA 2: DASHBOARD (FONDO NEGRO)
+# VISTA 2: DASHBOARD (FONDO NEGRO / CURRENT MONTH)
 # ==========================================
 elif st.session_state.page == "dashboard":
     st.markdown("""
@@ -127,7 +127,6 @@ elif st.session_state.page == "dashboard":
         font_main = dict(color="white", size=22)
         font_axes = dict(color="white", size=14)
 
-        # --- GRÁFICAS GLOBALES ---
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
 
@@ -175,7 +174,7 @@ elif st.session_state.page == "dashboard":
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
 
-        # --- GRÁFICA 5: BOTELLAS DE CERVEZA (CENTRADAS) ---
+        # --- GRÁFICA 5: BOTELLAS DE CERVEZA ---
         st.markdown("<br>", unsafe_allow_html=True)
         if not df_sec.empty:
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
@@ -183,11 +182,11 @@ elif st.session_state.page == "dashboard":
             
             fig5 = go.Figure()
             for i, row in data_score.reset_index(drop=True).iterrows():
-                # Botella vacía (Fondo)
+                # Botella vacía
                 fig5.add_trace(go.Bar(x=[row['Label']], y=[8], marker=dict(color='rgba(255,255,255,0.1)', line=dict(color='white', width=2)), showlegend=False, hoverinfo='skip'))
                 fig5.add_trace(go.Bar(x=[row['Label']], y=[2], base=8, width=0.3, marker=dict(color='rgba(255,255,255,0.1)', line=dict(color='white', width=2)), showlegend=False, hoverinfo='skip'))
                 
-                # Líquido Amarillo (Cuerpo y Cuello)
+                # Líquido Amarillo
                 fill_body = min(row['Score'], 8)
                 fig5.add_trace(go.Bar(x=[row['Label']], y=[fill_body], marker=dict(color='#FFFF00'), showlegend=False, name=row['Secondary Driver']))
                 if row['Score'] > 8:
@@ -211,7 +210,7 @@ elif st.session_state.page == "dashboard":
     else: st.warning("Asegúrate de tener el archivo Excel cargado.")
 
 # ==========================================
-# VISTA 3: MONTHLY EVOLUTION (NPS CD EL ALTO)
+# VISTA 3: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == "monthly":
     st.markdown("""<style>.stApp { background-color: black; color: white; } .header-banner { background-color: #FFFF00; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 10px; } .header-title { color: black !important; font-family: 'Arial Black', sans-serif; font-size: 28px; margin: 0; text-align: center; flex-grow: 1; } .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; } .logo-img { height: 70px; } div.stButton > button { background-color: #FFFF00 !important; color: black !important; border: None !important; font-weight: bold !important; } .stTextArea label { color: #FFFF00 !important; font-size: 22px !important; font-weight: bold !important; border: 2px solid #FFFF00; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 10px; } .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; } .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; } .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; } .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; } </style>""", unsafe_allow_html=True)
@@ -245,4 +244,12 @@ elif st.session_state.page == "monthly":
         for idx, col in zip(indices_ytd, [col_a1, col_a2, col_a3]):
             valor_ytd, texto_original = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0]); palabras = texto_original.split(); mitad = len(palabras) // 2; texto_formateado = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
             fig_ring = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False)); fig_ring.add_annotation(text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45)); fig_ring.add_annotation(text=f"<b>{texto_formateado}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14)); fig_ring.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320); col.plotly_chart(fig_ring, use_container_width=True)
-        st.markdown("---"); c1, c2, c3 = st.columns([1, 2, 1]); with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App"); with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos."); with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time")
+        
+        st.markdown("---")
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c1:
+            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App")
+        with c2:
+            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.")
+        with c3:
+            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time")
