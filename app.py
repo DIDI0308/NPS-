@@ -71,7 +71,7 @@ if not df_raw.empty:
     # --- TÍTULO UNIFICADO DINÁMICO ---
     st.markdown(f"""
         <h2 style='text-align: center; color: #FFFF00; padding-bottom: 20px; font-size: 20px;'>
-            NPS CD EL ALTO | ({val_actual_2025}) ({mes_actual_nombre}) – ({val_actual_2024}) LY ({val_actual_bgt}) BGT (BU) | ({ytd_25_int}) YTD vs ({ytd_bu_int}) BGT YTD
+            NPS CD EL ALTO | {val_actual_2025} {mes_actual_nombre} – {val_actual_2024} LY {val_actual_bgt} BGT (BU) | {ytd_25_int} YTD vs {ytd_bu_int} BGT YTD
         </h2>
     """, unsafe_allow_html=True)
 
@@ -104,7 +104,7 @@ if not df_raw.empty:
         fig_bar.add_trace(go.Bar(
             x=[label_24, label_bu, label_25],
             y=[val_24, val_bu, val_25],
-            text=[f"{val_24}%", f"{val_bu}%", f"{val_25}%"],
+            text=[f"{val_24}", f"{val_bu}", f"{val_25}"],
             textposition='auto',
             marker_color=['#F4D03F', '#FFD700', '#FFFF00'],
             width=0.6,
