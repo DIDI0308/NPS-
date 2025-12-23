@@ -85,7 +85,7 @@ if st.session_state.page == "home":
             st.rerun()
 
 # ==========================================
-# VISTA 2: CURRENT MONTH (DASHBOARD)
+# VISTA 2: DASHBOARD (CURRENT MONTH)
 # ==========================================
 elif st.session_state.page == "dashboard":
     st.markdown("""
@@ -102,14 +102,13 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
-    # BOTONES DE NAVEGACIÓN Y ACTUALIZACIÓN
     col_nav1, col_nav2 = st.columns([1, 5])
     with col_nav1:
-        if st.button("⬅ INICIO", key="back_dashboard"):
+        if st.button("⬅ INICIO"):
             st.session_state.page = "home"
             st.rerun()
     with col_nav2:
-        if st.button("🔄 ACTUALIZAR DATOS", key="update_dashboard"):
+        if st.button("🔄 ACTUALIZAR DATOS"):
             st.cache_data.clear()
             st.rerun()
 
@@ -119,6 +118,7 @@ elif st.session_state.page == "dashboard":
             base_url = url.split('/edit')[0]
             csv_url = f"{base_url}/export?format=csv&cache_bust=" + str(pd.Timestamp.now().timestamp())
             response = requests.get(csv_url)
+            response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
             df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
             df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
@@ -126,7 +126,9 @@ elif st.session_state.page == "dashboard":
             df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
             df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
             return df
-        except: return pd.DataFrame()
+        except Exception as e:
+            st.error(f"Error: {e}")
+            return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
     df = load_data_from_sheets(SHEET_URL_CURRENT)
@@ -200,13 +202,9 @@ elif st.session_state.page == "dashboard":
             with col:
                 st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
                 st.text_input("Secondary Driver:", value=default_title, key=f"t_{key_id}")
-                st.text_input("Cliente:", key=f"cl_{key_id}")
-                st.number_input("Score:", 0, 10, 1, key=f"sc_{key_id}")
-                st.text_area("Comentario:", key=f"cm_{key_id}", height=120)
-                st.text_input("Unidad:", key=f"tr_{key_id}")
-        render_card(col_t1, "c1", "Secondary Driver 1:")
-        render_card(col_t2, "c2", "Secondary Driver 2:")
-        render_card(col_t3, "c3", "Secondary Driver 3:")
+                st.text_input("Cliente:", key=f"cl_{key_id}"); st.number_input("Score:", 0, 10, 1, key=f"sc_{key_id}")
+                st.text_area("Comentario:", key=f"cm_{key_id}", height=120); st.text_input("Unidad:", key=f"tr_{key_id}")
+        render_card(col_t1, "c1", "Secondary Driver 1:"); render_card(col_t2, "c2", "Secondary Driver 2:"); render_card(col_t3, "c3", "Secondary Driver 3:")
     else: st.warning("Conectando con Google Sheets...")
 
 # ==========================================
@@ -217,11 +215,11 @@ elif st.session_state.page == "monthly":
     
     col_nav_m1, col_nav_m2 = st.columns([1, 5])
     with col_nav_m1:
-        if st.button("⬅ INICIO", key="back_evo"):
+        if st.button("⬅ INICIO"):
             st.session_state.page = "home"
             st.rerun()
     with col_nav_m2:
-        if st.button("🔄 ACTUALIZAR DATOS", key="update_evo"):
+        if st.button("🔄 ACTUALIZAR DATOS"):
             st.cache_data.clear()
             st.rerun()
         
@@ -244,7 +242,6 @@ elif st.session_state.page == "monthly":
         y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-        
         v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
         vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
         v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
@@ -277,11 +274,10 @@ elif st.session_state.page == "monthly":
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
         col_a1, col_a2, col_a3 = st.columns(3)
         for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
-            valor_ytd = df_raw.iloc[idx, 2]
-            txt = str(df_raw.iloc[idx, 0])
+            val, txt = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
             txt_f = "<br>".join([txt[:len(txt)//2], txt[len(txt)//2:]])
             fr = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False))
-            fr.add_annotation(text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
+            fr.add_annotation(text=f"<b>{val}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
             fr.add_annotation(text=f"<b>{txt_f}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center')
             fr.update_layout(paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
             col.plotly_chart(fr, use_container_width=True)
@@ -289,8 +285,8 @@ elif st.session_state.page == "monthly":
         st.markdown("---")
         c1, c2, c3 = st.columns([1, 2, 1])
         with c1:
-            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
+            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="cr_m")
         with c2:
-            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
+            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="pa_m")
         with c3:
-            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="kk_m")
