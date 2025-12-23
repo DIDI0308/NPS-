@@ -117,7 +117,7 @@ if not df_raw.empty:
     p24 = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
     st.markdown(f"""<h2 style='text-align: center; color: #FFFF00; padding-bottom: 10px; font-size: 20px;'>
-        NPS CD EL ALTO | {v_a_25} {mes_actual_nombre} – {v_a_24} LY {v_a_bu} BGT (YTD BU) | {y25_i} YTD vs {ybu_i} BGT YTD</h2>""", unsafe_allow_html=True)
+        NPS CD EL ALTO | {v_a_25} {mes_actual_nombre} – {v_a_24} LY {v_a_bu} BGT ({YTD BU}) | {y25_i} YTD vs {ybu_i} BGT YTD</h2>""", unsafe_allow_html=True)
 
     # --- RENDERIZADO DE GRÁFICAS ---
     col_evol, col_ytd = st.columns([3, 1.2])
