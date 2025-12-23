@@ -5,7 +5,7 @@ import requests
 from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Performance Dashboard", layout="wide")
+st.set_page_config(page_title="NPS Growth Analysis", layout="wide")
 
 st.markdown("""
     <style>
@@ -19,6 +19,7 @@ def load_live_data(spreadsheet_url):
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
+        # Fila 3=índice 2, Fila 4=índice 3, Fila 5=índice 4
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
@@ -74,33 +75,37 @@ if not df_raw.empty:
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # --- LÍNEAS DE CONEXIÓN EN ÁNGULO RECTO ---
-        y_top = max(val_25, val_bu, val_24) + 10 # Altura horizontal de referencia
+        # --- LÍNEAS DE CONEXIÓN RECTAS CON COLOR CONDICIONAL ---
+        y_common_top = max(val_25, val_bu, val_24) + 12 # Altura fija para ambas líneas
 
-        # Conexión BU a 2025 (Vertical -> Horizontal -> Vertical)
+        # Lógica de Color para Círculos: Verde si >= 0, Rojo si < 0
+        color_circle_25 = "#00FF00" if pct_25_vs_bu >= 0 else "#FF0000"
+        color_circle_24 = "#00FF00" if pct_24_vs_bu >= 0 else "#FF0000"
+
+        # Conexión BU a 2025 (Recta)
         fig_bar.add_shape(type="path",
-            path=f"M 1,{val_bu} L 1,{y_top} L 2,{y_top} L 2,{val_25}",
+            path=f"M 1,{val_bu} L 1,{y_common_top} L 2,{y_common_top} L 2,{val_25}",
             line=dict(color="white", width=2))
         
         fig_bar.add_annotation(
-            x=1.5, y=y_top, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
+            x=1.5, y=y_common_top, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
             showarrow=False, font=dict(color="black", size=10),
-            bgcolor="#FFFF00", bordercolor="white", borderwidth=1, borderpad=4)
+            bgcolor=color_circle_25, bordercolor="white", borderwidth=1, borderpad=5)
 
-        # Conexión BU a 2024 (Vertical -> Horizontal -> Vertical)
+        # Conexión BU a 2024 (Recta)
         fig_bar.add_shape(type="path",
-            path=f"M 1,{val_bu} L 1,{y_top+5} L 0,{y_top+5} L 0,{val_24}",
+            path=f"M 1,{val_bu} L 1,{y_common_top} L 0,{y_common_top} L 0,{val_24}",
             line=dict(color="white", width=2))
         
         fig_bar.add_annotation(
-            x=0.5, y=y_top+5, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
+            x=0.5, y=y_common_top, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
             showarrow=False, font=dict(color="black", size=10),
-            bgcolor="#F4D03F", bordercolor="white", borderwidth=1, borderpad=4)
+            bgcolor=color_circle_24, bordercolor="white", borderwidth=1, borderpad=5)
 
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, y_top + 15]),
+            yaxis=dict(visible=False, range=[0, y_common_top + 15]),
             height=500, margin=dict(t=50, b=20)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
