@@ -106,19 +106,30 @@ elif st.session_state.page == "dashboard":
         st.session_state.page = "home"
         st.rerun()
 
-    @st.cache_data
-    def load_data():
+    # NUEVA FUNCIÓN PARA CARGAR DESDE GOOGLE SHEETS
+    @st.cache_data(ttl=600)
+    def load_data_from_sheets(url):
         try:
-            df = pd.read_excel('Base bruta dic.xlsx')
-            df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'])
+            base_url = url.split('/edit')[0]
+            csv_url = f"{base_url}/export?format=csv"
+            response = requests.get(csv_url)
+            response.raise_for_status()
+            df = pd.read_csv(StringIO(response.text))
+            
+            # Limpieza y formateo (mismo que tenías antes)
+            df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
             df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
             df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
             df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
             df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
             return df
-        except: return pd.DataFrame()
+        except Exception as e:
+            st.error(f"Error cargando datos de Sheets: {e}")
+            return pd.DataFrame()
 
-    df = load_data()
+    SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
+    df = load_data_from_sheets(SHEET_URL_CURRENT)
+
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
@@ -174,7 +185,6 @@ elif st.session_state.page == "dashboard":
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
 
-        # --- GRÁFICA 5: BOTELLAS DE CERVEZA REALISTAS ---
         st.markdown("<br>", unsafe_allow_html=True)
         if not df_sec.empty:
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
@@ -205,10 +215,10 @@ elif st.session_state.page == "dashboard":
                 st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
                 st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Asegúrate de tener el archivo Excel cargado.")
+    else: st.warning("Cargando datos desde la nube o la hoja está vacía...")
 
 # ==========================================
-# VISTA 3: MONTHLY EVOLUTION (NPS CD EL ALTO)
+# VISTA 3: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == "monthly":
     st.markdown("""
@@ -303,7 +313,7 @@ elif st.session_state.page == "monthly":
         </div>
         """, unsafe_allow_html=True)
 
-    def load_live_data(spreadsheet_url):
+    def load_live_data_evolution(spreadsheet_url):
         try:
             base_url = spreadsheet_url.split('/edit')[0]
             csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
@@ -315,8 +325,8 @@ elif st.session_state.page == "monthly":
             st.error(f"Error de conexión: {e}")
             return pd.DataFrame()
 
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
-    df_raw = load_live_data(SHEET_URL)
+    SHEET_URL_EVO = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
+    df_raw = load_live_data_evolution(SHEET_URL_EVO)
 
     def render_nps_block(df, row_start_idx, title_prefix):
         meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
