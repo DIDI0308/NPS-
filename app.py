@@ -5,79 +5,108 @@ import requests
 from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Real-Time Evolution", layout="wide")
-st.markdown("<style>.stApp { background-color: black; color: white; }</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="NPS Dashboard Yellow", layout="wide")
 
-# --- FUNCIÓN DE CARGA SIN CACHÉ (Sincronización Total) ---
-def load_nps_live_data(spreadsheet_url):
+# Fondo negro global
+st.markdown("""
+    <style>
+    .stApp { background-color: black; color: white; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- CARGA DE DATOS EN TIEMPO REAL (SIN CACHÉ) ---
+def load_live_data(spreadsheet_url):
     try:
-        # Forzamos la descarga del CSV de la Hoja 1 (gid=0)
         base_url = spreadsheet_url.split('/edit')[0]
-        csv_url = f"{base_url}/export?format=csv&gid=0"
-        
-        # Agregamos un parámetro aleatorio a la URL para saltar posibles cachés de red
-        response = requests.get(csv_url + "&cache_bust=1")
+        # Forzamos la descarga del CSV y evitamos el caché de red con un timestamp
+        csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
+        response = requests.get(csv_url)
         response.raise_for_status()
         
-        # Leemos el CSV sin usar la primera fila como nombres (header=None) 
-        # para que la Fila 1 de Sheets sea el índice 0 de Pandas
+        # Leemos sin encabezados para usar índices exactos de celdas
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
-        st.error(f"Error de sincronización: {e}")
+        st.error(f"Error de conexión: {e}")
         return pd.DataFrame()
 
 # URL de tu Google Sheet
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
 
-# --- PROCESAMIENTO DE DATOS ---
-df_raw = load_nps_live_data(SHEET_URL)
+# --- PROCESAMIENTO ---
+df_raw = load_live_data(SHEET_URL)
 
 if not df_raw.empty:
-    # Eje X: Meses
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
-    # EXTRACCIÓN POR COORDENADAS:
-    # Columnas D a O son los índices 3 a 14 en Python.
+    # 1. DATOS GRÁFICA DE LÍNEAS (Filas 3-5, Columnas D-O -> Indices [2-4, 3-14])
+    ytd_2025_line = pd.to_numeric(df_raw.iloc[2, 3:15], errors='coerce').tolist()
+    bgt_line = pd.to_numeric(df_raw.iloc[3, 3:15], errors='coerce').tolist()
+    ytd_2024_line = pd.to_numeric(df_raw.iloc[4, 3:15], errors='coerce').tolist()
     
-    # Fila 3 de Sheets -> Índice 2 en Pandas (YTD 2025)
-    ytd_2025 = pd.to_numeric(df_raw.iloc[2, 3:15], errors='coerce').tolist()
-    
-    # Fila 4 de Sheets -> Índice 3 en Pandas (BGT)
-    bgt_val = pd.to_numeric(df_raw.iloc[3, 3:15], errors='coerce').tolist()
-    
-    # Fila 5 de Sheets -> Índice 4 en Pandas (YTD 2024)
-    ytd_2024 = pd.to_numeric(df_raw.iloc[4, 3:15], errors='coerce').tolist()
+    # 2. DATOS BARRAS DELGADAS (Nombres Col B, Valores Col C -> Indices [2-4, 1-2])
+    # Ordenamos para que aparezca 2024, BGT, 2025 de izquierda a derecha
+    labels_bar = [df_raw.iloc[4, 1], df_raw.iloc[3, 1], df_raw.iloc[2, 1]]
+    values_bar = [
+        pd.to_numeric(df_raw.iloc[4, 2], errors='coerce'),
+        pd.to_numeric(df_raw.iloc[3, 2], errors='coerce'),
+        pd.to_numeric(df_raw.iloc[2, 2], errors='coerce')
+    ]
 
-    # --- GRÁFICA ---
-    st.markdown("<h2 style='text-align: center;'>NPS MONTHLY EVOLUTION (LIVE)</h2>", unsafe_allow_html=True)
+    # --- DISEÑO EN COLUMNAS ---
+    col_evol, col_ytd = st.columns([3, 1]) # 75% Líneas, 25% Barras
 
-    fig = go.Figure()
+    # --- COLUMNA IZQUIERDA: NPS MONTHLY EVOLUTION ---
+    with col_evol:
+        st.markdown("<h3 style='text-align: center; color: #FFFF00;'>NPS MONTHLY EVOLUTION</h3>", unsafe_allow_html=True)
+        fig_line = go.Figure()
 
-    # YTD 2025 (Azul)
-    fig.add_trace(go.Scatter(x=meses, y=ytd_2025, mode='lines+markers+text', name='YTD 2025',
-                             line=dict(color='#005587', width=4), text=ytd_2025, textposition="top center"))
+        # Línea 2025 (Amarillo Brillante)
+        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2025_line, mode='lines+markers+text', name='YTD 2025',
+                                     line=dict(color='#FFFF00', width=4), text=ytd_2025_line, 
+                                     textposition="top center", textfont=dict(color="white")))
+        # BGT (Dashed)
+        fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name='BGT',
+                                     line=dict(color='#FFD700', width=2, dash='dash')))
+        # Línea 2024 (Amarillo Ámbar)
+        fig_line.add_trace(go.Scatter(x=meses, y=ytd_2024_line, mode='lines+markers+text', name='YTD 2024',
+                                     line=dict(color='#F4D03F', width=3), text=ytd_2024_line, 
+                                     textposition="bottom center", textfont=dict(color="white")))
 
-    # BGT (Verde)
-    fig.add_trace(go.Scatter(x=meses, y=bgt_val, mode='lines', name='BGT',
-                             line=dict(color='#006A4D', width=3)))
+        fig_line.update_layout(
+            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
+            yaxis=dict(visible=False),
+            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white")),
+            height=500, margin=dict(t=80, b=40)
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
 
-    # YTD 2024 (Naranja)
-    fig.add_trace(go.Scatter(x=meses, y=ytd_2024, mode='lines+markers+text', name='YTD 2024',
-                             line=dict(color='#E87722', width=3), text=ytd_2024, textposition="bottom center"))
+    # --- COLUMNA DERECHA: BARRAS YTD (B3-B5, C3-C5) ---
+    with col_ytd:
+        st.markdown("<h3 style='text-align: center; color: #FFFF00;'>YTD</h3>", unsafe_allow_html=True)
+        fig_bar = go.Figure()
 
-    fig.update_layout(
-        paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
-        xaxis=dict(showgrid=False), yaxis=dict(visible=False),
-        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"),
-        height=550
-    )
+        fig_bar.add_trace(go.Bar(
+            x=labels_bar,
+            y=values_bar,
+            text=values_bar,
+            textposition='auto',
+            marker_color=['#F4D03F', '#FFD700', '#FFFF00'],
+            width=0.4, # Hace las barritas más delgadas
+            textfont=dict(color="white", size=14)
+        ))
 
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Botón manual de refresco
-    if st.button("🔄 Sincronizar ahora"):
-        st.rerun()
+        fig_bar.update_layout(
+            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
+            xaxis=dict(tickfont=dict(color="white", size=12), showgrid=False),
+            yaxis=dict(visible=False),
+            height=500, margin=dict(t=80, b=40)
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    # Botón de actualización
+    st.button("🔄 ACTUALIZAR DATOS")
 
 else:
-    st.info("Conectando con Google Sheets...")
+    st.info("Esperando conexión con Google Sheets...")
