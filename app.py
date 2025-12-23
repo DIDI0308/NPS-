@@ -8,36 +8,28 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS CD EL ALTO Dashboard", layout="wide")
 
-# Estilo para fondo negro y diseño de los cuadros
+# Estilo para fondo negro, texto blanco y personalización del botón
 st.markdown("""
     <style>
     .stApp { background-color: black; color: white; }
     
-    /* Estilo para el botón de actualización */
+    /* Estilo para el botón de actualización (Amarillo con texto negro) */
     div.stButton > button {
         background-color: #FFFF00;
         color: black;
         border: None;
         font-weight: bold;
     }
-
-    /* Estilo de los encabezados de los cuadros editables */
-    .header-box {
-        background-color: #000000;
-        color: #FFFF00;
-        text-align: center;
-        font-weight: bold;
-        border: 1px solid white;
-        padding: 5px;
-        text-decoration: underline;
-        margin-bottom: -5px;
+    div.stButton > button:hover {
+        background-color: #e6e600;
+        color: black;
     }
     
-    /* Quitar bordes rojos de enfoque en text_area */
-    .stTextArea textarea {
-        background-color: #000000 !important;
-        color: white !important;
-        border: 1px solid white !important;
+    /* Estilo para etiquetas de los editores */
+    .stTextArea label {
+        color: #FFFF00 !important;
+        font-weight: bold !important;
+        text-decoration: underline !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -76,6 +68,10 @@ if not df_raw.empty:
     val_bu = pd.to_numeric(df_raw.iloc[3, 2], errors='coerce')
     val_24 = pd.to_numeric(df_raw.iloc[4, 2], errors='coerce')
     
+    label_25 = str(df_raw.iloc[2, 1])
+    label_bu = str(df_raw.iloc[3, 1])
+    label_24 = str(df_raw.iloc[4, 1])
+
     # Lógica título dinámico
     valid_data_2025 = [i for i, v in enumerate(y25_line) if pd.notnull(v) and v != 0]
     last_idx = valid_data_2025[-1] if valid_data_2025 else 0
@@ -97,20 +93,20 @@ if not df_raw.empty:
         </h2>
     """, unsafe_allow_html=True)
 
-    # --- GRÁFICAS ---
+    # --- RENDERIZADO DE GRÁFICAS ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
     with col_evol:
         fig_line = go.Figure()
-        fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name="YTD 2025", line=dict(color='#FFFF00', width=4), text=y25_line, textposition="top center", textfont=dict(color="white")))
-        fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name="BU", line=dict(color='#FFD700', width=2, dash='dash')))
-        fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name="YTD 2024", line=dict(color='#F4D03F', width=2), text=y24_line, textposition="bottom center", textfont=dict(color="white")))
+        fig_line.add_trace(go.Scatter(x=meses, y=y25_line, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_line, textposition="top center", textfont=dict(color="white")))
+        fig_line.add_trace(go.Scatter(x=meses, y=bgt_line, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
+        fig_line.add_trace(go.Scatter(x=meses, y=y24_line, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_line, textposition="bottom center", textfont=dict(color="white")))
         fig_line.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False), legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"), height=400)
         st.plotly_chart(fig_line, use_container_width=True)
 
     with col_ytd:
         fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(x=['2024', 'BGT', '2025'], y=[val_24, val_bu, val_25], text=[f"{val_24}", f"{val_bu}", f"{val_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
+        fig_bar.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_24, val_bu, val_25], text=[f"{val_24}", f"{val_bu}", f"{val_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
         y_top = max(val_25, val_bu, val_24) + 12
         fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 2,{y_top} L 2,{val_25}", line=dict(color="white", width=2))
         fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 0,{y_top} L 0,{val_24}", line=dict(color="white", width=2))
@@ -124,8 +120,7 @@ if not df_raw.empty:
     c1, c2, c3 = st.columns([1, 2, 1])
 
     with c1:
-        st.markdown('<div class="header-box">Causas Raíz YTD</div>', unsafe_allow_html=True)
-        causas_input = st.text_area(label="Editar Causas", height=200, label_visibility="collapsed", value="""Top 5:
+        st.text_area("Causas Raíz YTD", height=200, value="""Top 5:
 • Equipos de Frío (SALES)
 • Servicio de Entrega (LOG)
 • Bees App (SALES)
@@ -133,16 +128,14 @@ if not df_raw.empty:
 • Programa de Puntos (SALES)""")
 
     with c2:
-        st.markdown('<div class="header-box">Plan de Acción</div>', unsafe_allow_html=True)
-        plan_input = st.text_area(label="Editar Plan", height=200, label_visibility="collapsed", value="""• Se recapacitó en atención al cliente a distribución y en el proceso de entrega.
+        st.text_area("Plan de Acción", height=200, value="""• Se recapacitó en atención al cliente a distribución y en el proceso de entrega.
 • Reforzar con Operadores Logísticos la buena atención al cliente.
 • Reforzar comunicación clientes-ventas-log demora en entrega de pedidos.
 • Cruce de horario de entrega exitoso con VH para coordinar horario de entrega por zona.
 • Se reforzó el servicio de entrega exitosamente, logrando brindar una experiencia buena y nueva a un cliente detractor.""")
 
     with c3:
-        st.markdown('<div class="header-box">Key KPIs</div>', unsafe_allow_html=True)
-        kpis_input = st.text_area(label="Editar KPIs", height=200, label_visibility="collapsed", value="""• Canjes (Dev. Mercado y faltantes)
+        st.text_area("Key KPIs", height=200, value="""• Canjes (Dev. Mercado y faltantes)
 • Rechazo
 • On time
 • In full""")
