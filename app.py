@@ -54,24 +54,17 @@ st.markdown("""
         border: None;
         font-weight: bold;
     }
-    
-    /* Etiquetas amarillas para recuadros editables */
-    .stTextArea label {
-        color: #FFFF00 !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-    }
 
     /* Estilo para la Tabla de Detractores (FONDO BLANCO) */
     .detractores-table {
         width: 100%;
         border-collapse: collapse;
         color: black;
-        background-color: white; /* Fondo blanco solicitado */
+        background-color: white;
         margin-bottom: 20px;
     }
     .detractores-table th {
-        background-color: #1a3a4a; /* Encabezado mantiene azul oscuro */
+        background-color: #1a3a4a;
         color: white;
         padding: 10px;
         border: 1px solid #ddd;
@@ -86,9 +79,38 @@ st.markdown("""
     }
     .detractores-table .text-col {
         text-align: left;
-        background-color: #f9f9f9; /* Gris muy claro para la descripción */
+        background-color: #f9f9f9;
         width: 25%;
         font-weight: bold;
+    }
+
+    /* Estilo para los Círculos Indicadores */
+    .circle-container {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin: 20px 0;
+        text-align: center;
+    }
+    .kpi-circle {
+        width: 120px;
+        height: 120px;
+        background-color: #FFFF00;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: black;
+        font-size: 32px;
+        font-weight: bold;
+        margin: 0 auto 10px auto;
+        border: 3px solid white;
+    }
+    .kpi-label {
+        font-size: 14px;
+        font-weight: bold;
+        color: #FFFF00;
+        max-width: 200px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -176,28 +198,37 @@ if not df_raw.empty:
     render_nps_block(df_raw, 7, "NPS EA")
     render_nps_block(df_raw, 11, "NPS LP")
 
-    # --- TABLA: DETRACTORES (CON FONDO BLANCO) ---
-    st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
-    
-    # Filas 19, 21, 23 (Indices 18, 20, 22)
+    # --- TABLA: DETRACTORES ---
+    st.markdown('<div class="section-banner">DETRACTORS</div>', unsafe_allow_html=True)
     rows_det = [18, 20, 22]
     months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
     table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
-    for m in months:
-        table_html += f'<th>{m}</th>'
+    for m in months: table_html += f'<th>{m}</th>'
     table_html += '</tr></thead><tbody>'
     
     for r in rows_det:
-        text_desc = str(df_raw.iloc[r, 0]) # Columna A
+        text_desc = str(df_raw.iloc[r, 0])
         table_html += f'<tr><td class="text-col">{text_desc}</td>'
         for c in range(3, 15):
             val = df_raw.iloc[r, c]
             table_html += f'<td>{val if pd.notnull(val) else "-"}</td>'
         table_html += '</tr>'
     table_html += '</tbody></table>'
-    
     st.markdown(table_html, unsafe_allow_html=True)
+
+    # --- INDICADORES CIRCULARES (C19, C21, C23) ---
+    st.markdown('<div class="circle-container">', unsafe_allow_html=True)
+    for r in rows_det:
+        val_ytd = int(pd.to_numeric(df_raw.iloc[r, 2], errors='coerce')) if pd.notnull(df_raw.iloc[r, 2]) else 0
+        label_text = str(df_raw.iloc[r, 0])
+        st.markdown(f"""
+            <div>
+                <div class="kpi-circle">{val_ytd}</div>
+                <div class="kpi-label">{label_text}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # --- RECUADROS EDITABLES INFERIORES ---
     st.markdown("---")
