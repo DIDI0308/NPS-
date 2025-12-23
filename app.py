@@ -62,31 +62,33 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* Estilo para la Tabla de Detractores */
+    /* Estilo para la Tabla de Detractores (FONDO BLANCO) */
     .detractores-table {
         width: 100%;
         border-collapse: collapse;
-        color: white;
-        background-color: #111;
+        color: black;
+        background-color: white; /* Fondo blanco solicitado */
         margin-bottom: 20px;
     }
     .detractores-table th {
-        background-color: #1a3a4a; /* Azul oscuro similar a la imagen */
+        background-color: #1a3a4a; /* Encabezado mantiene azul oscuro */
         color: white;
         padding: 10px;
-        border: 1px solid #333;
+        border: 1px solid #ddd;
         font-size: 12px;
     }
     .detractores-table td {
         padding: 8px;
-        border: 1px solid #333;
+        border: 1px solid #ddd;
         text-align: center;
         font-size: 12px;
+        color: black;
     }
     .detractores-table .text-col {
         text-align: left;
-        background-color: #000;
+        background-color: #f9f9f9; /* Gris muy claro para la descripción */
         width: 25%;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -174,12 +176,11 @@ if not df_raw.empty:
     render_nps_block(df_raw, 7, "NPS EA")
     render_nps_block(df_raw, 11, "NPS LP")
 
-    # --- NUEVA TABLA: CANTIDAD DETRACTORES ---
+    # --- TABLA: DETRACTORES (CON FONDO BLANCO) ---
     st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
     
     # Filas 19, 21, 23 (Indices 18, 20, 22)
     rows_det = [18, 20, 22]
-    # Columnas D a O (Indices 3 a 14)
     months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
     table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
