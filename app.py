@@ -215,11 +215,11 @@ elif st.session_state.page == "monthly":
     
     col_nav_m1, col_nav_m2 = st.columns([1, 5])
     with col_nav_m1:
-        if st.button("⬅ INICIO"):
+        if st.button("⬅ INICIO", key="back_evo"):
             st.session_state.page = "home"
             st.rerun()
     with col_nav_m2:
-        if st.button("🔄 ACTUALIZAR DATOS"):
+        if st.button("🔄 ACTUALIZAR DATOS", key="update_evo"):
             st.cache_data.clear()
             st.rerun()
         
@@ -242,6 +242,7 @@ elif st.session_state.page == "monthly":
         y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
+        
         v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
         vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
         v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
@@ -281,12 +282,8 @@ elif st.session_state.page == "monthly":
             fr.add_annotation(text=f"<b>{txt_f}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center')
             fr.update_layout(paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
             col.plotly_chart(fr, use_container_width=True)
-            
         st.markdown("---")
         c1, c2, c3 = st.columns([1, 2, 1])
-        with c1:
-            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="cr_m")
-        with c2:
-            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="pa_m")
-        with c3:
-            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="kk_m")
+        with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_evo")
+        with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_evo")
+        with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_evo")
