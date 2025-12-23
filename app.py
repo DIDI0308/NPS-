@@ -9,7 +9,7 @@ import base64
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS CD EL ALTO Dashboard", layout="wide")
 
-# Estilo para fondo negro, franja amarilla y logos
+# Estilo para fondo negro, franja amarilla y personalización de recuadros
 st.markdown("""
     <style>
     .stApp { background-color: black; color: white; }
@@ -47,9 +47,17 @@ st.markdown("""
         background-color: #e6e600;
         color: black;
     }
+
+    /* TÍTULOS DE LOS RECUADROS EN AMARILLO */
+    .stTextArea label {
+        color: #FFFF00 !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
+# --- CARGA DE LOGOS ---
 def get_base64_image(image_path):
     if os.path.exists(image_path):
         with open(image_path, "rb") as img_file:
@@ -59,6 +67,7 @@ def get_base64_image(image_path):
 img_logo_izq = get_base64_image("logo2.png")
 img_logo_der = get_base64_image("logo.png")
 
+# --- ENCABEZADO PRINCIPAL ---
 st.markdown(f"""
     <div class="header-banner">
         <img src="data:image/png;base64,{img_logo_izq}" class="logo-img">
@@ -67,7 +76,7 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# Botón de actualización
+# Botón de actualización superior izquierdo
 col_btn, _ = st.columns([1, 5])
 with col_btn:
     if st.button("ACTUALIZAR DATOS"):
@@ -92,36 +101,41 @@ df_raw = load_live_data(SHEET_URL)
 if not df_raw.empty:
     # --- PROCESAMIENTO DE DATOS ---
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+    
+    # Datos mensuales (Filas 3, 4, 5 -> Indices 2, 3, 4)
     y25_line = pd.to_numeric(df_raw.iloc[2, 3:15], errors='coerce').tolist()
     bgt_line = pd.to_numeric(df_raw.iloc[3, 3:15], errors='coerce').tolist()
     y24_line = pd.to_numeric(df_raw.iloc[4, 3:15], errors='coerce').tolist()
 
-    val_25 = pd.to_numeric(df_raw.iloc[2, 2], errors='coerce')
-    val_bu = pd.to_numeric(df_raw.iloc[3, 2], errors='coerce')
-    val_24 = pd.to_numeric(df_raw.iloc[4, 2], errors='coerce')
+    # Datos YTD (Columna C -> Indice 2)
+    val_ytd_25 = pd.to_numeric(df_raw.iloc[2, 2], errors='coerce')
+    val_ytd_bu = pd.to_numeric(df_raw.iloc[3, 2], errors='coerce') 
+    val_ytd_24 = pd.to_numeric(df_raw.iloc[4, 2], errors='coerce')
     
     label_25 = str(df_raw.iloc[2, 1]); label_bu = str(df_raw.iloc[3, 1]); label_24 = str(df_raw.iloc[4, 1])
 
-    # Título dinámico interno
+    # Detección de Mes Actual
     valid_data_2025 = [i for i, v in enumerate(y25_line) if pd.notnull(v) and v != 0]
     last_idx = valid_data_2025[-1] if valid_data_2025 else 0
     mes_actual_nombre = meses[last_idx]
-    v_a_25 = int(y25_line[last_idx]) if pd.notnull(y25_line[last_idx]) else 0
-    v_a_24 = int(y24_line[last_idx]) if pd.notnull(y24_line[last_idx]) else 0
-    v_a_bu = int(bgt_line[last_idx]) if pd.notnull(bgt_line[last_idx]) else 0
     
-    # Definición de valores YTD enteros para el título
-    y25_i = int(val_25) if pd.notnull(val_25) else 0
-    ybu_i = int(val_bu) if pd.notnull(val_bu) else 0 # YTD BU capturado de columna C
+    # Valores dinámicos del título
+    v_ma_25 = int(y25_line[last_idx]) if pd.notnull(y25_line[last_idx]) else 0
+    v_ma_24 = int(y24_line[last_idx]) if pd.notnull(y24_line[last_idx]) else 0
+    v_ma_bu = int(bgt_line[last_idx]) if pd.notnull(bgt_line[last_idx]) else 0
     
-    p25 = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
-    p24 = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
+    ytd_25_int = int(val_ytd_25) if pd.notnull(val_ytd_25) else 0
+    ytd_bu_int = int(val_ytd_bu) if pd.notnull(val_ytd_bu) else 0 
 
-    # TÍTULO CORREGIDO: Ahora muestra el valor de YTD BU en el paréntesis
-    st.markdown(f"""<h2 style='text-align: center; color: #FFFF00; padding-bottom: 10px; font-size: 20px;'>
-        NPS CD EL ALTO | {v_a_25} {mes_actual_nombre} – {v_a_24} LY {v_a_bu} BGT ({ybu_i}) | {y25_i} YTD vs {ybu_i} BGT YTD</h2>""", unsafe_allow_html=True)
+    # --- TÍTULO DINÁMICO ---
+    # Incluye el YTD BU en paréntesis
+    st.markdown(f"""
+        <h2 style='text-align: center; color: #FFFF00; padding-bottom: 20px; font-size: 20px;'>
+            NPS CD EL ALTO | {v_ma_25} {mes_actual_nombre} – {v_ma_24} LY {v_ma_bu} BGT ({ytd_bu_int}) | {ytd_25_int} YTD vs {ytd_bu_int} BGT YTD
+        </h2>
+    """, unsafe_allow_html=True)
 
-    # --- RENDERIZADO DE GRÁFICAS ---
+    # --- GRÁFICAS ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
     with col_evol:
@@ -134,16 +148,22 @@ if not df_raw.empty:
 
     with col_ytd:
         fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_24, val_bu, val_25], text=[f"{val_24}", f"{val_bu}", f"{val_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-        y_top = max(val_25, val_bu, val_24) + 12
-        fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 2,{y_top} L 2,{val_25}", line=dict(color="white", width=2))
-        fig_bar.add_shape(type="path", path=f"M 1,{val_bu} L 1,{y_top} L 0,{y_top} L 0,{val_24}", line=dict(color="white", width=2))
+        fig_bar.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
+        
+        y_top = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 12
+        p25 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
+        p24 = ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
+
+        # Conexiones rectas
+        fig_bar.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_top} L 2,{y_top} L 2,{val_ytd_25}", line=dict(color="white", width=2))
+        fig_bar.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_top} L 0,{y_top} L 0,{val_ytd_24}", line=dict(color="white", width=2))
         fig_bar.add_annotation(x=1.5, y=y_top, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
         fig_bar.add_annotation(x=0.5, y=y_top, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
+        
         fig_bar.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_top + 15]), height=400)
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # --- CUADROS EDITABLES INFERIORES ---
+    # --- CUADROS EDITABLES CON TÍTULOS AMARILLOS ---
     st.markdown("---")
     c1, c2, c3 = st.columns([1, 2, 1])
     with c1: st.text_area("Causas Raíz YTD", height=200, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App\n• Precios\n• Puntos")
