@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import requests
 from io import StringIO
 import os
+import base64
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="NPS CD EL ALTO Dashboard", layout="wide")
@@ -32,7 +33,7 @@ st.markdown("""
         flex-grow: 1;
     }
     .logo-img {
-        height: 70px; /* Ajusta el tamaño de tus logos aquí */
+        height: 70px;
     }
 
     /* Estilo para el botón de actualización */
@@ -48,10 +49,6 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
-
-# --- ENCABEZADO CON LOGOS LOCALES ---
-# Nota: Asegúrate de que logo.png y logo2.png estén en la misma carpeta que este script.
-import base64
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -105,19 +102,24 @@ if not df_raw.empty:
     
     label_25 = str(df_raw.iloc[2, 1]); label_bu = str(df_raw.iloc[3, 1]); label_24 = str(df_raw.iloc[4, 1])
 
-    # Título dinámico interno (Debajo del banner)
+    # Título dinámico interno
     valid_data_2025 = [i for i, v in enumerate(y25_line) if pd.notnull(v) and v != 0]
     last_idx = valid_data_2025[-1] if valid_data_2025 else 0
     mes_actual_nombre = meses[last_idx]
     v_a_25 = int(y25_line[last_idx]) if pd.notnull(y25_line[last_idx]) else 0
     v_a_24 = int(y24_line[last_idx]) if pd.notnull(y24_line[last_idx]) else 0
     v_a_bu = int(bgt_line[last_idx]) if pd.notnull(bgt_line[last_idx]) else 0
-    y25_i = int(val_25); ybu_i = int(val_bu)
+    
+    # Definición de valores YTD enteros para el título
+    y25_i = int(val_25) if pd.notnull(val_25) else 0
+    ybu_i = int(val_bu) if pd.notnull(val_bu) else 0 # YTD BU capturado de columna C
+    
     p25 = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
     p24 = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
+    # TÍTULO CORREGIDO: Ahora muestra el valor de YTD BU en el paréntesis
     st.markdown(f"""<h2 style='text-align: center; color: #FFFF00; padding-bottom: 10px; font-size: 20px;'>
-        NPS CD EL ALTO | {v_a_25} {mes_actual_nombre} – {v_a_24} LY {v_a_bu} BGT ({ytd_bu_int}) | {y25_i} YTD vs {ybu_i} BGT YTD</h2>""", unsafe_allow_html=True)
+        NPS CD EL ALTO | {v_a_25} {mes_actual_nombre} – {v_a_24} LY {v_a_bu} BGT ({ybu_i}) | {y25_i} YTD vs {ybu_i} BGT YTD</h2>""", unsafe_allow_html=True)
 
     # --- RENDERIZADO DE GRÁFICAS ---
     col_evol, col_ytd = st.columns([3, 1.2])
