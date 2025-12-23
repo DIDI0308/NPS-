@@ -184,33 +184,36 @@ if not df_raw.empty:
     table_html += '</tbody></table>'
     st.markdown(table_html, unsafe_allow_html=True)
 
-    # --- ANILLOS AMARILLOS YTD ---
+    # --- ANILLOS AMARILLOS YTD CORREGIDOS ---
     col_a1, col_a2, col_a3 = st.columns(3)
     indices_ytd = [18, 20, 22]
 
     for idx, col in zip(indices_ytd, [col_a1, col_a2, col_a3]):
-        valor_ytd = df_raw.iloc[idx, 2] # Columna C
-        texto_original = str(df_raw.iloc[idx, 0]) # Columna A
+        valor_ytd = df_raw.iloc[idx, 2]
+        texto_original = str(df_raw.iloc[idx, 0])
         
-        # Lógica para dividir el texto en dos líneas (espacio más cercano al medio)
         palabras = texto_original.split()
         mitad = len(palabras) // 2
         texto_formateado = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
         
         fig_ring = go.Figure(go.Pie(
-            values=[1], labels=[""], hole=0.8,
+            values=[1], hole=0.8,
             marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)),
             showlegend=False, hoverinfo='none'
         ))
+        # Número central blanco grueso
         fig_ring.add_annotation(
             text=f"<b>{valor_ytd}</b>", x=0.5, y=0.5, showarrow=False,
             font=dict(color="white", size=45, family="Arial Black")
         )
+        # Texto descriptivo inferior con separación (y=-0.15)
+        fig_ring.add_annotation(
+            text=f"<b>{texto_formateado}</b>", x=0.5, y=-0.15, showarrow=False,
+            font=dict(color="white", size=14), align='center', xref="paper", yref="paper"
+        )
         fig_ring.update_layout(
-            # Texto separado (y=-0.2) y en dos líneas
-            title=dict(text=f"<b>{texto_formateado}</b>", y=-0.05, x=0.5, xanchor='center', font=dict(color="white", size=14)),
             paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(t=10, b=80, l=10, r=10), height=300 # Aumentado margen inferior y alto
+            margin=dict(t=10, b=80, l=10, r=10), height=300
         )
         col.plotly_chart(fig_ring, use_container_width=True)
 
