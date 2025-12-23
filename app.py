@@ -184,10 +184,10 @@ elif st.session_state.page == "dashboard":
             data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
             fig5 = go.Figure()
             for i, row in data_score.reset_index(drop=True).iterrows():
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[1.5], base=6, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.4, showlegend=False))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[2.5], base=7.5, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.2, showlegend=False))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[0.2], base=10, marker=dict(color='#888'), width=0.25, showlegend=False))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[1.5], base=6, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.4, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[2.5], base=7.5, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.2, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[0.2], base=10, marker=dict(color='#888'), width=0.25, showlegend=False, hoverinfo='skip'))
                 score = row['Score']
                 if score > 0: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score, 6)], marker=dict(color='#FFCC00'), width=0.6, showlegend=False))
                 if score > 6: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-6, 1.5)], base=6, marker=dict(color='#FFCC00'), width=0.4, showlegend=False))
@@ -208,7 +208,7 @@ elif st.session_state.page == "dashboard":
     else: st.warning("Conectando con Google Sheets...")
 
 # ==========================================
-# VISTA 3: MONTHLY EVOLUTION
+# VISTA 3: MONTHLY EVOLUTION (UNIFICADO)
 # ==========================================
 elif st.session_state.page == "monthly":
     st.markdown("""<style>.stApp { background-color: black; color: white; } .header-banner { background-color: #FFFF00; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 10px; } .header-title { color: black !important; font-family: 'Arial Black', sans-serif; font-size: 28px; margin: 0; text-align: center; flex-grow: 1; } .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; } .logo-img { height: 70px; } div.stButton > button { background-color: #FFFF00 !important; color: black !important; border: None !important; font-weight: bold !important; } .stTextArea label { color: #FFFF00 !important; font-size: 22px !important; font-weight: bold !important; border: 2px solid #FFFF00; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 10px; } .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; } .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; } .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; } .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; } </style>""", unsafe_allow_html=True)
@@ -242,24 +242,22 @@ elif st.session_state.page == "monthly":
         y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
         bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
         y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-        
         v25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
         vbu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
         v24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-        
         last_idx = ([i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0] or [0])[-1]
         st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>{title_prefix} | {int(y25_m[last_idx])} {meses[last_idx]} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(vbu)}) | {int(v25)} YTD vs {int(vbu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
         ca, cb = st.columns([3, 1.2])
         with ca:
             fl = go.Figure()
-            fl.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name="2025", line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center"))
+            fl.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name="2025", line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
             fl.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name="Budget", line=dict(color='#FFD700', dash='dash')))
-            fl.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name="2024", line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center"))
-            fl.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False, range=[min(y24_m)-15, max(y25_m)+25]))
+            fl.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name="2024", line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+            fl.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, xaxis=dict(showgrid=False), yaxis=dict(visible=False, range=[min(y24_m)-15, max(y25_m)+25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
             st.plotly_chart(fl, use_container_width=True)
         with cb:
             fb = go.Figure()
-            fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[v24, vbu, v25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
+            fb.add_trace(go.Bar(x=["2024", "Budget", "2025"], y=[v24, vbu, v25], text=[v24, vbu, v25], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
             fb.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=500, yaxis=dict(visible=False))
             st.plotly_chart(fb, use_container_width=True)
 
@@ -276,7 +274,8 @@ elif st.session_state.page == "monthly":
         col_a1, col_a2, col_a3 = st.columns(3)
         for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
             val, txt = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
-            txt_f = "<br>".join([txt[:len(txt)//2], txt[len(txt)//2:]])
+            palabras = txt.split(); mitad = len(palabras) // 2
+            txt_f = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
             fr = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False))
             fr.add_annotation(text=f"<b>{val}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
             fr.add_annotation(text=f"<b>{txt_f}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center')
@@ -284,6 +283,9 @@ elif st.session_state.page == "monthly":
             col.plotly_chart(fr, use_container_width=True)
         st.markdown("---")
         c1, c2, c3 = st.columns([1, 2, 1])
-        with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_evo")
-        with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_evo")
-        with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_evo")
+        with c1:
+            st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="cr_v3")
+        with c2:
+            st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="pa_v3")
+        with c3:
+            st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="kk_v3")
