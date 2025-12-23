@@ -86,15 +86,13 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJ
 df_raw = load_live_data(SHEET_URL)
 
 def render_nps_block(df, row_start_idx, title_prefix):
-    """Función para renderizar bloques de gráficas basados en índices de fila"""
+    """Función para renderizar bloques de gráficas con eje Y extendido"""
     meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
     
-    # Datos mensuales (Índices dinámicos basados en row_start_idx)
     y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
     bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
     y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
 
-    # Datos YTD
     val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
     val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
     val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
@@ -103,17 +101,20 @@ def render_nps_block(df, row_start_idx, title_prefix):
     label_bu = str(df.iloc[row_start_idx + 1, 1])
     label_24 = str(df.iloc[row_start_idx + 2, 1])
 
-    # Detección Mes Actual
     valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
     last_idx = valid_data[-1] if valid_data else 0
     mes_txt = meses[last_idx]
     
-    # Título dinámico del bloque
     st.markdown(f"""
         <h2 style='text-align: center; color: #FFFF00; padding: 15px 0; font-size: 20px;'>
             {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD
         </h2>
     """, unsafe_allow_html=True)
+
+    # Cálculo de límites para el eje Y (Aumento de rango)
+    all_values_l = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
+    max_val_l = max(all_values_l) if all_values_l else 100
+    min_val_l = min(all_values_l) if all_values_l else 0
 
     col_a, col_b = st.columns([3, 1.2])
     with col_a:
@@ -121,20 +122,39 @@ def render_nps_block(df, row_start_idx, title_prefix):
         fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='lines+markers+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
         fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
         fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='lines+markers+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-        fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False), legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white")), height=350)
+        
+        # Ajuste de altura del gráfico y rango del eje Y (extendido arriba y abajo)
+        fig_l.update_layout(
+            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
+            yaxis=dict(visible=False, range=[min_val_l - 15, max_val_l + 25]), # Más espacio para etiquetas
+            legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")),
+            height=500, # Gráfico más alto (aprox +3cm)
+            margin=dict(t=50)
+        )
         st.plotly_chart(fig_l, use_container_width=True)
 
     with col_b:
         fig_b = go.Figure()
         fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-        y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 12
+        
+        y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15 # Subimos un poco más el tope de la línea
         p25 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
         p24 = ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
+        
         fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
         fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
+        
         fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
         fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-        fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 15]), height=350)
+        
+        fig_b.update_layout(
+            paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
+            xaxis=dict(showgrid=False, tickfont=dict(color="white")),
+            yaxis=dict(visible=False, range=[0, y_t + 30]), # Rango extendido para ver los círculos sin cortes
+            height=500, # Gráfico más alto
+            margin=dict(t=50)
+        )
         st.plotly_chart(fig_b, use_container_width=True)
 
 if not df_raw.empty:
@@ -144,7 +164,7 @@ if not df_raw.empty:
     st.markdown("<br>", unsafe_allow_html=True)
 
     # BLOQUE 2: Filas 8, 9, 10 (Indices 7, 8, 9)
-    render_nps_block(df_raw, 7, "NPS CD EL ALTO - NUEVA SECCIÓN")
+    render_nps_block(df_raw, 7, "NPS CD EL ALTO - SECCIÓN 2")
 
     # --- CUADROS EDITABLES INFERIORES ---
     st.markdown("---")
