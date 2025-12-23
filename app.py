@@ -5,7 +5,7 @@ import requests
 from io import StringIO
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="NPS Growth Dashboard", layout="wide")
+st.set_page_config(page_title="NPS Performance Dashboard", layout="wide")
 
 st.markdown("""
     <style>
@@ -16,11 +16,10 @@ st.markdown("""
 def load_live_data(spreadsheet_url):
     try:
         base_url = spreadsheet_url.split('/edit')[0]
-        # Sincronización en tiempo real saltando el caché
         csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
         response = requests.get(csv_url)
         response.raise_for_status()
-        # Estructura: Fila 3=índice 2, Fila 4=índice 3, Fila 5=índice 4
+        # Fila 3=índice 2, Fila 4=índice 3, Fila 5=índice 4
         df = pd.read_csv(StringIO(response.text), header=None)
         return df
     except Exception as e:
@@ -47,10 +46,14 @@ if not df_raw.empty:
     label_bu = str(df_raw.iloc[3, 1])
     label_24 = str(df_raw.iloc[4, 1])
 
-    # 3. CÁLCULOS DE DELTAS
-    delta_25 = val_25 - val_bu
-    delta_24 = val_24 - val_bu
+    # 3. CÁLCULO DE CRECIMIENTO EN %
+    pct_25_vs_bu = ((val_25 / val_bu) - 1) * 100 if val_bu != 0 else 0
+    pct_24_vs_bu = ((val_24 / val_bu) - 1) * 100 if val_bu != 0 else 0
 
+    # Altura máxima para posicionar flechas por encima de las barras
+    max_y = max(val_25, val_bu, val_24)
+
+    # --- RENDERIZADO ---
     col_evol, col_ytd = st.columns([3, 1.2])
 
     with col_evol:
@@ -66,6 +69,7 @@ if not df_raw.empty:
         st.markdown("<h3 style='text-align: center; color: #FFFF00;'>YTD COMPARISON</h3>", unsafe_allow_html=True)
         
         fig_bar = go.Figure()
+        # Gráfico de Barras
         fig_bar.add_trace(go.Bar(
             x=[label_24, label_bu, label_25],
             y=[val_24, val_bu, val_25],
@@ -76,37 +80,40 @@ if not df_raw.empty:
             textfont=dict(color="black", size=14, family="Arial Black")
         ))
 
-        # CORRECCIÓN DE ANOTACIONES (FLECHAS Y CÍRCULOS SIMULADOS)
-        # BU a 2025
+        # POSICIONES DE LAS FLECHAS (RECTAS Y POR ENCIMA)
+        y_arrow_25 = max_y + 8   # Altura para flecha BU -> 2025
+        y_arrow_24 = max_y + 16  # Altura para flecha BU -> 2024 (más arriba para no chocar)
+
+        # FLECHA RECTA: BU -> 2025
         fig_bar.add_annotation(
-            x=label_25, y=val_25, ax=label_bu, ay=val_bu,
+            x=label_25, y=y_arrow_25, ax=label_bu, ay=y_arrow_25,
             xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
-        # Círculo con el % de crecimiento
+        # CÍRCULO %: BU -> 2025
         fig_bar.add_annotation(
-            x=1.5, y=(val_bu + val_25)/2, text=f"<b>{delta_25:+.1f}</b>",
-            showarrow=False, font=dict(color="black", size=12),
-            bgcolor="#FFFF00", bordercolor="white", borderwidth=2, borderpad=6 # Simulamos el círculo con borderpad
+            x=1.5, y=y_arrow_25, text=f"<b>{pct_25_vs_bu:+.1f}%</b>",
+            showarrow=False, font=dict(color="black", size=11),
+            bgcolor="#FFFF00", bordercolor="white", borderwidth=2, borderpad=6
         )
 
-        # BU a 2024
+        # FLECHA RECTA: BU -> 2024
         fig_bar.add_annotation(
-            x=label_24, y=val_24, ax=label_bu, ay=val_bu,
+            x=label_24, y=y_arrow_24, ax=label_bu, ay=y_arrow_24,
             xref="x", yref="y", axref="x", ayref="y",
             showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="white"
         )
-        # Círculo con el % de decrecimiento
+        # CÍRCULO %: BU -> 2024
         fig_bar.add_annotation(
-            x=0.5, y=(val_bu + val_24)/2, text=f"<b>{delta_24:.1f}</b>",
-            showarrow=False, font=dict(color="black", size=12),
+            x=0.5, y=y_arrow_24, text=f"<b>{pct_24_vs_bu:+.1f}%</b>",
+            showarrow=False, font=dict(color="black", size=11),
             bgcolor="#F4D03F", bordercolor="white", borderwidth=2, borderpad=6
         )
 
         fig_bar.update_layout(
             paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"),
             xaxis=dict(showgrid=False, tickfont=dict(color="white")),
-            yaxis=dict(visible=False, range=[0, max(val_25, val_bu, val_24)+25]),
+            yaxis=dict(visible=False, range=[0, max_y + 30]), # Rango ampliado para las flechas superiores
             height=500, margin=dict(t=50, b=20)
         )
         st.plotly_chart(fig_bar, use_container_width=True)
