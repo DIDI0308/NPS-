@@ -212,53 +212,55 @@ elif st.session_state.page == "dashboard":
             st.plotly_chart(fig5, use_container_width=True)
 
         # --- SECCIÓN MAPA DE CALOR (CORREGIDA PARA ROBUSTEZ) ---
+        # --- SECCIÓN MAPA DE CALOR (CORREGIDA SEGÚN TU ESTRUCTURA) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         if not df_coords.empty and not df_filt3.empty:
             try:
-                # Normalizamos nombres de columnas para búsqueda
+                # Limpiamos nombres de columnas por si acaso hay espacios
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
                 
-                # Intentamos identificar columnas de coordenadas por palabra clave
-                lat_col = next((c for c in df_coords.columns if "lat" in c.lower()), df_coords.columns[2])
-                lon_col = next((c for c in df_coords.columns if "lon" in c.lower() or "lng" in c.lower()), df_coords.columns[1])
-                id_col_coords = df_coords.columns[4] # Columna E (Link)
+                # Definimos las columnas según tu indicación:
+                # A (índice 0): Cod Cliente
+                # B (índice 1): Longitud
+                # C (índice 2): Latitud
+                id_col_coords = df_coords.columns[0]  # Columna A
+                lon_col = df_coords.columns[1]         # Columna B
+                lat_col = df_coords.columns[2]         # Columna C
                 
-                # Limpiar IDs de espacios
+                # Aseguramos que los IDs sean strings y no tengan espacios
                 df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
                 df_coords[id_col_coords] = df_coords[id_col_coords].astype(str).str.strip()
 
+                # Cruce de datos
                 df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_coords, how='inner')
                 
                 if not df_map_final.empty:
+                    # Convertimos coordenadas a numérico por seguridad
+                    df_map_final[lat_col] = pd.to_numeric(df_map_final[lat_col], errors='coerce')
+                    df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
+                    df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
+
                     fig_map = px.density_mapbox(df_map_final, 
                                                 lat=lat_col, 
                                                 lon=lon_col, 
                                                 z='Score', 
                                                 radius=15,
-                                                center=dict(lat=df_map_final[lat_col].astype(float).mean(), lon=df_map_final[lon_col].astype(float).mean()), 
+                                                center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), 
                                                 zoom=10,
-                                                mapbox_style="carto-darkmatter",
-                                                hover_name=df_coords.columns[0])
-                    fig_map.update_layout(title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                                          paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=600, margin=dict(t=50, b=10))
+                                                mapbox_style="carto-darkmatter")
+                    
+                    fig_map.update_layout(
+                        title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        font=dict(color="white"), 
+                        height=600, 
+                        margin=dict(t=50, b=10)
+                    )
                     st.plotly_chart(fig_map, use_container_width=True)
                 else:
-                    st.warning("No se encontraron coincidencias entre IDs de clientes y coordenadas.")
+                    st.warning("⚠️ No se encontraron coincidencias. Revisa que los 'Customer ID' en la Base NPS coincidan exactamente con los de la Columna A del Excel de Coordenadas.")
             except Exception as e:
-                st.info("No se pudo generar el mapa: Asegúrese de que la hoja de coordenadas tenga Latitud en Col C, Longitud en Col B y el ID del cliente en Col E.")
-
-        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
-        col_t1, col_t2, col_t3 = st.columns(3)
-        def render_dynamic_card(col, key_id, default_title):
-            with col:
-                st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
-                st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
-                st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
-                st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
-        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Cargando datos...")
-
+                st.error(f"Error técnico en el mapa: {e}")
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
 # ==========================================
