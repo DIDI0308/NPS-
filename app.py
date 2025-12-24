@@ -120,14 +120,21 @@ elif st.session_state.page == "dashboard":
             response = requests.get(csv_url)
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
-            df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
-            df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-            df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
-            df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
-            df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+            
+            # Procesamiento seguro de columnas
+            if 'Survey Completed Date' in df.columns:
+                df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
+            
+            for col in ['Primary Driver', 'Secondary Driver', 'Category']:
+                if col in df.columns:
+                    df[col] = df[col].astype(str).replace('nan', 'N/A')
+            
+            if 'Score' in df.columns:
+                df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+            
             return df
         except Exception as e:
-            st.error(f"Error cargando datos de Sheets: {e}")
+            st.error(f"Error procesando datos: {e}")
             return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
@@ -144,54 +151,69 @@ elif st.session_state.page == "dashboard":
         font_main = dict(color="white", size=22)
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
-        df_global = df[df['Primary Driver'] != 'N/A'].copy()
+        
+        # Filtro inicial para evitar errores si falta la columna
+        df_global = df.copy()
+        if 'Primary Driver' in df.columns:
+            df_global = df[df['Primary Driver'] != 'N/A'].copy()
         
         with col_g1:
-            data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
-            fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(title={'text': "1. Primary Driver Composition", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', legend=dict(font=dict(color="white", size=14)), font=dict(color="white"), height=400)
-            st.plotly_chart(fig1, use_container_width=True)
+            if 'Primary Driver' in df_global.columns:
+                data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
+                fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
+                fig1.update_layout(title={'text': "1. Primary Driver Composition", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', legend=dict(font=dict(color="white", size=14)), font=dict(color="white"), height=400)
+                st.plotly_chart(fig1, use_container_width=True)
         with col_g2:
-            data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-            fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
-            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
-            fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white") )
-            st.plotly_chart(fig2, use_container_width=True)
-        
+            if 'Primary Driver' in df_global.columns:
+                data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+                fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
+                fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
+                fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white") )
+                st.plotly_chart(fig2, use_container_width=True)
+
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         c_f1, c_f2 = st.columns(2)
-        with c_f1: selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
-        with c_f2: selector_cat = st.multiselect('Category:', sorted([cat for cat in df['Category'].unique() if cat != 'N/A']), default=['Detractor', 'Passive', 'Promoter'])
+        with c_f1: 
+            p_drivers = ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']) if 'Primary Driver' in df.columns else ['All']
+            selector_driver = st.selectbox('Primary Driver:', p_drivers)
+        with c_f2: 
+            categories = sorted([cat for cat in df['Category'].unique() if cat != 'N/A']) if 'Category' in df.columns else []
+            selector_cat = st.multiselect('Category:', categories, default=[c for c in ['Detractor', 'Passive', 'Promoter'] if c in categories])
         
         df_filt3 = df.copy()
-        if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
-        df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
-        
+        if 'Primary Driver' in df.columns and selector_driver != 'All': 
+            df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
+        if 'Category' in df.columns:
+            df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+        else:
+            df_sec = df_filt3.copy()
+
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
-            df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
-            if not df_visual_cat.empty:
-                conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
-                orden = ['Detractor', 'Passive', 'Promoter']
-                color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
-                fig3 = go.Figure()
-                for cat in orden:
-                    val = conteo_cat.get(cat, 0)
-                    fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textfont=dict(color="white")))
-                fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'xanchor': 'center', 'font': font_main}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(tickfont=font_axes), legend=dict(font=dict(color="white", size=12)), font=dict(color="white"), height=450)
-                st.plotly_chart(fig3, use_container_width=True)
+            if 'Category' in df_filt3.columns:
+                df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
+                if not df_visual_cat.empty:
+                    conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
+                    orden = [c for c in ['Detractor', 'Passive', 'Promoter'] if c in conteo_cat.index]
+                    color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+                    fig3 = go.Figure()
+                    for cat in orden:
+                        val = conteo_cat.get(cat, 0)
+                        fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textfont=dict(color="white")))
+                    fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'xanchor': 'center', 'font': font_main}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(tickfont=font_axes), legend=dict(font=dict(color="white", size=12)), font=dict(color="white"), height=450)
+                    st.plotly_chart(fig3, use_container_width=True)
         with col_d2:
-            if not df_sec.empty:
+            if not df_sec.empty and 'Secondary Driver' in df_sec.columns:
                 data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
                 fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
                 fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
-        
+
         st.markdown("<br>", unsafe_allow_html=True)
-        if not df_sec.empty:
+        if not df_sec.empty and 'Secondary Driver' in df_sec.columns:
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
+            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=15)))
             fig5 = go.Figure()
             for i, row in data_score.reset_index(drop=True).iterrows():
                 fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False, hoverinfo='skip'))
@@ -206,14 +228,12 @@ elif st.session_state.page == "dashboard":
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- SECCIÓN MAPA DE CALOR (BLANCO Y CON COD CLIENTE) ---
+        # --- MAPA DE CALOR (CORRECCIÓNSurvey Completed Date) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        if not df_coords.empty and not df_filt3.empty:
+        if not df_coords.empty:
             try:
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
-                id_col_coords = df_coords.columns[0]  
-                lon_col = df_coords.columns[1]         
-                lat_col = df_coords.columns[2]         
+                id_col_coords, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
                 
                 df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
                 df_coords[id_col_coords] = df_coords[id_col_coords].astype(str).str.strip()
@@ -225,33 +245,17 @@ elif st.session_state.page == "dashboard":
                     df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
-                    # MAPA BLANCO DINÁMICO
                     fig_map = px.density_mapbox(
-                        df_map_final, 
-                        lat=lat_col, 
-                        lon=lon_col, 
-                        z='Score', 
-                        radius=15,
-                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), 
-                        zoom=10,
+                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=15,
+                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=10,
                         mapbox_style="carto-darkmatter",
                         hover_data={'Customer ID': True, lat_col: False, lon_col: False, 'Score': True},
                         color_continuous_scale=[[0, 'rgba(255,255,255,0)'], [0.1, 'rgba(255,255,255,0.2)'], [1, 'rgba(255,255,255,1)']]
                     )
-                    
-                    fig_map.update_layout(
-                        title={'text': "6. Customer Density Heatmap (White High Contrast)", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                        paper_bgcolor='rgba(0,0,0,0)', 
-                        font=dict(color="white"), 
-                        height=700, 
-                        margin=dict(t=50, b=10),
-                        coloraxis_showscale=False
-                    )
+                    fig_map.update_layout(title={'text': "6. Customer Density Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                                          paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=700, margin=dict(t=50, b=10), coloraxis_showscale=False)
                     st.plotly_chart(fig_map, use_container_width=True)
-                else:
-                    st.warning("No se encontraron coincidencias para el mapa.")
-            except Exception as e:
-                st.error(f"Error en mapa: {e}")
+            except: pass
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
@@ -277,20 +281,6 @@ elif st.session_state.page == "monthly":
         .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
         .logo-img { height: 70px; }
         div.stButton > button { background-color: #FFFF00; color: black; border: None; font-weight: bold; }
-        .stTextArea label {
-            color: #FFFF00 !important;
-            font-size: 22px !important; 
-            font-weight: bold !important;
-            border: 2px solid #FFFF00; 
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
-        .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
-        .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
-        .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -326,7 +316,7 @@ elif st.session_state.page == "monthly":
             return pd.DataFrame()
 
     SHEET_URL_EVO = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
-    df_raw = load_live_data_evolution(SHEET_URL_EVO)
+    df_raw_evo = load_live_data_evolution(SHEET_URL_EVO)
 
     def render_nps_block(df, row_start_idx, title_prefix):
         meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
@@ -362,23 +352,23 @@ elif st.session_state.page == "monthly":
             fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 30]), height=500, margin=dict(t=50))
             st.plotly_chart(fig_b, use_container_width=True)
 
-    if not df_raw.empty:
-        render_nps_block(df_raw, 2, "NPS CD EL ALTO")
-        render_nps_block(df_raw, 7, "NPS EA")
-        render_nps_block(df_raw, 11, "NPS LP")
+    if not df_raw_evo.empty:
+        render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
+        render_nps_block(df_raw_evo, 7, "NPS EA")
+        render_nps_block(df_raw_evo, 11, "NPS LP")
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
         table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
         for m in months: table_html += f'<th>{m}</th>'
         table_html += '</tr></thead><tbody>'
         for r in rows_det:
-            table_html += f'<tr><td class="text-col">{str(df_raw.iloc[r, 0])}</td>'
-            for c in range(3, 15): table_html += f'<td>{df_raw.iloc[r, c] if pd.notnull(df_raw.iloc[r, c]) else "-"}</td>'
+            table_html += f'<tr><td class="text-col">{str(df_raw_evo.iloc[r, 0])}</td>'
+            for c in range(3, 15): table_html += f'<td>{df_raw_evo.iloc[r, c] if pd.notnull(df_raw_evo.iloc[r, c]) else "-"}</td>'
             table_html += '</tr>'
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
         col_a1, col_a2, col_a3 = st.columns(3)
         for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
-            val_ytd, txt_orig = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
+            val_ytd, txt_orig = df_raw_evo.iloc[idx, 2], str(df_raw_evo.iloc[idx, 0])
             palabras = txt_orig.split()
             mitad = len(palabras) // 2
             txt_form = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
