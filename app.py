@@ -108,7 +108,7 @@ elif st.session_state.page == "dashboard":
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_dash"):
+        if st.button("ACTUALIZAR", key="refresh_dash"):
             st.cache_data.clear()
             st.rerun()
 
@@ -215,7 +215,7 @@ elif st.session_state.page == "dashboard":
         # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
-        busqueda = st.text_input("🔍 Buscar por Código de Cliente (Opcional):", placeholder="Escriba el ID para filtrar el mapa...")
+        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...")
 
         if not df_coords.empty:
             df_c = df_coords.copy()
@@ -293,7 +293,7 @@ elif st.session_state.page == "monthly":
             st.session_state.page = "home"
             st.rerun()
     with c_nav_m2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_m"):
+        if st.button("ACTUALIZAR", key="refresh_m"):
             st.cache_data.clear()
             st.rerun()
 
