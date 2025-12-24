@@ -123,14 +123,11 @@ elif st.session_state.page == "dashboard":
             
             if 'Survey Completed Date' in df.columns:
                 df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
-            
             for col in ['Primary Driver', 'Secondary Driver', 'Category']:
                 if col in df.columns:
                     df[col] = df[col].astype(str).replace('nan', 'N/A')
-            
             if 'Score' in df.columns:
                 df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-            
             return df
         except Exception as e:
             return pd.DataFrame()
@@ -149,7 +146,6 @@ elif st.session_state.page == "dashboard":
         font_main = dict(color="white", size=22)
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
-        
         df_global = df.copy()
         if 'Primary Driver' in df.columns:
             df_global = df[df['Primary Driver'] != 'N/A'].copy()
@@ -175,15 +171,13 @@ elif st.session_state.page == "dashboard":
             selector_driver = st.selectbox('Primary Driver:', p_drivers)
         with c_f2: 
             categories = sorted([cat for cat in df['Category'].unique() if cat != 'N/A']) if 'Category' in df.columns else []
-            selector_cat = st.multiselect('Category:', categories, default=[c for c in ['Detractor', 'Passive', 'Promoter'] if c in categories])
+            selector_cat = st.multiselect('Category:', categories, default=categories)
         
         df_filt3 = df.copy()
         if 'Primary Driver' in df.columns and selector_driver != 'All': 
             df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
         if 'Category' in df.columns:
-            df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
-        else:
-            df_sec = df_filt3.copy()
+            df_filt3 = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
 
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
@@ -200,42 +194,24 @@ elif st.session_state.page == "dashboard":
                     fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'xanchor': 'center', 'font': font_main}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(tickfont=font_axes), legend=dict(font=dict(color="white", size=12)), font=dict(color="white"), height=450)
                     st.plotly_chart(fig3, use_container_width=True)
         with col_d2:
-            if not df_sec.empty and 'Secondary Driver' in df_sec.columns:
-                data_vol = df_sec['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
+            if not df_filt3.empty and 'Secondary Driver' in df_filt3.columns:
+                data_vol = df_filt3['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
                 fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
                 fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        if not df_sec.empty and 'Secondary Driver' in df_sec.columns:
-            data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=15)))
-            fig5 = go.Figure()
-            for i, row in data_score.reset_index(drop=True).iterrows():
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[1.5], base=6, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.4, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[2.5], base=7.5, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.2, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[0.2], base=10, marker=dict(color='#888'), width=0.25, showlegend=False, hoverinfo='skip'))
-                score = row['Score']
-                if score > 0: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score, 6)], marker=dict(color='#FFCC00'), width=0.6, showlegend=False))
-                if score > 6: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-6, 1.5)], base=6, marker=dict(color='#FFCC00'), width=0.4, showlegend=False))
-                if score > 7.5: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-7.5, 2.5)], base=7.5, marker=dict(color='#FFCC00'), width=0.2, showlegend=False))
-                fig5.add_annotation(x=row['Label'], y=10.5, text=f"<b>{score:.2f}</b>", showarrow=False, font=dict(color="white", size=15))
-            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
-            st.plotly_chart(fig5, use_container_width=True)
-
-        # --- SECCIÓN MAPA DE CALOR (FONDO BLANCO / PUNTOS ROJOS) ---
+        # --- SECCIÓN MAPA DE CALOR DINÁMICO ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        if not df_coords.empty:
+        if not df_coords.empty and not df_filt3.empty:
             try:
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
-                id_col_coords, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
+                id_col_map, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
                 
                 df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
-                df_coords[id_col_coords] = df_coords[id_col_coords].astype(str).str.strip()
+                df_coords[id_col_map] = df_coords[id_col_map].astype(str).str.strip()
 
-                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_coords, how='inner')
+                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_map, how='inner')
                 
                 if not df_map_final.empty:
                     df_map_final[lat_col] = pd.to_numeric(df_map_final[lat_col], errors='coerce')
@@ -243,14 +219,14 @@ elif st.session_state.page == "dashboard":
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
                     fig_map = px.density_mapbox(
-                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=18,
+                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
                         center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
-                        mapbox_style="carto-positron", # FONDO BLANCO / CLARO
-                        hover_data={'Customer ID': True, lat_col: False, lon_col: False, 'Score': True},
-                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.3)'], [1, 'rgba(255,0,0,1)']] # ESCALA ROJA
+                        mapbox_style="open-street-map", # FONDO BLANCO CON CALLES VISIBLES
+                        hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
+                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.4)'], [1, 'rgba(255,0,0,1)']]
                     )
-                    fig_map.update_layout(title={'text': "6. Customer Geographic Heatmap (Red Intensity)", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                                          paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=700, margin=dict(t=50, b=10), coloraxis_showscale=False)
+                    fig_map.update_layout(title={'text': "6. Geographic Distribution (Filtered)", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                                          height=700, margin=dict(t=50, b=10), coloraxis_showscale=False)
                     st.plotly_chart(fig_map, use_container_width=True)
             except: pass
 
@@ -314,65 +290,50 @@ elif st.session_state.page == "monthly":
     SHEET_URL_EVO = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
     df_raw_evo = load_live_data_evolution(SHEET_URL_EVO)
 
-    def render_nps_block(df, row_start_idx, title_prefix):
-        meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-        y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
-        bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
-        y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-        val_ytd_25, val_ytd_bu, val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-        label_25, label_bu, label_24 = str(df.iloc[row_start_idx, 1]), str(df.iloc[row_start_idx + 1, 1]), str(df.iloc[row_start_idx + 2, 1])
-        valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
-        last_idx = valid_data[-1] if valid_data else 0
-        mes_txt = meses[last_idx]
-        st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
-                    {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
-        all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
-        max_l, min_l = max(all_vals) if all_vals else 100, min(all_vals) if all_vals else 0
-        col_a, col_b = st.columns([3, 1.2])
-        with col_a:
-            fig_l = go.Figure()
-            fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
-            fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
-            fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-            fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
-            st.plotly_chart(fig_l, use_container_width=True)
-        with col_b:
-            fig_b = go.Figure()
-            fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-            y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
-            p25, p24 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0, ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
-            fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
-            fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
-            fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-            fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-            fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 30]), height=500, margin=dict(t=50))
-            st.plotly_chart(fig_b, use_container_width=True)
-
     if not df_raw_evo.empty:
+        def render_nps_block(df, row_start_idx, title_prefix):
+            meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+            y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
+            bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
+            y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
+            val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
+            val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
+            val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
+            label_25 = str(df.iloc[row_start_idx, 1])
+            label_bu = str(df.iloc[row_start_idx + 1, 1])
+            label_24 = str(df.iloc[row_start_idx + 2, 1])
+            valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
+            last_idx = valid_data[-1] if valid_data else 0
+            mes_txt = meses[last_idx]
+            st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
+                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+            col_a, col_b = st.columns([3, 1.2])
+            with col_a:
+                fig_l = go.Figure()
+                fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
+                fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
+                fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+                fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False), height=500)
+                st.plotly_chart(fig_l, use_container_width=True)
+            with col_b:
+                fig_b = go.Figure()
+                fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6))
+                fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), yaxis=dict(visible=False), height=500)
+                st.plotly_chart(fig_b, use_container_width=True)
+
         render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
         render_nps_block(df_raw_evo, 7, "NPS EA")
         render_nps_block(df_raw_evo, 11, "NPS LP")
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-        table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
+        table_html = '<table style="width:100%; color:black; background:white; border-collapse:collapse;"><thead><tr style="background:#1a3a4a; color:white;"><th>Secondary Driver</th>'
         for m in months: table_html += f'<th>{m}</th>'
         table_html += '</tr></thead><tbody>'
         for r in rows_det:
-            table_html += f'<tr><td class="text-col">{str(df_raw_evo.iloc[r, 0])}</td>'
+            table_html += f'<tr><td style="font-weight:bold;">{str(df_raw_evo.iloc[r, 0])}</td>'
             for c in range(3, 15): table_html += f'<td>{df_raw_evo.iloc[r, c] if pd.notnull(df_raw_evo.iloc[r, c]) else "-"}</td>'
             table_html += '</tr>'
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
-        col_a1, col_a2, col_a3 = st.columns(3)
-        for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
-            val_ytd, txt_orig = df_raw_evo.iloc[idx, 2], str(df_raw_evo.iloc[idx, 0])
-            palabras = txt_orig.split()
-            mitad = len(palabras) // 2
-            txt_form = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
-            fig_ring = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False, hoverinfo='none'))
-            fig_ring.add_annotation(text=f"<b>{val_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=45, family="Arial Black"))
-            fig_ring.add_annotation(text=f"<b>{txt_form}</b>", x=0.5, y=-0.25, showarrow=False, font=dict(color="white", size=14), align='center', xref="paper", yref="paper")
-            fig_ring.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=10, b=100, l=10, r=10), height=320)
-            col.plotly_chart(fig_ring, use_container_width=True)
         st.markdown("---")
         c1, c2, c3 = st.columns([1, 2, 1])
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
