@@ -146,6 +146,7 @@ elif st.session_state.page == "dashboard":
         font_main = dict(color="white", size=22)
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
+        
         df_global = df.copy()
         if 'Primary Driver' in df.columns:
             df_global = df[df['Primary Driver'] != 'N/A'].copy()
@@ -179,30 +180,13 @@ elif st.session_state.page == "dashboard":
         if 'Category' in df.columns:
             df_filt3 = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
 
-        col_d1, col_d2 = st.columns([1, 2])
-        with col_d1:
-            if 'Category' in df_filt3.columns:
-                df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
-                if not df_visual_cat.empty:
-                    conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
-                    orden = [c for c in ['Detractor', 'Passive', 'Promoter'] if c in conteo_cat.index]
-                    color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
-                    fig3 = go.Figure()
-                    for cat in orden:
-                        val = conteo_cat.get(cat, 0)
-                        fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textfont=dict(color="white")))
-                    fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'xanchor': 'center', 'font': font_main}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(tickfont=font_axes), legend=dict(font=dict(color="white", size=12)), font=dict(color="white"), height=450)
-                    st.plotly_chart(fig3, use_container_width=True)
-        with col_d2:
-            if not df_filt3.empty and 'Secondary Driver' in df_filt3.columns:
-                data_vol = df_filt3['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
-                fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
-                fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
-                fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
-                st.plotly_chart(fig4, use_container_width=True)
-
-        # --- SECCIÓN MAPA DE CALOR DINÁMICO ---
+        # --- SECCIÓN MAPA DE CALOR CON BUSCADOR ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">GEOGRAPHIC ANALYSIS</p>', unsafe_allow_html=True)
+        
+        # BUSCADOR POR COD CLIENTE
+        search_id = st.text_input("🔍 Buscar Cliente por ID:", placeholder="Ingrese código de cliente...")
+
         if not df_coords.empty and not df_filt3.empty:
             try:
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
@@ -218,16 +202,22 @@ elif st.session_state.page == "dashboard":
                     df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
-                    fig_map = px.density_mapbox(
-                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
-                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
-                        mapbox_style="open-street-map", # FONDO BLANCO CON CALLES VISIBLES
-                        hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
-                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.4)'], [1, 'rgba(255,0,0,1)']]
-                    )
-                    fig_map.update_layout(title={'text': "6. Geographic Distribution (Filtered)", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                                          height=700, margin=dict(t=50, b=10), coloraxis_showscale=False)
-                    st.plotly_chart(fig_map, use_container_width=True)
+                    # Lógica de búsqueda: Si hay texto en el buscador, filtrar
+                    if search_id:
+                        df_map_final = df_map_final[df_map_final['Customer ID'].str.contains(search_id, case=False)]
+
+                    if not df_map_final.empty:
+                        fig_map = px.density_mapbox(
+                            df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
+                            center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
+                            mapbox_style="open-street-map",
+                            hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
+                            color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.4)'], [1, 'rgba(255,0,0,1)']]
+                        )
+                        fig_map.update_layout(height=700, margin=dict(t=10, b=10), coloraxis_showscale=False)
+                        st.plotly_chart(fig_map, use_container_width=True)
+                    else:
+                        st.warning("No se encontró el código de cliente en la selección actual.")
             except: pass
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
