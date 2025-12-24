@@ -121,13 +121,19 @@ elif st.session_state.page == "dashboard":
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
             
+            # Limpieza SEGURA de columnas
             if 'Survey Completed Date' in df.columns:
                 df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
-            for col in ['Primary Driver', 'Secondary Driver', 'Category']:
-                if col in df.columns:
-                    df[col] = df[col].astype(str).replace('nan', 'N/A')
+            if 'Primary Driver' in df.columns:
+                df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+            if 'Secondary Driver' in df.columns:
+                df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
+            if 'Category' in df.columns:
+                df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
             if 'Score' in df.columns:
                 df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+            if 'Customer ID' in df.columns:
+                df['Customer ID'] = df['Customer ID'].astype(str).str.strip()
             return df
         except Exception as e:
             return pd.DataFrame()
@@ -152,72 +158,101 @@ elif st.session_state.page == "dashboard":
             df_global = df[df['Primary Driver'] != 'N/A'].copy()
         
         with col_g1:
-            if 'Primary Driver' in df_global.columns:
-                data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
-                fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-                fig1.update_layout(title={'text': "1. Primary Driver Composition", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', legend=dict(font=dict(color="white", size=14)), font=dict(color="white"), height=400)
-                st.plotly_chart(fig1, use_container_width=True)
+            data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
+            fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
+            fig1.update_layout(title={'text': "1. Primary Driver Composition", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', legend=dict(font=dict(color="white", size=14)), font=dict(color="white"), height=400)
+            st.plotly_chart(fig1, use_container_width=True)
         with col_g2:
-            if 'Primary Driver' in df_global.columns:
-                data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-                fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
-                fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
-                fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white") )
-                st.plotly_chart(fig2, use_container_width=True)
+            data_lineas = df_global.groupby('Primary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+            fig2 = px.line(data_lineas, x='Primary Driver', y='Score', markers=True)
+            fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
+            fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white") )
+            st.plotly_chart(fig2, use_container_width=True)
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         c_f1, c_f2 = st.columns(2)
-        with c_f1: 
-            p_drivers = ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']) if 'Primary Driver' in df.columns else ['All']
-            selector_driver = st.selectbox('Primary Driver:', p_drivers)
-        with c_f2: 
-            categories = sorted([cat for cat in df['Category'].unique() if cat != 'N/A']) if 'Category' in df.columns else []
-            selector_cat = st.multiselect('Category:', categories, default=categories)
+        with c_f1: selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
+        with c_f2: selector_cat = st.multiselect('Category:', sorted([cat for cat in df['Category'].unique() if cat != 'N/A']), default=['Detractor', 'Passive', 'Promoter'])
         
         df_filt3 = df.copy()
-        if 'Primary Driver' in df.columns and selector_driver != 'All': 
-            df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
-        if 'Category' in df.columns:
-            df_filt3 = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+        if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
+        df_filt3 = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
 
-        # --- SECCIÓN MAPA DE CALOR CON BUSCADOR ---
+        col_d1, col_d2 = st.columns([1, 2])
+        with col_d1:
+            df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
+            if not df_visual_cat.empty:
+                conteo_cat = df_visual_cat['Category'].value_counts(normalize=True) * 100
+                orden = [c for c in ['Detractor', 'Passive', 'Promoter'] if c in conteo_cat.index]
+                color_map = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+                fig3 = go.Figure()
+                for cat in orden:
+                    val = conteo_cat.get(cat, 0)
+                    fig3.add_trace(go.Bar(name=cat, x=['Composition %'], y=[val], marker_color=color_map[cat], text=f"{val:.1f}%" if val > 0 else "", textfont=dict(color="white")))
+                fig3.update_layout(title={'text':"3. Category Composition", 'x':0.5, 'xanchor': 'center', 'font': font_main}, barmode='stack', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(tickfont=font_axes), legend=dict(font=dict(color="white", size=12)), font=dict(color="white"), height=450)
+                st.plotly_chart(fig3, use_container_width=True)
+        with col_d2:
+            if not df_filt3.empty:
+                data_vol = df_filt3['Secondary Driver'].value_counts().sort_values(ascending=True).reset_index()
+                fig4 = px.bar(data_vol, x='count', y='Secondary Driver', orientation='h', text_auto=True)
+                fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
+                fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
+                st.plotly_chart(fig4, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if not df_filt3.empty:
+            data_score = df_filt3.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
+            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
+            fig5 = go.Figure()
+            for i, row in data_score.reset_index(drop=True).iterrows():
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[1.5], base=6, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.4, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[2.5], base=7.5, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.2, showlegend=False, hoverinfo='skip'))
+                fig5.add_trace(go.Bar(x=[row['Label']], y=[0.2], base=10, marker=dict(color='#888'), width=0.25, showlegend=False, hoverinfo='skip'))
+                score = row['Score']
+                if score > 0: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score, 6)], marker=dict(color='#FFCC00'), width=0.6, showlegend=False))
+                if score > 6: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-6, 1.5)], base=6, marker=dict(color='#FFCC00'), width=0.4, showlegend=False))
+                if score > 7.5: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-7.5, 2.5)], base=7.5, marker=dict(color='#FFCC00'), width=0.2, showlegend=False))
+                fig5.add_annotation(x=row['Label'], y=10.5, text=f"<b>{score:.2f}</b>", showarrow=False, font=dict(color="white", size=15))
+            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
+            st.plotly_chart(fig5, use_container_width=True)
+
+        # --- MAPA DE CALOR CON BUSCADOR ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">GEOGRAPHIC ANALYSIS</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
-        # BUSCADOR POR COD CLIENTE
-        search_id = st.text_input("🔍 Buscar Cliente por ID:", placeholder="Ingrese código de cliente...")
+        # Buscador específico para el mapa
+        search_id = st.text_input("🔍 Buscar por Código de Cliente:", placeholder="Escriba el ID...")
 
         if not df_coords.empty and not df_filt3.empty:
             try:
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
-                id_col_map, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
+                id_col_m, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
+                df_coords[id_col_m] = df_coords[id_col_m].astype(str).str.strip()
                 
-                df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
-                df_coords[id_col_map] = df_coords[id_col_map].astype(str).str.strip()
+                # Cruce de datos filtrados con coordenadas
+                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_m, how='inner')
+                
+                # Filtrar mapa por el buscador si hay texto
+                if search_id:
+                    df_map_final = df_map_final[df_map_final['Customer ID'].str.contains(search_id, case=False)]
 
-                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_map, how='inner')
-                
                 if not df_map_final.empty:
                     df_map_final[lat_col] = pd.to_numeric(df_map_final[lat_col], errors='coerce')
                     df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
-                    # Lógica de búsqueda: Si hay texto en el buscador, filtrar
-                    if search_id:
-                        df_map_final = df_map_final[df_map_final['Customer ID'].str.contains(search_id, case=False)]
-
-                    if not df_map_final.empty:
-                        fig_map = px.density_mapbox(
-                            df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
-                            center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
-                            mapbox_style="open-street-map",
-                            hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
-                            color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.4)'], [1, 'rgba(255,0,0,1)']]
-                        )
-                        fig_map.update_layout(height=700, margin=dict(t=10, b=10), coloraxis_showscale=False)
-                        st.plotly_chart(fig_map, use_container_width=True)
-                    else:
-                        st.warning("No se encontró el código de cliente en la selección actual.")
+                    fig_map = px.density_mapbox(
+                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
+                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
+                        mapbox_style="open-street-map", # FONDO BLANCO
+                        hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
+                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']] # ROJO INTENSO
+                    )
+                    fig_map.update_layout(height=700, margin=dict(t=20, b=10), coloraxis_showscale=False)
+                    st.plotly_chart(fig_map, use_container_width=True)
+                else:
+                    st.warning("No se encontraron resultados para el filtro o búsqueda actual.")
             except: pass
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
@@ -289,9 +324,7 @@ elif st.session_state.page == "monthly":
             val_ytd_25 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce')
             val_ytd_bu = pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce')
             val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-            label_25 = str(df.iloc[row_start_idx, 1])
-            label_bu = str(df.iloc[row_start_idx + 1, 1])
-            label_24 = str(df.iloc[row_start_idx + 2, 1])
+            label_25 = str(df.iloc[row_start_idx, 1]); label_bu = str(df.iloc[row_start_idx + 1, 1]); label_24 = str(df.iloc[row_start_idx + 2, 1])
             valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
             last_idx = valid_data[-1] if valid_data else 0
             mes_txt = meses[last_idx]
