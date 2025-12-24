@@ -37,21 +37,37 @@ if st.session_state.page == "home":
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        overflow: hidden; height: 100vh; width: 100vw;
+        overflow: hidden; 
+        height: 100vh;
+        width: 100vw;
     }}
     header {{visibility: hidden;}}
     .block-container {{padding: 0 !important;}}
     .main-title {{
-        position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
-        color: white; font-size: 4rem; font-weight: 800; text-align: center; width: 100%;
-        text-shadow: 4px 4px 15px rgba(0,0,0,0.8); z-index: 1000;
+        position: fixed;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        color: white; font-size: 4rem; font-weight: 800;
+        text-align: center; width: 100%;
+        text-shadow: 4px 4px 15px rgba(0,0,0,0.8);
+        z-index: 1000; letter-spacing: 2px;
     }}
     .stHorizontalBlock {{
-        position: fixed; bottom: 10%; left: 50%; transform: translateX(-50%); width: 50% !important; z-index: 1001;
+        position: fixed;
+        bottom: 10%; left: 50%;
+        transform: translateX(-50%);
+        width: 50% !important;
+        z-index: 1001;
     }}
     div.stButton > button {{
-        background-color: #FFFF00 !important; color: black !important; font-weight: bold !important;
-        font-size: 18px !important; border: none !important; padding: 15px 30px !important; border-radius: 10px !important;
+        background-color: #FFFF00 !important;
+        color: black !important;
+        font-weight: bold !important;
+        font-size: 18px !important;
+        border: none !important;
+        padding: 15px 30px !important;
+        border-radius: 10px !important;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
     }}
     </style>
     '''
@@ -61,10 +77,12 @@ if st.session_state.page == "home":
     col1, col2 = st.columns(2)
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
-            st.session_state.page = "monthly"; st.rerun()
+            st.session_state.page = "monthly"
+            st.rerun()
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
-            st.session_state.page = "dashboard"; st.rerun()
+            st.session_state.page = "dashboard"
+            st.rerun()
 
 # ==========================================
 # VISTA 2: DASHBOARD (CURRENT MONTH)
@@ -73,60 +91,63 @@ elif st.session_state.page == "dashboard":
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
-        div[data-testid="stButton"] button { background-color: #FFFF00 !important; color: #000000 !important; font-weight: bold !important; }
-        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 25px; }
-        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; color: black; text-align: center; width: 100%; }
-        .card-transparent { background-color: rgba(255, 255, 255, 0.02); border-radius: 15px; padding: 10px; margin-bottom: 20px; }
-        .emoji-solid-yellow { font-size: 110px; text-align: center; color: #FFFF00; }
+        div[data-testid="stButton"] button { background-color: #FFFF00 !important; color: #000000 !important; border: none !important; font-weight: bold !important; padding: 0.5rem 1rem !important; }
+        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-top: 10px; margin-bottom: 25px; }
+        .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
+        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
+        .card-transparent { background-color: rgba(255, 255, 255, 0.02); border-radius: 15px; padding: 10px; margin-bottom: 20px; color: #FFFFFF; }
+        .emoji-solid-yellow { font-size: 110px; text-align: center; color: #FFFF00; text-shadow: 0 0 0 #FFFF00; line-height: 1; margin-bottom: 15px; display: block; }
         label { color: #FFFF00 !important; font-weight: bold !important; }
+        .stTextInput input, .stTextArea textarea, .stNumberInput input { background-color: #1A1A1A !important; color: white !important; border: 1px solid #333 !important; }
         </style>
         """, unsafe_allow_html=True)
 
     c_nav1, c_nav2 = st.columns([8, 1.2])
     with c_nav1:
-        if st.button("⬅ VOLVER AL INICIO"):
-            st.session_state.page = "home"; st.rerun()
+        if st.button("⬅ VOLVER AL INICIO", key="back_btn"):
+            st.session_state.page = "home"
+            st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR"):
-            st.cache_data.clear(); st.rerun()
+        if st.button("🔄 ACTUALIZAR", key="refresh_dash"):
+            st.cache_data.clear()
+            st.rerun()
 
     @st.cache_data(ttl=600)
-    def load_data(url):
+    def load_data_from_sheets(url):
         try:
-            csv_url = url.split('/edit')[0] + "/export?format=csv"
-            res = requests.get(csv_url)
-            return pd.read_csv(StringIO(res.text))
+            base_url = url.split('/edit')[0]
+            csv_url = f"{base_url}/export?format=csv"
+            response = requests.get(csv_url)
+            response.raise_for_status()
+            df = pd.read_csv(StringIO(response.text))
+            if 'Customer ID' in df.columns:
+                df['Customer ID'] = df['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            return df
         except: return pd.DataFrame()
 
-    df = load_data("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit")
-    df_coords = load_data("https://docs.google.com/spreadsheets/d/1L-WNzMEAmvdcqSm0gvpRSzNUE29hwvxk396Q8MwUfUo/edit")
+    df = load_data_from_sheets("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
+    df_coords = load_data_from_sheets("https://docs.google.com/spreadsheets/d/1L-WNzMEAmvdcqSm0gvpRSzNUE29hwvxk396Q8MwUfUo/edit?usp=sharing")
 
     if not df.empty:
-        # Limpieza base principal
         df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
         df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
         df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-        # Limpieza ID Cliente (Quitar .0 si es flotante y espacios)
-        df['Customer ID'] = df['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-        # Cabecera
         b2, b1 = get_base64('logo2.png'), get_base64('logo.png')
-        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b2}" height="60"><h1>NPS 2025</h1><img src="data:image/png;base64,{b1}" height="60"></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b2}" height="60"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b1}" height="60"></div>', unsafe_allow_html=True)
 
-        # Gráficos superiores
         col_g1, col_g2 = st.columns(2)
         with col_g1:
             fig1 = px.pie(df[df['Primary Driver']!='N/A'], names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
-            fig1.update_layout(title="1. Primary Driver Composition", paper_bgcolor='rgba(0,0,0,0)', font_color="white")
+            fig1.update_layout(title={'text': "1. Primary Driver Composition", 'x': 0.5, 'font': dict(color="white")}, paper_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig1, use_container_width=True)
         with col_g2:
             data_l = df[df['Primary Driver']!='N/A'].groupby('Primary Driver')['Score'].mean().reset_index()
             fig2 = px.line(data_l, x='Primary Driver', y='Score', markers=True)
             fig2.update_traces(line_color='#FFFF00', textposition="top center", mode='markers+lines+text', texttemplate='%{y:.2f}')
-            fig2.update_layout(title="2. Average Score Per Driver", paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+            fig2.update_layout(title={'text': "2. Average Score Per Driver", 'x': 0.5, 'font': dict(color="white")}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig2, use_container_width=True)
 
-        # Filtros
         st.markdown("---")
         cf1, cf2 = st.columns(2)
         sel_driver = cf1.selectbox('Primary Driver:', ['All'] + sorted(df['Primary Driver'].unique().tolist()))
@@ -136,17 +157,14 @@ elif st.session_state.page == "dashboard":
         if sel_driver != 'All': df_filt = df_filt[df_filt['Primary Driver'] == sel_driver]
         df_filt = df_filt[df_filt['Category'].isin(sel_cat)]
 
-        # --- MAPA DE CALOR (ROBUSTO) ---
+        # --- MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
-        busqueda = st.text_input("🔍 Buscar por Código de Cliente:", placeholder="Escriba el ID...")
+        busqueda = st.text_input("🔍 Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...")
 
         if not df_coords.empty:
-            # Limpieza base coordenadas (A: ID, B: Lon, C: Lat)
             df_c = df_coords.copy()
             df_c.columns = ['ID', 'Lon', 'Lat'] + list(df_c.columns[3:])
             df_c['ID'] = df_c['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-            
-            # Cruce
             df_map = pd.merge(df_filt, df_c[['ID', 'Lon', 'Lat']], left_on='Customer ID', right_on='ID', how='inner')
             
             if busqueda:
@@ -156,37 +174,101 @@ elif st.session_state.page == "dashboard":
                 df_map['Lat'] = pd.to_numeric(df_map['Lat'], errors='coerce')
                 df_map['Lon'] = pd.to_numeric(df_map['Lon'], errors='coerce')
                 df_map = df_map.dropna(subset=['Lat', 'Lon'])
-
-                fig_map = px.density_mapbox(
-                    df_map, lat='Lat', lon='Lon', z='Score', radius=20,
-                    center=dict(lat=df_map['Lat'].mean(), lon=df_map['Lon'].mean()), zoom=10,
-                    mapbox_style="open-street-map", # FONDO BLANCO
-                    hover_name='Customer ID',
-                    hover_data={'Category': True, 'Score': True, 'Lat': False, 'Lon': False},
-                    color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']] # ROJO
-                )
+                fig_map = px.density_mapbox(df_map, lat='Lat', lon='Lon', z='Score', radius=20, center=dict(lat=df_map['Lat'].mean(), lon=df_map['Lon'].mean()), zoom=10, mapbox_style="open-street-map", hover_name='Customer ID', color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']])
                 fig_map.update_layout(height=600, margin=dict(t=0, b=0, l=0, r=0), coloraxis_showscale=False)
                 st.plotly_chart(fig_map, use_container_width=True)
-            else:
-                st.info("Sin datos para mostrar en el mapa con los filtros actuales.")
 
-        # --- CHOSEN COMMENTS ---
         st.markdown("---")
-        st.markdown('<p style="color:#FFFF00; font-size:30px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
-        ct1, ct2, ct3 = st.columns(3)
-        for i, c in enumerate([ct1, ct2, ct3]):
-            with c:
-                st.markdown('<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
-                st.text_input(f"Secondary Driver {i+1}:", key=f"t_{i}")
-                st.text_input("Cliente:", key=f"cl_{i}"); st.number_input("Score:", 0, 10, key=f"s_{i}")
-                st.text_area("Comentario:", key=f"co_{i}", height=100)
+        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
+        col_t1, col_t2, col_t3 = st.columns(3)
+        def render_dynamic_card(col, key_id, default_title):
+            with col:
+                st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
+                st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
+                st.text_input("Cliente:", key=f"client_{key_id}")
+                st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
+                st.text_area("Comentario:", key=f"comment_{key_id}", height=120)
+                st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
+        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:")
+        render_dynamic_card(col_t2, "c2", "Secondary Driver 2:")
+        render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+    else: st.warning("Cargando datos...")
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
 # ==========================================
 elif st.session_state.page == "monthly":
-    st.markdown("<style>.stApp { background-color: black; color: white; }</style>", unsafe_allow_html=True)
-    if st.button("⬅ VOLVER"): st.session_state.page = "home"; st.rerun()
-    st.title("MONTHLY EVOLUTION")
-    st.write("Cargando indicadores temporales...")
-    # (Aquí iría tu lógica de Monthly Evolution que ya tenías)
+    st.markdown("""<style>.stApp { background-color: black; color: white; }
+    .header-banner { background-color: #FFFF00; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 10px; }
+    .header-title { color: black !important; font-family: 'Arial Black', sans-serif; font-size: 28px; margin: 0; text-align: center; flex-grow: 1; }
+    .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
+    .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
+    .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
+    .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
+    </style>""", unsafe_allow_html=True)
+
+    c_nav_m1, c_nav_m2 = st.columns([8, 1.2])
+    with c_nav_m1:
+        if st.button("⬅ VOLVER AL INICIO"): st.session_state.page = "home"; st.rerun()
+    with c_nav_m2:
+        if st.button("🔄 ACTUALIZAR"): st.cache_data.clear(); st.rerun()
+
+    izq, der = get_base64('logo2.png'), get_base64('logo.png')
+    st.markdown(f'<div class="header-banner"><img src="data:image/png;base64,{izq}" height="70"><h1 class="header-title">MONTHLY EVOLUTION</h1><img src="data:image/png;base64,{der}" height="70"></div>', unsafe_allow_html=True)
+
+    def load_evo(url):
+        try:
+            base = url.split('/edit')[0]
+            res = requests.get(f"{base}/export?format=csv&gid=0&cache_bust={pd.Timestamp.now().timestamp()}")
+            return pd.read_csv(StringIO(res.text), header=None)
+        except: return pd.DataFrame()
+
+    df_raw = load_evo("https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit")
+
+    if not df_raw.empty:
+        def render_nps_block(df, r_idx, title):
+            meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+            y25, bu, y24 = pd.to_numeric(df.iloc[r_idx, 3:15], errors='coerce').tolist(), pd.to_numeric(df.iloc[r_idx+1, 3:15], errors='coerce').tolist(), pd.to_numeric(df.iloc[r_idx+2, 3:15], errors='coerce').tolist()
+            ytd25, ytdbu, ytd24 = pd.to_numeric(df.iloc[r_idx, 2], errors='coerce'), pd.to_numeric(df.iloc[r_idx+1, 2], errors='coerce'), pd.to_numeric(df.iloc[r_idx+2, 2], errors='coerce')
+            val_data = [i for i, v in enumerate(y25) if pd.notnull(v) and v != 0]
+            l_idx = val_data[-1] if val_data else 0
+            st.markdown(f'<div class="section-banner">{title} | {int(y25[l_idx])} {meses[l_idx]} – {int(y24[l_idx])} LY | {int(ytd25)} YTD vs {int(ytdbu)} BGT</div>', unsafe_allow_html=True)
+            ca, cb = st.columns([3, 1.2])
+            with ca:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=meses, y=y25, mode='markers+lines+text', name="2025", line=dict(color='#FFFF00', width=4), text=y25, textposition="top center"))
+                fig.add_trace(go.Scatter(x=meses, y=bu, mode='lines', name="BGT", line=dict(color='#FFD700', dash='dash')))
+                fig.add_trace(go.Scatter(x=meses, y=y24, mode='markers+lines+text', name="2024", line=dict(color='#F4D03F'), text=y24, textposition="bottom center"))
+                fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', font_color="white", xaxis_showgrid=False, yaxis_visible=False, height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            with cb:
+                figb = go.Figure(go.Bar(x=["2024", "BGT", "2025"], y=[ytd24, ytdbu, ytd25], text=[ytd24, ytdbu, ytd25], marker_color=['#F4D03F', '#FFD700', '#FFFF00']))
+                figb.update_layout(paper_bgcolor='black', plot_bgcolor='black', font_color="white", yaxis_visible=False, height=400)
+                st.plotly_chart(figb, use_container_width=True)
+
+        render_nps_block(df_raw, 2, "NPS CD EL ALTO")
+        render_nps_block(df_raw, 7, "NPS EA")
+        render_nps_block(df_raw, 11, "NPS LP")
+
+        st.markdown('<div class="section-banner">DETRACTORS</div>', unsafe_allow_html=True)
+        rows_det = [18, 20, 22]
+        months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+        html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>' + "".join([f"<th>{m}</th>" for m in months]) + "</tr></thead><tbody>"
+        for r in rows_det:
+            html += f'<tr><td style="text-align:left; font-weight:bold;">{df_raw.iloc[r,0]}</td>' + "".join([f"<td>{df_raw.iloc[r,c] if pd.notnull(df_raw.iloc[r,c]) else '-'}</td>" for c in range(3,15)]) + "</tr>"
+        st.markdown(html + "</tbody></table>", unsafe_allow_html=True)
+
+        col_a1, col_a2, col_a3 = st.columns(3)
+        for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
+            val, txt = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
+            fig_r = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False))
+            fig_r.add_annotation(text=f"<b>{val}</b>", font=dict(color="white", size=40))
+            fig_r.add_annotation(text=f"<b>{txt}</b>", y=-0.2, font=dict(color="white", size=12))
+            fig_r.update_layout(paper_bgcolor='rgba(0,0,0,0)', height=300, margin=dict(t=0, b=50))
+            col.plotly_chart(fig_r, use_container_width=True)
+
+        st.markdown("---")
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c1: st.text_area("Causas Raíz YTD", "Top 5:\n• Equipos de Frío\n• Servicio Entrega", height=150)
+        with c2: st.text_area("Plan de Acción", "• Recapacitación atención cliente.", height=150)
+        with c3: st.text_area("Key KPIs", "• Canjes\n• Rechazo", height=150)
