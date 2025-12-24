@@ -120,16 +120,6 @@ elif st.session_state.page == "dashboard":
             response = requests.get(csv_url)
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
-            if 'Survey Completed Date' in df.columns:
-                df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
-            if 'Primary Driver' in df.columns:
-                df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-            if 'Secondary Driver' in df.columns:
-                df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
-            if 'Category' in df.columns:
-                df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
-            if 'Score' in df.columns:
-                df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
             return df
         except Exception as e:
             st.error(f"Error cargando datos de Sheets: {e}")
@@ -138,16 +128,26 @@ elif st.session_state.page == "dashboard":
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
     SHEET_URL_MAP = "https://docs.google.com/spreadsheets/d/1L-WNzMEAmvdcqSm0gvpRSzNUE29hwvxk396Q8MwUfUo/edit?usp=sharing"
     
-    df = load_data_from_sheets(SHEET_URL_CURRENT)
+    df_raw = load_data_from_sheets(SHEET_URL_CURRENT)
     df_coords = load_data_from_sheets(SHEET_URL_MAP)
 
-    b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
-    if b64_logo and b64_logo2:
-        st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
+    # Limpieza de datos NPS
+    if not df_raw.empty:
+        df = df_raw.copy()
+        df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+        df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
+        df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
+        df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+        df['Customer ID'] = df['Customer ID'].astype(str).str.strip()
 
-    if not df.empty:
+        b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
+        if b64_logo and b64_logo2:
+            st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
+
         font_main = dict(color="#FFFF00", size=22)
         font_axes = dict(color="white", size=14)
+
+        # Gráficos de Driver
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
         
@@ -171,7 +171,7 @@ elif st.session_state.page == "dashboard":
         df_filt3 = df.copy()
         if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
         df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
-        
+
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
             df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
@@ -192,75 +192,62 @@ elif st.session_state.page == "dashboard":
                 fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        if not df_sec.empty:
-            data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
-            data_score['Label'] = data_score['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(x, width=15)))
-            fig5 = go.Figure()
-            for i, row in data_score.reset_index(drop=True).iterrows():
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[6], marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.6, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[1.5], base=6, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.4, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[2.5], base=7.5, marker=dict(color='rgba(255,255,255,0.05)', line=dict(color='rgba(255,255,255,0.4)', width=1.5)), width=0.2, showlegend=False, hoverinfo='skip'))
-                fig5.add_trace(go.Bar(x=[row['Label']], y=[0.2], base=10, marker=dict(color='#888'), width=0.25, showlegend=False, hoverinfo='skip'))
-                score = row['Score']
-                if score > 0: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score, 6)], marker=dict(color='#FFCC00'), width=0.6, showlegend=False))
-                if score > 6: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-6, 1.5)], base=6, marker=dict(color='#FFCC00'), width=0.4, showlegend=False))
-                if score > 7.5: fig5.add_trace(go.Bar(x=[row['Label']], y=[min(score-7.5, 2.5)], base=7.5, marker=dict(color='#FFCC00'), width=0.2, showlegend=False))
-                fig5.add_annotation(x=row['Label'], y=10.5, text=f"<b>{score:.2f}</b>", showarrow=False, font=dict(color="white", size=15))
-            fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
-            st.plotly_chart(fig5, use_container_width=True)
 
-        # --- SECCIÓN MAPA DE CALOR (CORREGIDA PARA ROBUSTEZ) ---
-        # --- SECCIÓN MAPA DE CALOR (CORREGIDA SEGÚN TU ESTRUCTURA) ---
+        # --- MAPA DE CALOR DINÁMICO ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        if not df_coords.empty and not df_filt3.empty:
+        if not df_coords.empty:
             try:
-                # Limpiamos nombres de columnas por si acaso hay espacios
-                df_coords.columns = [str(c).strip() for c in df_coords.columns]
+                # Normalizar columnas de coordenadas (A: ID, B: Lon, C: Lat)
+                df_c = df_coords.copy()
+                id_col_c, lon_col, lat_col = df_c.columns[0], df_c.columns[1], df_c.columns[2]
+                df_c[id_col_c] = df_c[id_col_c].astype(str).str.strip()
                 
-                # Definimos las columnas según tu indicación:
-                # A (índice 0): Cod Cliente
-                # B (índice 1): Longitud
-                # C (índice 2): Latitud
-                id_col_coords = df_coords.columns[0]  # Columna A
-                lon_col = df_coords.columns[1]         # Columna B
-                lat_col = df_coords.columns[2]         # Columna C
+                # Unir con base filtrada
+                df_map = pd.merge(df_filt3, df_c, left_on='Customer ID', right_on=id_col_c, how='inner')
                 
-                # Aseguramos que los IDs sean strings y no tengan espacios
-                df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
-                df_coords[id_col_coords] = df_coords[id_col_coords].astype(str).str.strip()
+                if not df_map.empty:
+                    df_map[lat_col] = pd.to_numeric(df_map[lat_col], errors='coerce')
+                    df_map[lon_col] = pd.to_numeric(df_map[lon_col], errors='coerce')
+                    df_map = df_map.dropna(subset=[lat_col, lon_col])
 
-                # Cruce de datos
-                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_coords, how='inner')
-                
-                if not df_map_final.empty:
-                    # Convertimos coordenadas a numérico por seguridad
-                    df_map_final[lat_col] = pd.to_numeric(df_map_final[lat_col], errors='coerce')
-                    df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
-                    df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
-
-                    fig_map = px.density_mapbox(df_map_final, 
-                                                lat=lat_col, 
-                                                lon=lon_col, 
-                                                z='Score', 
-                                                radius=15,
-                                                center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), 
-                                                zoom=10,
-                                                mapbox_style="carto-darkmatter")
+                    # Mapa dinámico con Plotly Mapbox
+                    fig_map = px.density_mapbox(
+                        df_map, 
+                        lat=lat_col, 
+                        lon=lon_col, 
+                        z='Score', 
+                        radius=20,
+                        center=dict(lat=df_map[lat_col].mean(), lon=df_map[lon_col].mean()), 
+                        zoom=11,
+                        mapbox_style="carto-darkmatter",
+                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.5, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,0.8)']],
+                        opacity=0.6
+                    )
                     
                     fig_map.update_layout(
-                        title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                        paper_bgcolor='rgba(0,0,0,0)', 
-                        font=dict(color="white"), 
-                        height=600, 
-                        margin=dict(t=50, b=10)
+                        title={'text': "6. Customer Geographic Heatmap (Scroll & Zoom)", 'x': 0.5, 'xanchor': 'center', 'font': font_main},
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        margin=dict(t=50, b=10, l=10, r=10),
+                        height=700,
+                        coloraxis_showscale=False
                     )
                     st.plotly_chart(fig_map, use_container_width=True)
-                else:
-                    st.warning("⚠️ No se encontraron coincidencias. Revisa que los 'Customer ID' en la Base NPS coincidan exactamente con los de la Columna A del Excel de Coordenadas.")
-            except Exception as e:
-                st.error(f"Error técnico en el mapa: {e}")
+            except:
+                st.info("Mapa no disponible temporalmente. Verifique el archivo de coordenadas.")
+
+        # --- CHOSEN COMMENTS ---
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
+        col_t1, col_t2, col_t3 = st.columns(3)
+        def render_dynamic_card(col, key_id, default_title):
+            with col:
+                st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
+                st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
+                st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
+                st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
+        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
+    else: st.warning("Cargando datos...")
+
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
 # ==========================================
@@ -273,20 +260,6 @@ elif st.session_state.page == "monthly":
         .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
         .logo-img { height: 70px; }
         div.stButton > button { background-color: #FFFF00; color: black; border: None; font-weight: bold; }
-        .stTextArea label {
-            color: #FFFF00 !important;
-            font-size: 22px !important; 
-            font-weight: bold !important;
-            border: 2px solid #FFFF00; 
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
-        .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
-        .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
-        .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
