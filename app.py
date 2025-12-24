@@ -45,7 +45,7 @@ if st.session_state.page == "home":
     .block-container {{padding: 0 !important;}}
     .main-title {{
         position: fixed;
-        top: 50%; left: 50%;
+        top: 40%; left: 50%;
         transform: translate(-50%, -50%);
         color: white; font-size: 4rem; font-weight: 800;
         text-align: center; width: 100%;
@@ -102,11 +102,17 @@ elif st.session_state.page == "dashboard":
         </style>
         """, unsafe_allow_html=True)
 
-    if st.button("⬅ VOLVER AL INICIO", key="back_btn"):
-        st.session_state.page = "home"
-        st.rerun()
+    # BOTONES DE CABECERA
+    c_nav1, c_nav2 = st.columns([8, 1])
+    with c_nav1:
+        if st.button("⬅ VOLVER AL INICIO", key="back_btn"):
+            st.session_state.page = "home"
+            st.rerun()
+    with c_nav2:
+        if st.button("🔄 ACTUALIZAR", key="refresh_dash"):
+            st.cache_data.clear()
+            st.rerun()
 
-    # NUEVA FUNCIÓN PARA CARGAR DESDE GOOGLE SHEETS
     @st.cache_data(ttl=600)
     def load_data_from_sheets(url):
         try:
@@ -116,7 +122,6 @@ elif st.session_state.page == "dashboard":
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
             
-            # Limpieza y formateo (mismo que tenías antes)
             df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
             df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
             df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
@@ -224,83 +229,28 @@ elif st.session_state.page == "monthly":
     st.markdown("""
         <style>
         .stApp { background-color: black; color: white; }
-        .header-banner {
-            background-color: #FFFF00;
-            padding: 10px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-        .header-title {
-            color: black !important;
-            font-family: 'Arial Black', sans-serif;
-            font-size: 28px;
-            margin: 0;
-            text-align: center;
-            flex-grow: 1;
-        }
-        .section-banner {
-            background-color: #FFFF00;
-            color: black !important;
-            padding: 4px 10px;
-            border-radius: 5px;
-            text-align: center;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
+        .header-banner { background-color: #FFFF00; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 10px; }
+        .header-title { color: black !important; font-family: 'Arial Black', sans-serif; font-size: 28px; margin: 0; text-align: center; flex-grow: 1; }
+        .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
         .logo-img { height: 70px; }
-        div.stButton > button {
-            background-color: #FFFF00;
-            color: black;
-            border: None;
-            font-weight: bold;
-        }
-        .stTextArea label {
-            color: #FFFF00 !important;
-            font-size: 22px !important; 
-            font-weight: bold !important;
-            border: 2px solid #FFFF00; 
-            padding: 5px 10px;
-            border-radius: 5px;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
-        .detractores-table {
-            width: 100%;
-            border-collapse: collapse;
-            color: black;
-            background-color: white;
-            margin-bottom: 20px;
-        }
-        .detractores-table th {
-            background-color: #1a3a4a;
-            color: white;
-            padding: 10px;
-            border: 1px solid #ddd;
-            font-size: 12px;
-        }
-        .detractores-table td {
-            padding: 8px;
-            border: 1px solid #ddd;
-            text-align: center;
-            font-size: 12px;
-            color: black;
-        }
-        .detractores-table .text-col {
-            text-align: left;
-            background-color: #f9f9f9;
-            width: 25%;
-            font-weight: bold;
-        }
+        div.stButton > button { background-color: #FFFF00; color: black; border: None; font-weight: bold; }
+        .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
+        .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
+        .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
+        .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
-    if st.button("⬅ VOLVER AL INICIO"):
-        st.session_state.page = "home"
-        st.rerun()
+    # BOTONES DE CABECERA
+    c_nav_m1, c_nav_m2 = st.columns([8, 1])
+    with c_nav_m1:
+        if st.button("⬅ VOLVER AL INICIO", key="back_btn_m"):
+            st.session_state.page = "home"
+            st.rerun()
+    with c_nav_m2:
+        if st.button("🔄 ACTUALIZAR", key="refresh_m"):
+            st.cache_data.clear()
+            st.rerun()
 
     img_logo_izq = get_base64('logo2.png')
     img_logo_der = get_base64('logo.png')
@@ -316,7 +266,7 @@ elif st.session_state.page == "monthly":
     def load_live_data_evolution(spreadsheet_url):
         try:
             base_url = spreadsheet_url.split('/edit')[0]
-            csv_url = f"{base_url}/export?format=csv&gid=0&cache_bust=" + str(pd.Timestamp.now().timestamp())
+            csv_url = f"{base_url}/export?format=csv&gid=0"
             response = requests.get(csv_url)
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text), header=None)
@@ -407,4 +357,3 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-            
