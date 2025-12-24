@@ -121,7 +121,6 @@ elif st.session_state.page == "dashboard":
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
             
-            # Procesamiento seguro de columnas
             if 'Survey Completed Date' in df.columns:
                 df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
             
@@ -134,7 +133,6 @@ elif st.session_state.page == "dashboard":
             
             return df
         except Exception as e:
-            st.error(f"Error procesando datos: {e}")
             return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
@@ -152,7 +150,6 @@ elif st.session_state.page == "dashboard":
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
         
-        # Filtro inicial para evitar errores si falta la columna
         df_global = df.copy()
         if 'Primary Driver' in df.columns:
             df_global = df[df['Primary Driver'] != 'N/A'].copy()
@@ -228,7 +225,7 @@ elif st.session_state.page == "dashboard":
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- MAPA DE CALOR (CORRECCIÓNSurvey Completed Date) ---
+        # --- SECCIÓN MAPA DE CALOR (FONDO BLANCO / PUNTOS ROJOS) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         if not df_coords.empty:
             try:
@@ -246,13 +243,13 @@ elif st.session_state.page == "dashboard":
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
                     fig_map = px.density_mapbox(
-                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=15,
-                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=10,
-                        mapbox_style="carto-darkmatter",
+                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=18,
+                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
+                        mapbox_style="carto-positron", # FONDO BLANCO / CLARO
                         hover_data={'Customer ID': True, lat_col: False, lon_col: False, 'Score': True},
-                        color_continuous_scale=[[0, 'rgba(255,255,255,0)'], [0.1, 'rgba(255,255,255,0.2)'], [1, 'rgba(255,255,255,1)']]
+                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.2, 'rgba(255,0,0,0.3)'], [1, 'rgba(255,0,0,1)']] # ESCALA ROJA
                     )
-                    fig_map.update_layout(title={'text': "6. Customer Density Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                    fig_map.update_layout(title={'text': "6. Customer Geographic Heatmap (Red Intensity)", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
                                           paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=700, margin=dict(t=50, b=10), coloraxis_showscale=False)
                     st.plotly_chart(fig_map, use_container_width=True)
             except: pass
@@ -312,7 +309,6 @@ elif st.session_state.page == "monthly":
             df = pd.read_csv(StringIO(response.text), header=None)
             return df
         except Exception as e:
-            st.error(f"Error de conexión: {e}")
             return pd.DataFrame()
 
     SHEET_URL_EVO = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
