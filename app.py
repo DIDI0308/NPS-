@@ -146,7 +146,7 @@ elif st.session_state.page == "dashboard":
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        font_main = dict(color="#FFFF00", size=22) # Títulos en Amarillo
+        font_main = dict(color="#FFFF00", size=22)
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
@@ -211,27 +211,32 @@ elif st.session_state.page == "dashboard":
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- SECCIÓN MAPA DE CALOR ---
+        # --- SECCIÓN MAPA DE CALOR (CORREGIDA) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         if not df_coords.empty and not df_filt3.empty:
-            # Cruce de Base con Coordenadas: Columna E (Link) con Customer ID (Base)
-            df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=df_coords.columns[4], how='inner')
-            if not df_map_final.empty:
-                # Columnas: B (Index 1) es X/Lon, C (Index 2) es Y/Lat
-                fig_map = px.density_mapbox(df_map_final, 
-                                            lat=df_coords.columns[2], 
-                                            lon=df_coords.columns[1], 
-                                            z='Score', 
-                                            radius=15,
-                                            center=dict(lat=df_map_final[df_coords.columns[2]].mean(), lon=df_map_final[df_coords.columns[1]].mean()), 
-                                            zoom=10,
-                                            mapbox_style="carto-darkmatter",
-                                            hover_name=df_coords.columns[0]) # Col A en Tooltip
-                fig_map.update_layout(title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
-                                      paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=600, margin=dict(t=50, b=10))
-                st.plotly_chart(fig_map, use_container_width=True)
-            else:
-                st.warning("No se encontraron coincidencias entre la base y el mapa de coordenadas.")
+            try:
+                # El cruce se hace asumiendo que el ID del cliente está en la última columna disponible de df_coords
+                col_id_map = df_coords.columns[-1] 
+                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=col_id_map, how='inner')
+                
+                if not df_map_final.empty:
+                    # Coordenadas: B (Index 1) es Lon, C (Index 2) es Lat
+                    fig_map = px.density_mapbox(df_map_final, 
+                                                lat=df_coords.columns[2], 
+                                                lon=df_coords.columns[1], 
+                                                z='Score', 
+                                                radius=15,
+                                                center=dict(lat=df_map_final[df_coords.columns[2]].mean(), lon=df_map_final[df_coords.columns[1]].mean()), 
+                                                zoom=10,
+                                                mapbox_style="carto-darkmatter",
+                                                hover_name=df_coords.columns[0])
+                    fig_map.update_layout(title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                                          paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=600, margin=dict(t=50, b=10))
+                    st.plotly_chart(fig_map, use_container_width=True)
+                else:
+                    st.warning("No se encontraron coincidencias de Clientes para mostrar en el mapa.")
+            except Exception as e:
+                st.error(f"Error generando el mapa: Verifique las columnas del link de coordenadas.")
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
@@ -243,7 +248,7 @@ elif st.session_state.page == "dashboard":
                 st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
                 st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Cargando datos desde la nube o la hoja está vacía...")
+    else: st.warning("Cargando datos...")
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
