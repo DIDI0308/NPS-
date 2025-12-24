@@ -211,22 +211,31 @@ elif st.session_state.page == "dashboard":
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- SECCIÓN MAPA DE CALOR (CORREGIDA) ---
+        # --- SECCIÓN MAPA DE CALOR (CORREGIDA PARA ROBUSTEZ) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         if not df_coords.empty and not df_filt3.empty:
             try:
-                # El cruce se hace asumiendo que el ID del cliente está en la última columna disponible de df_coords
-                col_id_map = df_coords.columns[-1] 
-                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=col_id_map, how='inner')
+                # Normalizamos nombres de columnas para búsqueda
+                df_coords.columns = [str(c).strip() for c in df_coords.columns]
+                
+                # Intentamos identificar columnas de coordenadas por palabra clave
+                lat_col = next((c for c in df_coords.columns if "lat" in c.lower()), df_coords.columns[2])
+                lon_col = next((c for c in df_coords.columns if "lon" in c.lower() or "lng" in c.lower()), df_coords.columns[1])
+                id_col_coords = df_coords.columns[4] # Columna E (Link)
+                
+                # Limpiar IDs de espacios
+                df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
+                df_coords[id_col_coords] = df_coords[id_col_coords].astype(str).str.strip()
+
+                df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_coords, how='inner')
                 
                 if not df_map_final.empty:
-                    # Coordenadas: B (Index 1) es Lon, C (Index 2) es Lat
                     fig_map = px.density_mapbox(df_map_final, 
-                                                lat=df_coords.columns[2], 
-                                                lon=df_coords.columns[1], 
+                                                lat=lat_col, 
+                                                lon=lon_col, 
                                                 z='Score', 
                                                 radius=15,
-                                                center=dict(lat=df_map_final[df_coords.columns[2]].mean(), lon=df_map_final[df_coords.columns[1]].mean()), 
+                                                center=dict(lat=df_map_final[lat_col].astype(float).mean(), lon=df_map_final[lon_col].astype(float).mean()), 
                                                 zoom=10,
                                                 mapbox_style="carto-darkmatter",
                                                 hover_name=df_coords.columns[0])
@@ -234,9 +243,9 @@ elif st.session_state.page == "dashboard":
                                           paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=600, margin=dict(t=50, b=10))
                     st.plotly_chart(fig_map, use_container_width=True)
                 else:
-                    st.warning("No se encontraron coincidencias de Clientes para mostrar en el mapa.")
+                    st.warning("No se encontraron coincidencias entre IDs de clientes y coordenadas.")
             except Exception as e:
-                st.error(f"Error generando el mapa: Verifique las columnas del link de coordenadas.")
+                st.info("No se pudo generar el mapa: Asegúrese de que la hoja de coordenadas tenga Latitud en Col C, Longitud en Col B y el ID del cliente en Col E.")
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
