@@ -120,28 +120,37 @@ elif st.session_state.page == "dashboard":
             response = requests.get(csv_url)
             response.raise_for_status()
             df = pd.read_csv(StringIO(response.text))
-            df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
-            df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
-            df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
-            df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
-            df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+            if 'Survey Completed Date' in df.columns:
+                df['Survey Completed Date'] = pd.to_datetime(df['Survey Completed Date'], errors='coerce')
+            if 'Primary Driver' in df.columns:
+                df['Primary Driver'] = df['Primary Driver'].astype(str).replace('nan', 'N/A')
+            if 'Secondary Driver' in df.columns:
+                df['Secondary Driver'] = df['Secondary Driver'].astype(str).replace('nan', 'N/A')
+            if 'Category' in df.columns:
+                df['Category'] = df['Category'].astype(str).replace('nan', 'N/A')
+            if 'Score' in df.columns:
+                df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
             return df
         except Exception as e:
             st.error(f"Error cargando datos de Sheets: {e}")
             return pd.DataFrame()
 
     SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
+    SHEET_URL_MAP = "https://docs.google.com/spreadsheets/d/1L-WNzMEAmvdcqSm0gvpRSzNUE29hwvxk396Q8MwUfUo/edit?usp=sharing"
+    
     df = load_data_from_sheets(SHEET_URL_CURRENT)
+    df_coords = load_data_from_sheets(SHEET_URL_MAP)
 
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     if b64_logo and b64_logo2:
         st.markdown(f'<div class="banner-amarillo"><img src="data:image/png;base64,{b64_logo2}" style="max-height:80px;"><div class="titulo-texto"><h1>NPS 2025</h1></div><img src="data:image/png;base64,{b64_logo}" style="max-height:80px;"></div>', unsafe_allow_html=True)
 
     if not df.empty:
-        font_main = dict(color="white", size=22)
+        font_main = dict(color="#FFFF00", size=22) # Títulos en Amarillo
         font_axes = dict(color="white", size=14)
         col_g1, col_g2 = st.columns(2)
         df_global = df[df['Primary Driver'] != 'N/A'].copy()
+        
         with col_g1:
             data_anillo = df_global.groupby('Primary Driver')['Customer ID'].count().reset_index()
             fig1 = px.pie(data_anillo, values='Customer ID', names='Primary Driver', hole=0.6, color_discrete_sequence=['#FFFF00', '#FFD700', '#FFEA00'])
@@ -153,13 +162,16 @@ elif st.session_state.page == "dashboard":
             fig2.update_traces(line_color='#FFD700', marker=dict(size=10, color='#FFD700'), text=data_lineas['Score'].map('{:.2f}'.format), textposition="top center", mode='markers+lines+text', textfont=dict(color="white", size=14))
             fig2.update_layout(title={'text': "2. Average Score Per Primary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), yaxis=dict(title=None, tickfont=font_axes, gridcolor='#333333'), font=dict(color="white") )
             st.plotly_chart(fig2, use_container_width=True)
+        
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         c_f1, c_f2 = st.columns(2)
         with c_f1: selector_driver = st.selectbox('Primary Driver:', ['All'] + sorted([d for d in df['Primary Driver'].unique() if d != 'N/A']))
         with c_f2: selector_cat = st.multiselect('Category:', sorted([cat for cat in df['Category'].unique() if cat != 'N/A']), default=['Detractor', 'Passive', 'Promoter'])
+        
         df_filt3 = df.copy()
         if selector_driver != 'All': df_filt3 = df_filt3[df_filt3['Primary Driver'] == selector_driver]
         df_sec = df_filt3[df_filt3['Category'].isin(selector_cat)].copy()
+        
         col_d1, col_d2 = st.columns([1, 2])
         with col_d1:
             df_visual_cat = df_filt3[df_filt3['Category'] != 'N/A']
@@ -180,6 +192,7 @@ elif st.session_state.page == "dashboard":
                 fig4.update_traces(marker_color='#FFEA00', textfont=dict(color="black", size=14))
                 fig4.update_layout(title={'text':"4. Volume by Secondary Driver", 'x':0.5, 'xanchor': 'center', 'font': font_main}, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=font_axes), font=dict(color="white"), height=450)
                 st.plotly_chart(fig4, use_container_width=True)
+        
         st.markdown("<br>", unsafe_allow_html=True)
         if not df_sec.empty:
             data_score = df_sec.groupby('Secondary Driver')['Score'].mean().reset_index().sort_values(by='Score', ascending=False)
@@ -197,6 +210,29 @@ elif st.session_state.page == "dashboard":
                 fig5.add_annotation(x=row['Label'], y=10.5, text=f"<b>{score:.2f}</b>", showarrow=False, font=dict(color="white", size=15))
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
+
+        # --- SECCIÓN MAPA DE CALOR ---
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        if not df_coords.empty and not df_filt3.empty:
+            # Cruce de Base con Coordenadas: Columna E (Link) con Customer ID (Base)
+            df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=df_coords.columns[4], how='inner')
+            if not df_map_final.empty:
+                # Columnas: B (Index 1) es X/Lon, C (Index 2) es Y/Lat
+                fig_map = px.density_mapbox(df_map_final, 
+                                            lat=df_coords.columns[2], 
+                                            lon=df_coords.columns[1], 
+                                            z='Score', 
+                                            radius=15,
+                                            center=dict(lat=df_map_final[df_coords.columns[2]].mean(), lon=df_map_final[df_coords.columns[1]].mean()), 
+                                            zoom=10,
+                                            mapbox_style="carto-darkmatter",
+                                            hover_name=df_coords.columns[0]) # Col A en Tooltip
+                fig_map.update_layout(title={'text': "6. Customer Concentration Heatmap", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, 
+                                      paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=600, margin=dict(t=50, b=10))
+                st.plotly_chart(fig_map, use_container_width=True)
+            else:
+                st.warning("No se encontraron coincidencias entre la base y el mapa de coordenadas.")
+
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
         col_t1, col_t2, col_t3 = st.columns(3)
