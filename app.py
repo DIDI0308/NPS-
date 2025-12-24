@@ -218,55 +218,64 @@ elif st.session_state.page == "dashboard":
             st.plotly_chart(fig5, use_container_width=True)
 
         # --- MAPA DE CALOR CON BUSCADOR ---
+        # --- MAPA DE CALOR CON BUSCADOR (CORREGIDO) ---
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
-        # Buscador específico para el mapa
-        search_id = st.text_input("🔍 Buscar por Código de Cliente:", placeholder="Escriba el ID...")
+        # Buscador opcional
+        search_id = st.text_input("Buscar por Código de Cliente:", placeholder="Ej: 100234...")
 
         if not df_coords.empty and not df_filt3.empty:
             try:
+                # Limpieza de nombres de columnas y datos de coordenadas
                 df_coords.columns = [str(c).strip() for c in df_coords.columns]
-                id_col_m, lon_col, lat_col = df_coords.columns[0], df_coords.columns[1], df_coords.columns[2]
-                df_coords[id_col_m] = df_coords[id_col_m].astype(str).str.strip()
+                id_col_m = df_coords.columns[0] # Primera columna: ID Cliente
+                lon_col = df_coords.columns[1] # Segunda: Longitud
+                lat_col = df_coords.columns[2] # Tercera: Latitud
                 
-                # Cruce de datos filtrados con coordenadas
+                # Asegurar que los IDs sean strings limpios para el cruce
+                df_coords[id_col_m] = df_coords[id_col_m].astype(str).str.strip()
+                df_filt3['Customer ID'] = df_filt3['Customer ID'].astype(str).str.strip()
+                
+                # CRUCE DE DATOS: Unimos los datos filtrados con sus coordenadas
                 df_map_final = pd.merge(df_filt3, df_coords, left_on='Customer ID', right_on=id_col_m, how='inner')
                 
-                # Filtrar mapa por el buscador si hay texto
+                # APLICAR BÚSQUEDA SOLO SI EL USUARIO ESCRIBIÓ ALGO
                 if search_id:
                     df_map_final = df_map_final[df_map_final['Customer ID'].str.contains(search_id, case=False)]
 
                 if not df_map_final.empty:
+                    # Convertir a numérico por si acaso
                     df_map_final[lat_col] = pd.to_numeric(df_map_final[lat_col], errors='coerce')
                     df_map_final[lon_col] = pd.to_numeric(df_map_final[lon_col], errors='coerce')
                     df_map_final = df_map_final.dropna(subset=[lat_col, lon_col])
 
+                    # Renderizar Mapa
                     fig_map = px.density_mapbox(
-                        df_map_final, lat=lat_col, lon=lon_col, z='Score', radius=25,
-                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), zoom=11,
-                        mapbox_style="open-street-map", # FONDO BLANCO
-                        hover_data={'Customer ID': True, 'Category': True, 'Score': True, lat_col: False, lon_col: False},
-                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']] # ROJO INTENSO
+                        df_map_final, 
+                        lat=lat_col, 
+                        lon=lon_col, 
+                        z='Score', 
+                        radius=15, # Ajuste de tamaño del punto de calor
+                        center=dict(lat=df_map_final[lat_col].mean(), lon=df_map_final[lon_col].mean()), 
+                        zoom=10,
+                        mapbox_style="open-street-map",
+                        hover_name='Customer ID', # El ID aparece al poner el mouse
+                        hover_data={'Category': True, 'Score': True, lat_col: False, lon_col: False, id_col_m: False},
+                        color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']]
                     )
-                    fig_map.update_layout(height=700, margin=dict(t=20, b=10), coloraxis_showscale=False)
+                    
+                    fig_map.update_layout(
+                        height=700, 
+                        margin=dict(t=0, b=0, l=0, r=0),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        coloraxis_showscale=False
+                    )
                     st.plotly_chart(fig_map, use_container_width=True)
                 else:
-                    st.warning("No se encontraron resultados para el filtro o búsqueda actual.")
-            except: pass
-
-        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-        st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
-        col_t1, col_t2, col_t3 = st.columns(3)
-        def render_dynamic_card(col, key_id, default_title):
-            with col:
-                st.markdown(f'<div class="card-transparent"><div class="emoji-solid-yellow">☹</div></div>', unsafe_allow_html=True)
-                st.text_input("Secondary Driver:", value=default_title, key=f"title_{key_id}")
-                st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
-                st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
-        render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Cargando datos...")
-
+                    st.info("No hay datos geográficos para mostrar con los filtros actuales.")
+            except Exception as e:
+                st.error(f"Error al procesar el mapa: {e}")
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
 # ==========================================
