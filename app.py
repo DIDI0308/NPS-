@@ -474,7 +474,7 @@ elif st.session_state.page == "ea_lp":
                     y="Altura", 
                     color="REG_GROUP", 
                     text="Customer ID", # NÚMERO REAL
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
+                    color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                     category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
                     barmode="stack"
                 )
