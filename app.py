@@ -391,40 +391,51 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (EXCLUSIVO DELIVERY)
+# VISTA 4: EA / LP (DISEÑO FINAL)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def get_data_fresh():
+    def get_data_ea_lp():
+        # URL con bust para ignorar caché
         u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
         csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
-        res = requests.get(csv_url)
-        return pd.read_csv(StringIO(res.text))
+        return pd.read_csv(StringIO(requests.get(csv_url).text))
 
-    st.markdown("<style>.stApp { background-color: #000000; }</style>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .stApp { background-color: #000000; color: #FFFFFF; }
+        /* Estilo para que el botón de actualizar sea amarillo sólido */
+        div.stButton > button[key="refresh_ea_lp"] {
+            background-color: #FFFF00 !important;
+            color: black !important;
+            font-weight: bold !important;
+            border: none !important;
+        }
+        .banner-amarillo { background-color: #FFFF00; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
+        </style>
+        """, unsafe_allow_html=True)
 
-    # Navegación
+    # --- NAVEGACIÓN ---
     col_nav1, col_nav2 = st.columns([8, 2])
     with col_nav1:
-        if st.button("⬅ VOLVER", key="btn_back"):
+        if st.button("⬅ VOLVER AL INICIO", key="btn_back"):
             st.session_state.page = "home"; st.rerun()
     with col_nav2:
-        if st.button("🔄 ACTUALIZAR", key="btn_refresh"):
+        # Botón de actualizar amarillo
+        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div style="background-color:#FFFF00; padding:8px; border-radius:5px; text-align:center; margin-bottom:15px;">'
-                '<h2 style="color:black; margin:0; font-family:Arial Black; font-size:22px;">PERFORMANCE EA / LP (ONLY DELIVERY)</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-amarillo"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:28px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_fresh()
+    df_raw = get_data_ea_lp()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
         
-        # --- FILTRO ESTRICTO DE DELIVERY ---
-        # Limpiamos la columna Primary Driver de espacios y la pasamos a mayúsculas para comparar
+        # --- FILTRO EXCLUSIVO DELIVERY ---
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
-        # Normalización de Regiones (Agrupar variaciones de nombres)
+        # Normalización de Regiones
         def clean_reg(x):
             x = str(x).upper()
             if 'ALTO' in x or 'EA' in x: return 'EA'
@@ -435,31 +446,31 @@ elif st.session_state.page == "ea_lp":
         df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            # Contar Customer ID por Categoría y Región
+            # Agrupación para la gráfica
             df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            
-            # Cálculo para apilar al 100% pero mostrar números reales
             df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
             df_plot['Altura_Visual'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
 
-            # --- GRÁFICA COMPACTA ---
+            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center; margin-bottom:0px;">DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
+
+            # --- GRÁFICA COMPACTA Y ESTÉTICA ---
             fig = px.bar(
                 df_plot, 
                 x="Category", 
                 y="Altura_Visual", 
                 color="REG_GROUP", 
-                text="Customer ID", # Muestra el conteo de clientes
-                color_discrete_map={'EA': '#FFFF00', 'LP': '#D4AF37'}, # Tonos de amarillo
+                text="Customer ID", # Muestra el número real de clientes
+                color_discrete_map={'EA': '#FFFF00', 'LP': '#D4AF37'}, # Tonos amarillos
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
                 barmode="stack",
-                width=300 # Barras más delgadas
+                width=280 # Barras delgadas
             )
 
             fig.update_layout(
                 paper_bgcolor='black', plot_bgcolor='black',
-                height=380, # Altura reducida
+                height=350, # Tamaño pequeño
                 yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                xaxis=dict(title=None, tickfont=dict(color="white", size=11, family="Arial Black"), showgrid=False),
+                xaxis=dict(title=None, tickfont=dict(color="white", size=12, family="Arial Black"), showgrid=False),
                 legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
                 margin=dict(t=10, b=10, l=10, r=10)
             )
@@ -469,11 +480,13 @@ elif st.session_state.page == "ea_lp":
                 textfont=dict(color="black", size=18, family="Arial Black")
             )
 
-            # Centrar la gráfica en la pantalla
-            _, col_center, _ = st.columns([1.2, 2, 1.2])
+            # Centrar la gráfica
+            _, col_center, _ = st.columns([1.5, 2, 1.5])
             with col_center:
-                st.plotly_chart(fig, use_container_width=True, key=f"mini_deliv_{pd.Timestamp.now().microsecond}")
+                st.plotly_chart(fig, use_container_width=True, key=f"ea_lp_deliv_{pd.Timestamp.now().microsecond}")
             
-            st.markdown(f'<p style="text-align:center; color:#888; font-size:12px;">Total encuestas Delivery en EA/LP: {len(df_final)}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p style="text-align:center; color:#888; font-size:12px;">Total analizado: {len(df_final)} registros (Primary Driver: Delivery)</p>', unsafe_allow_html=True)
         else:
-            st.warning("No se encontraron datos registrados bajo el Primary Driver: 'Delivery'.")
+            st.warning("No se encontraron registros de 'Delivery' en EA o LP.")
+    else:
+        st.error("Error al conectar con la base de datos.")
