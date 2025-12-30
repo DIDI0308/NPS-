@@ -392,94 +392,96 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (CÓDIGO FINAL CORREGIDO)
+# VISTA 4: EA / LP (VERSIÓN FINAL FORZADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función de carga local para asegurar frescura de datos
-    def load_ea_lp_direct():
-        url = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
-        base_url = url.split('/edit')[0]
-        csv_url = f"{base_url}/export?format=csv&cache_bust={pd.Timestamp.now().timestamp()}"
-        res = requests.get(csv_url)
-        return pd.read_csv(StringIO(res.text))
+    def load_data_ea_lp_fixed(url):
+        try:
+            base_url = url.split('/edit')[0]
+            csv_url = f"{base_url}/export?format=csv"
+            response = requests.get(csv_url)
+            df = pd.read_csv(StringIO(response.text))
+            return df
+        except: return pd.DataFrame()
 
-    st.markdown("<style>.stApp { background-color: #000000; color: #FFFFFF; }</style>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        .stApp { background-color: #000000; color: #FFFFFF; }
+        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 25px; }
+        .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
+        .titulo-texto h1 { margin: 0; font-size: 45px; font-weight: 900; }
+        </style>
+        """, unsafe_allow_html=True)
 
-    # Navegación y Banner
-    if st.button("⬅ VOLVER AL INICIO"):
+    # Navegación
+    if st.button("⬅ VOLVER AL INICIO", key="btn_back_final"):
         st.session_state.page = "home"
         st.rerun()
 
-    st.markdown('<div style="background-color:#FFFF00; padding:15px; border-radius:5px; text-align:center; margin-bottom:20px;">'
-                '<h1 style="color:black; margin:0; font-family:Arial Black;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
+    # Banner
+    st.markdown(f'<div class="banner-amarillo"><div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div></div>', unsafe_allow_html=True)
 
-    df_raw = load_ea_lp_direct()
+    df_ea_lp = load_data_ea_lp_fixed("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
-    if not df_raw.empty:
-        # --- LIMPIEZA TOTAL DE COLUMNAS Y DATOS ---
-        df_raw.columns = df_raw.columns.str.strip() # Quitar espacios en nombres de columnas
+    if not df_ea_lp.empty:
+        # Aseguramos limpieza de nombres de columnas y datos
+        df_ea_lp.columns = df_ea_lp.columns.str.strip()
         
-        # Filtro de seguridad: Solo Driver "Delivery" (ignorando espacios y mayúsculas)
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip()
-        df_clean = df_raw[df_raw['Primary Driver'].str.upper() == 'DELIVERY'].copy()
+        # Filtrar solo REGIONES EA y LP y DRIVER Delivery
+        # Usamos .str.contains para capturar "EL ALTO", "EA", "LA PAZ", "LP"
+        df_filtrado = df_ea_lp[
+            (df_ea_lp['Sales Region'].astype(str).str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
+            (df_ea_lp['Primary Driver'].astype(str).str.strip() == 'Delivery')
+        ].copy()
 
-        # Normalizar Regiones para que solo existan "EA" y "LP"
-        def simplify_region(reg):
-            reg = str(reg).upper()
-            if 'ALTO' in reg or 'EA' in reg: return 'EA'
-            if 'PAZ' in reg or 'LP' in reg: return 'LP'
-            return 'OTRO'
-
-        df_clean['Region_Group'] = df_clean['Sales Region'].apply(simplify_region)
-        # Filtrar solo las que nos interesan
-        df_final = df_clean[df_clean['Region_Group'].isin(['EA', 'LP'])]
-
-        # --- GRÁFICA: X = CATEGORY, COLOR = REGION ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">100% STACKED: CATEGORY COMPOSITION (DELIVERY)</p>', unsafe_allow_html=True)
 
-        if not df_final.empty:
-            # Agrupar: Contamos Customer ID por Categoría y por nuestro nuevo grupo de Región
-            df_plot = df_final.groupby(['Category', 'Region_Group'])['Customer ID'].count().reset_index()
+        if not df_filtrado.empty:
+            # AGRUPACIÓN: X = Category, Color = Sales Region
+            df_plot = df_filtrado.groupby(['Category', 'Sales Region'])['Customer ID'].count().reset_index()
             
-            # Calcular el porcentaje para que la barra de cada Categoría sume 100%
-            df_plot['Total_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['%'] = (df_plot['Customer ID'] / df_plot['Total_Cat']) * 100
+            # Cálculo para que cada barra de Categoría sume 100%
+            df_plot['Total_por_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Percentage'] = (df_plot['Customer ID'] / df_plot['Total_por_Cat']) * 100
 
-            # Paleta de Amarillos (EA: Amarillo Eléctrico, LP: Amarillo Ámbar/Dorado)
-            custom_yellows = {'EA': '#FFFF00', 'LP': '#FFCC00'}
+            # PALETA AMARILLA EXCLUSIVA
+            # Mapeamos EA a Amarillo y LP a Dorado/Mostaza
+            color_map = {
+                'EA': '#FFFF00', 'EL ALTO': '#FFFF00',
+                'LP': '#FFCC00', 'LA PAZ': '#FFCC00'
+            }
 
-            fig = px.bar(
-                df_plot,
-                x="Category",
-                y="%",
-                color="Region_Group",
-                text=df_plot['%'].apply(lambda x: f'{x:.1f}%'),
-                color_discrete_map=custom_yellows,
+            fig_final = px.bar(
+                df_plot, 
+                x="Category", 
+                y="Percentage", 
+                color="Sales Region",
+                text=df_plot['Percentage'].apply(lambda x: f'{x:.1f}%'),
+                color_discrete_map=color_map,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="relative" # Esto crea el efecto Stacked
+                barmode="relative"
             )
 
-            fig.update_layout(
-                paper_bgcolor='black',
-                plot_bgcolor='black',
+            fig_final.update_layout(
+                paper_bgcolor='black', 
+                plot_bgcolor='black', 
                 font=dict(color="white"),
-                height=550,
-                yaxis=dict(title="Porcentaje (%)", range=[0, 100], gridcolor='#333'),
+                yaxis=dict(title="Composición %", ticksuffix="%", range=[0, 100], gridcolor='#333'),
                 xaxis=dict(title="NPS Category"),
-                legend=dict(title="Región", orientation="h", y=1.1)
+                height=500,
+                legend=dict(title="Región", font=dict(color="white"))
             )
             
-            # Formato de texto dentro de las barras
-            fig.update_traces(
-                textposition='inside',
+            fig_final.update_traces(
+                textposition='inside', 
                 textfont=dict(color="black", size=14, family="Arial Black")
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig_final, use_container_width=True)
             
-            # Resumen de datos para verificar
-            st.write(f"📊 Registros totales analizados (Delivery): {len(df_final)}")
+            # --- INFO EXTRA ---
+            st.write(f"Datos analizados: {len(df_filtrado)} registros de Delivery en EA y LP.")
         else:
-            st.warning("No se encontraron datos de 'Delivery' para las regiones EA o LP. Revisa que la columna 'Primary Driver' diga exactamente 'Delivery'.")
+            st.warning("No se encontraron datos que coincidan con 'Delivery' en las regiones EA o LP.")
     else:
-        st.error("No se pudo obtener datos de la hoja de Google Sheets.")
+        st.error("No se pudo cargar la hoja de cálculo.")
