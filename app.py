@@ -213,6 +213,7 @@ elif st.session_state.page == "dashboard":
             st.plotly_chart(fig5, use_container_width=True)
 
         # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
+        # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
         busqueda = st.text_input("🔍 Buscar por Código de Cliente (Opcional):", placeholder="Escriba el ID para filtrar el mapa...")
@@ -257,6 +258,7 @@ elif st.session_state.page == "dashboard":
                 st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
     else: st.warning("Cargando datos...")
+
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
