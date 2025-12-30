@@ -391,9 +391,22 @@ elif st.session_state.page == "monthly":
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 # ==========================================
-# VISTA 4: EA / LP (SECCIÓN ENTERA)
+# VISTA 4: EA / LP (CORREGIDA PARA EVITAR NAMEERROR)
 # ==========================================
 elif st.session_state.page == "ea_lp":
+    # 1. Definición interna para evitar NameError si no se movió al inicio
+    def load_data_ea_lp(url):
+        try:
+            base_url = url.split('/edit')[0]
+            csv_url = f"{base_url}/export?format=csv"
+            response = requests.get(csv_url)
+            response.raise_for_status()
+            df = pd.read_csv(StringIO(response.text))
+            if 'Score' in df.columns:
+                df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
+            return df
+        except: return pd.DataFrame()
+
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
@@ -427,28 +440,22 @@ elif st.session_state.page == "ea_lp":
         ''', unsafe_allow_html=True)
 
     # --- CARGA DE DATOS ---
-    df_ea_lp = load_data_from_sheets("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
+    df_ea_lp = load_data_ea_lp("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
     if not df_ea_lp.empty:
-        # Filtrar para trabajar solo con datos de EA y LP (usando Sales Region)
-        # Ajustamos los nombres según tu columna 'Sales Region'
-        df_region = df_ea_lp[df_ea_lp['Sales Region'].str.contains('EA|LP|EL ALTO|LA PAZ', case=False, na=False)].copy()
+        # Filtrar solo EA y LP
+        df_region = df_ea_lp[df_ea_lp['Sales Region'].astype(str).str.contains('EA|LP|EL ALTO|LA PAZ', case=False, na=False)].copy()
 
-        # ---------------------------------------------------------
-        # 1. GRÁFICA DE BARRAS 100% APILADAS (SOLO DELIVERY)
-        # ---------------------------------------------------------
+        # 1. GRÁFICA 100% APILADAS (DELIVERY)
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">DELIVERY PERFORMANCE BY REGION (100% STACKED)</p>', unsafe_allow_html=True)
         
         df_delivery = df_region[df_region['Primary Driver'] == 'Delivery'].copy()
 
         if not df_delivery.empty:
-            # Agrupar y contar
             df_stacked = df_delivery.groupby(['Sales Region', 'Category'])['Customer ID'].count().reset_index()
-            # Calcular porcentajes para el 100%
             df_total = df_stacked.groupby('Sales Region')['Customer ID'].transform('sum')
             df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total) * 100
 
-            # Colores corporativos
             color_map_nps = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
             
             fig_100 = px.bar(
@@ -471,24 +478,19 @@ elif st.session_state.page == "ea_lp":
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
 
-        # ---------------------------------------------------------
-        # 2. COMPARATIVA DE SCORES EA VS LP
-        # ---------------------------------------------------------
+        # 2. COMPARATIVA DE SCORES
         col1, col2 = st.columns(2)
         
-        # Filtrar datos específicos para los indicadores
-        data_ea = df_region[df_region['Sales Region'].str.contains('EA|ALTO', case=False, na=False)]
-        data_lp = df_region[df_region['Sales Region'].str.contains('LP|PAZ', case=False, na=False)]
+        data_ea = df_region[df_region['Sales Region'].astype(str).str.contains('EA|ALTO', case=False, na=False)]
+        data_lp = df_region[df_region['Sales Region'].astype(str).str.contains('LP|PAZ', case=False, na=False)]
 
         with col1:
             st.markdown('<div class="card-region">', unsafe_allow_html=True)
             avg_ea = data_ea['Score'].mean() if not data_ea.empty else 0
             st.markdown(f'<h3 style="color:#FFFF00; margin:0;">EL ALTO (EA)</h3>', unsafe_allow_html=True)
             st.metric("Avg Score", f"{avg_ea:.2f}")
-            
-            fig_ea = px.pie(data_ea, names='Category', hole=0.6, color='Category',
-                            color_discrete_map=color_map_nps)
-            fig_ea.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(t=0,b=0,l=0,r=0))
+            fig_ea = px.pie(data_ea, names='Category', hole=0.6, color='Category', color_discrete_map=color_map_nps)
+            fig_ea.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False)
             st.plotly_chart(fig_ea, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -497,12 +499,9 @@ elif st.session_state.page == "ea_lp":
             avg_lp = data_lp['Score'].mean() if not data_lp.empty else 0
             st.markdown(f'<h3 style="color:#FFFFFF; margin:0;">LA PAZ (LP)</h3>', unsafe_allow_html=True)
             st.metric("Avg Score", f"{avg_lp:.2f}")
-            
-            fig_lp = px.pie(data_lp, names='Category', hole=0.6, color='Category',
-                            color_discrete_map=color_map_nps)
-            fig_lp.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(t=0,b=0,l=0,r=0))
+            fig_lp = px.pie(data_lp, names='Category', hole=0.6, color='Category', color_discrete_map=color_map_nps)
+            fig_lp.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False)
             st.plotly_chart(fig_lp, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
-
     else:
         st.warning("Cargando datos desde la fuente...")
