@@ -73,8 +73,7 @@ if st.session_state.page == "home":
     '''
     st.markdown(style_home, unsafe_allow_html=True)
     st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3) # Cambiamos de 2 a 3 columnas
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
             st.session_state.page = "monthly"
@@ -84,9 +83,9 @@ if st.session_state.page == "home":
             st.session_state.page = "dashboard"
             st.rerun()
     with col3:
-        if st.button("EA / LP", use_container_width=True):
+        if st.button("EA / LP", use_container_width=True): # Nuevo Botón
             st.session_state.page = "ea_lp"
-            st.rerun()
+            st.rerun()   
 
 # ==========================================
 # VISTA 2: DASHBOARD (FONDO NEGRO / CURRENT MONTH)
