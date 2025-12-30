@@ -212,40 +212,47 @@ elif st.session_state.page == "dashboard":
             fig5.update_layout(title={'text': "5. Avg Score by Secondary Driver", 'x': 0.5, 'xanchor': 'center', 'font': font_main}, barmode='overlay', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis=dict(title=None, tickfont=font_axes, showgrid=False), yaxis=dict(visible=False, range=[0, 12]), height=650, margin=dict(b=100))
             st.plotly_chart(fig5, use_container_width=True)
 
-        # --- SECCIÓN MAPA DE CALOR (CORREGIDA) ---
+        # --- MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
-        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...", key="search_input_map")
+        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para localizar al cliente...", key="search_input_map")
 
         if not df_coords.empty:
             df_c = df_coords.copy()
             df_c.columns = ['ID', 'Lon', 'Lat'] + list(df_c.columns[3:])
-            # Limpiar IDs de ambas bases para asegurar coincidencia
+            
+            # Limpieza profunda de IDs: eliminar .0 de Excel, espacios y asegurar string
             df_c['ID'] = df_c['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             df_filt_map = df_filt3.copy()
             df_filt_map['Customer ID'] = df_filt_map['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             
+            # Cruce de datos
             df_map = pd.merge(df_filt_map, df_c[['ID', 'Lon', 'Lat']], left_on='Customer ID', right_on='ID', how='inner')
             
+            # Filtro por búsqueda: Si hay texto, filtramos para que solo aparezca ese cliente
             if busqueda:
-                busqueda_clean = str(busqueda).strip().replace(".0", "")
-                df_map = df_map[df_map['Customer ID'].str.contains(busqueda_clean, case=False, na=False)]
+                busqueda_clean = str(busqueda).strip()
+                df_map = df_map[df_map['Customer ID'] == busqueda_clean]
 
             if not df_map.empty:
                 df_map['Lat'] = pd.to_numeric(df_map['Lat'], errors='coerce')
                 df_map['Lon'] = pd.to_numeric(df_map['Lon'], errors='coerce')
                 df_map = df_map.dropna(subset=['Lat', 'Lon'])
+                
+                # Mapa dinámico (Blanco con puntos rojos de calor)
                 fig_map = px.density_mapbox(
-                    df_map, lat='Lat', lon='Lon', z='Score', radius=20, 
+                    df_map, lat='Lat', lon='Lon', z='Score', 
+                    radius=25 if busqueda else 18, 
                     center=dict(lat=df_map['Lat'].mean(), lon=df_map['Lon'].mean()), 
-                    zoom=10, mapbox_style="open-street-map",
+                    zoom=15 if busqueda else 11, 
+                    mapbox_style="open-street-map", # Estilo claro
                     hover_name='Customer ID', 
                     hover_data={'Score': True, 'Category': True, 'Lat': False, 'Lon': False},
-                    color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']]
+                    color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']] # Escala Roja
                 )
                 fig_map.update_layout(height=600, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', coloraxis_showscale=False)
                 st.plotly_chart(fig_map, use_container_width=True)
             else:
-                st.info("Sin coincidencias en el mapa para el filtro o búsqueda actual.")
+                st.info("No se encontró el cliente o no existen coordenadas para la selección actual.")
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
@@ -271,6 +278,16 @@ elif st.session_state.page == "monthly":
         .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
         .logo-img { height: 70px; }
         div.stButton > button { background-color: #FFFF00; color: black; border: None; font-weight: bold; }
+        .stTextArea label {
+            color: #FFFF00 !important;
+            font-size: 22px !important; 
+            font-weight: bold !important;
+            border: 2px solid #FFFF00; 
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
         .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
         .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
         .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
@@ -310,50 +327,52 @@ elif st.session_state.page == "monthly":
             return pd.DataFrame()
 
     SHEET_URL_EVO = "https://docs.google.com/spreadsheets/d/1TFzkoiDubO6E_m-bNMqk1QUl6JJgZ7uTB6si_WqmFHI/edit?gid=0#gid=0"
-    df_raw_evo = load_live_data_evolution(SHEET_URL_EVO)
+    df_raw = load_live_data_evolution(SHEET_URL_EVO)
 
-    if not df_raw_evo.empty:
-        def render_nps_block(df, row_start_idx, title_prefix):
-            meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
-            y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
-            bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
-            y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
-            val_ytd_25, val_ytd_bu, val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
-            valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
-            last_idx = valid_data[-1] if valid_data else 0
-            mes_txt = meses[last_idx]
-            st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
-                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
-            col_a, col_b = st.columns([3, 1.2])
-            with col_a:
-                fig_l = go.Figure()
-                fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25 if 'label_25' in locals() else "2025", line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
-                fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu if 'label_bu' in locals() else "BGT", line=dict(color='#FFD700', width=2, dash='dash')))
-                fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24 if 'label_24' in locals() else "2024", line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-                fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min(y25_m+y24_m)-10, max(y25_m+y24_m)+20]), height=400)
-                st.plotly_chart(fig_l, use_container_width=True)
-            with col_b:
-                fig_b = go.Figure()
-                fig_b.add_trace(go.Bar(x=["2024", "BGT", "2025"], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-                fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False), height=400)
-                st.plotly_chart(fig_b, use_container_width=True)
+    def render_nps_block(df, row_start_idx, title_prefix):
+        meses = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+        y25_m = pd.to_numeric(df.iloc[row_start_idx, 3:15], errors='coerce').tolist()
+        bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
+        y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
+        val_ytd_25, val_ytd_bu, val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
+        valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
+        last_idx = valid_data[-1] if valid_data else 0
+        mes_txt = meses[last_idx]
+        st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
+                    {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+        all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
+        max_l, min_l = max(all_vals) if all_vals else 100, min(all_vals) if all_vals else 0
+        col_a, col_b = st.columns([3, 1.2])
+        with col_a:
+            fig_l = go.Figure()
+            fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name="2025", line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
+            fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name="BGT", line=dict(color='#FFD700', width=2, dash='dash')))
+            fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name="2024", line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+            fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
+            st.plotly_chart(fig_l, use_container_width=True)
+        with col_b:
+            fig_b = go.Figure()
+            fig_b.add_trace(go.Bar(x=["2024", "BGT", "2025"], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
+            fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False), height=500, margin=dict(t=50))
+            st.plotly_chart(fig_b, use_container_width=True)
 
-        render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
-        render_nps_block(df_raw_evo, 7, "NPS EA")
-        render_nps_block(df_raw_evo, 11, "NPS LP")
+    if not df_raw.empty:
+        render_nps_block(df_raw, 2, "NPS CD EL ALTO")
+        render_nps_block(df_raw, 7, "NPS EA")
+        render_nps_block(df_raw, 11, "NPS LP")
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
         table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
         for m in months: table_html += f'<th>{m}</th>'
         table_html += '</tr></thead><tbody>'
         for r in rows_det:
-            table_html += f'<tr><td class="text-col">{str(df_raw_evo.iloc[r, 0])}</td>'
-            for c in range(3, 15): table_html += f'<td>{df_raw_evo.iloc[r, c] if pd.notnull(df_raw_evo.iloc[r, c]) else "-"}</td>'
+            table_html += f'<tr><td class="text-col">{str(df_raw.iloc[r, 0])}</td>'
+            for c in range(3, 15): table_html += f'<td>{df_raw.iloc[r, c] if pd.notnull(df_raw.iloc[r, c]) else "-"}</td>'
             table_html += '</tr>'
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
         col_a1, col_a2, col_a3 = st.columns(3)
         for idx, col in zip([18, 20, 22], [col_a1, col_a2, col_a3]):
-            val_ytd, txt_orig = df_raw_evo.iloc[idx, 2], str(df_raw_evo.iloc[idx, 0])
+            val_ytd, txt_orig = df_raw.iloc[idx, 2], str(df_raw.iloc[idx, 0])
             palabras = txt_orig.split()
             mitad = len(palabras) // 2
             txt_form = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
