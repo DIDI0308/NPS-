@@ -391,120 +391,116 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (AMBAS GRÁFICAS INTEGRADAS)
+# VISTA 4: EA / LP (CÓDIGO NUEVO Y FORZADO)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def get_data_v4():
+    # 1. FUNCIÓN DE CARGA TOTALMENTE NUEVA
+    def fetch_data_final_v4():
         try:
-            u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
-            csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
-            res = requests.get(csv_url)
-            return pd.read_csv(StringIO(res.text))
+            u_base = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
+            # Usamos un parámetro único por segundo para destruir la caché
+            url_csv = f"{u_base}/export?format=csv&update_id={pd.Timestamp.now().microsecond}"
+            r = requests.get(url_csv)
+            return pd.read_csv(StringIO(r.text))
         except: return pd.DataFrame()
 
+    # 2. CSS FORZADO PARA BOTÓN AMARILLO Y DISEÑO
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
-        div.stButton > button {
+        div.stButton > button[key="btn_refresh_v4"] {
             background-color: #FFFF00 !important;
             color: black !important;
             font-weight: bold !important;
             border: none !important;
+            width: 100%;
         }
-        .banner-ea-lp {
-            background-color: #FFFF00;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+        .banner-ea-lp-final { background-color: #FFFF00; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
         </style>
         """, unsafe_allow_html=True)
 
-    # NAVEGACIÓN
-    c_nav1, c_nav2 = st.columns([8, 2])
-    with c_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_v4_home"):
+    # --- NAVEGACIÓN ---
+    c_nav_a, c_nav_b = st.columns([8, 2])
+    with c_nav_a:
+        if st.button("⬅ VOLVER AL INICIO", key="btn_home_v4"):
             st.session_state.page = "home"; st.rerun()
-    with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp_v4"):
+    with c_nav_b:
+        # BOTÓN AMARILLO SÓLIDO
+        if st.button("🔄 ACTUALIZAR", key="btn_refresh_v4"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div class="banner-ea-lp"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:24px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-ea-lp-final"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:26px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_v4()
+    df_raw_v4 = fetch_data_final_v4()
 
-    if not df_raw.empty:
-        df_raw.columns = df_raw.columns.str.strip()
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
+    if not df_raw_v4.empty:
+        df_raw_v4.columns = df_raw_v4.columns.str.strip()
         
-        # FILTRO BASE: DELIVERY
-        df_del = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
-        
-        def clean_reg(x):
+        # --- FILTRO DELIVERY ESTRICTO ---
+        df_raw_v4['Primary Driver'] = df_raw_v4['Primary Driver'].astype(str).str.strip().str.upper()
+        df_del_v4 = df_raw_v4[df_raw_v4['Primary Driver'] == 'DELIVERY'].copy()
+
+        # Normalización de Regiones
+        def map_reg_v4(x):
             x = str(x).upper()
             if 'ALTO' in x or 'EA' in x: return 'EA'
             if 'PAZ' in x or 'LP' in x: return 'LP'
             return 'OTRO'
         
-        df_del['REG_GROUP'] = df_del['Sales Region'].apply(clean_reg)
-        df_final = df_del[df_del['REG_GROUP'].isin(['EA', 'LP'])].copy()
+        df_del_v4['REG_TAG'] = df_del_v4['Sales Region'].apply(map_reg_v4)
+        df_final_v4 = df_del_v4[df_del_v4['REG_TAG'].isin(['EA', 'LP'])].copy()
 
-        if not df_final.empty:
-            # ---------------------------------------------------------
-            # GRÁFICA 1: COMPOSICIÓN POR CATEGORÍA (LA QUE YA TENÍAS)
-            # ---------------------------------------------------------
-            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center;">1. DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
+        if not df_final_v4.empty:
+            # --- GRÁFICA 1: COMPOSICIÓN VERTICAL (A LA IZQUIERDA) ---
+            col_izq, col_der = st.columns([1.5, 2.5])
             
-            df_p1 = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            df_p1['Total_Barra'] = df_p1.groupby('Category')['Customer ID'].transform('sum')
-            df_p1['Altura'] = (df_p1['Customer ID'] / df_p1['Total_Barra']) * 100
+            with col_izq:
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">1. DISTRIBUCIÓN NPS</p>', unsafe_allow_html=True)
+                df_g1 = df_final_v4.groupby(['Category', 'REG_TAG'])['Customer ID'].count().reset_index()
+                df_g1['Total'] = df_g1.groupby('Category')['Customer ID'].transform('sum')
+                df_g1['Perc'] = (df_g1['Customer ID'] / df_g1['Total']) * 100
 
-            fig1 = px.bar(df_p1, x="Category", y="Altura", color="REG_GROUP", text="Customer ID",
-                          color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
-                          category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                          barmode="stack", width=300)
+                fig1 = px.bar(df_g1, x="Category", y="Perc", color="REG_TAG", text="Customer ID",
+                              color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
+                              category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
+                              barmode="stack", width=280)
 
-            fig1.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=350,
-                               yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                               xaxis=dict(title=None, tickfont=dict(color="white", size=12, family="Arial Black")),
-                               legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"))
-            
-            fig1.update_traces(textposition='inside', textfont=dict(color="black", size=18, family="Arial Black"))
-            
-            _, col_c1, _ = st.columns([1.5, 2, 1.5])
-            with col_c1:
-                st.plotly_chart(fig1, use_container_width=True, key=f"g1_{pd.Timestamp.now().microsecond}")
+                fig1.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=350,
+                                   yaxis=dict(showticklabels=False, showgrid=False, title=None),
+                                   xaxis=dict(title=None, tickfont=dict(color="white", size=11, family="Arial Black")),
+                                   legend=dict(title=None, font=dict(color="white", size=9), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                                   margin=dict(t=10, b=10, l=10, r=10))
+                
+                fig1.update_traces(textposition='inside', textfont=dict(color="black", size=16, family="Arial Black"))
+                st.plotly_chart(fig1, use_container_width=True, key=f"force_g1_{pd.Timestamp.now().microsecond}")
 
             st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
 
-            # ---------------------------------------------------------
-            # GRÁFICA 2: BARRAS HORIZONTALES CON FILTRO MULTISELECT
-            # ---------------------------------------------------------
-            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center;">2. VOLUMEN POR SECONDARY DRIVER</p>', unsafe_allow_html=True)
+            # --- GRÁFICA 2: HORIZONTALES CON FILTRO ---
+            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">2. VOLUMEN POR SECONDARY DRIVER</p>', unsafe_allow_html=True)
             
-            cats = sorted(df_final['Category'].unique().tolist())
-            sel_cats = st.multiselect("Filtrar Categorías para esta gráfica:", cats, default=cats, key="ms_v4")
+            list_cats = sorted(df_final_v4['Category'].unique().tolist())
+            filt_cats = st.multiselect("Filtrar Categorías:", list_cats, default=list_cats, key="ms_final")
             
-            df_filtered2 = df_final[df_final['Category'].isin(sel_cats)].copy()
+            df_final_v4_filtered = df_final_v4[df_final_v4['Category'].isin(filt_cats)].copy()
 
-            if not df_filtered2.empty:
-                df_p2 = df_filtered2.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
+            if not df_final_v4_filtered.empty:
+                df_g2 = df_final_v4_filtered.groupby(['Secondary Driver', 'REG_TAG']).size().reset_index(name='Val')
                 
-                fig2 = px.bar(df_p2, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
-                              orientation='h', text="Cuenta",
+                fig2 = px.bar(df_g2, y="Secondary Driver", x="Val", color="REG_TAG",
+                              orientation='h', text="Val",
                               color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
                               template="plotly_dark")
 
                 fig2.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=500,
-                                   xaxis=dict(title="Número de Clientes", showgrid=False),
+                                   xaxis=dict(title="Número de Clientes", showgrid=False, tickfont=dict(color="white")),
                                    yaxis=dict(title=None, tickfont=dict(color="white", size=11)),
-                                   legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"))
+                                   legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                                   margin=dict(l=10, r=10, t=30, b=10))
                 
                 fig2.update_traces(textposition='inside', textfont=dict(color="black", size=14, family="Arial Black"))
-                
-                st.plotly_chart(fig2, use_container_width=True, key=f"g2_{pd.Timestamp.now().microsecond}")
+                st.plotly_chart(fig2, use_container_width=True, key=f"force_g2_{pd.Timestamp.now().microsecond}")
             else:
-                st.warning("Selecciona al menos una categoría.")
+                st.info("Seleccione categorías para visualizar datos.")
         else:
-            st.warning("No hay datos de Delivery para EA/LP.")
+            st.warning("Sin datos de Delivery en EA/LP.")
