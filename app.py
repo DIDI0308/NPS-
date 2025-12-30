@@ -215,27 +215,19 @@ elif st.session_state.page == "dashboard":
         # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
-        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...", key="search_input_map")
+        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...")
 
         if not df_coords.empty:
             df_c = df_coords.copy()
-            # Posiciones estáticas: A (ID), B (Lon), C (Lat)
             df_c.columns = ['ID', 'Lon', 'Lat'] + list(df_c.columns[3:])
-            
-            # Limpieza exhaustiva de IDs
             df_c['ID'] = df_c['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            df_filt_clean = df_filt3.copy()
+            df_filt_clean['Customer ID'] = df_filt_clean['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             
-            # Preparamos la base filtrada
-            df_filt_map = df_filt3.copy()
-            df_filt_map['Customer ID'] = df_filt_map['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            df_map = pd.merge(df_filt_clean, df_c[['ID', 'Lon', 'Lat']], left_on='Customer ID', right_on='ID', how='inner')
             
-            # Cruce de datos
-            df_map = pd.merge(df_filt_map, df_c[['ID', 'Lon', 'Lat']], left_on='Customer ID', right_on='ID', how='inner')
-            
-            # LÓGICA DE BÚSQUEDA: Si el usuario escribe algo, filtramos para que solo aparezca ese cliente
             if busqueda:
-                busqueda_clean = str(busqueda).strip()
-                df_map = df_map[df_map['Customer ID'] == busqueda_clean]
+                df_map = df_map[df_map['Customer ID'].str.contains(busqueda, case=False)]
 
             if not df_map.empty:
                 df_map['Lat'] = pd.to_numeric(df_map['Lat'], errors='coerce')
@@ -243,18 +235,16 @@ elif st.session_state.page == "dashboard":
                 df_map = df_map.dropna(subset=['Lat', 'Lon'])
 
                 fig_map = px.density_mapbox(
-                    df_map, lat='Lat', lon='Lon', z='Score', radius=25 if busqueda else 18, 
+                    df_map, lat='Lat', lon='Lon', z='Score', radius=20, 
                     center=dict(lat=df_map['Lat'].mean(), lon=df_map['Lon'].mean()), 
-                    zoom=15 if busqueda else 11, # Zoom más profundo si busca un cliente específico
-                    mapbox_style="open-street-map",
+                    zoom=10, mapbox_style="open-street-map",
                     hover_name='Customer ID', 
-                    hover_data={'Score': True, 'Category': True, 'Lat': False, 'Lon': False},
                     color_continuous_scale=[[0, 'rgba(255,0,0,0)'], [0.1, 'rgba(255,0,0,0.5)'], [1, 'rgba(255,0,0,1)']]
                 )
                 fig_map.update_layout(height=600, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', coloraxis_showscale=False)
                 st.plotly_chart(fig_map, use_container_width=True)
             else:
-                st.info("No se encontró el cliente o no tiene coordenadas registradas en la base.")
+                st.info("No se encontraron coordenadas para los clientes seleccionados o el ID buscado.")
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
         st.markdown('<p style="color:#FFFF00; font-size:35px; font-weight:bold; text-align:center;">CHOSEN COMMENTS</p>', unsafe_allow_html=True)
@@ -266,7 +256,7 @@ elif st.session_state.page == "dashboard":
                 st.text_input("Cliente:", key=f"client_{key_id}"); st.number_input("Score:", min_value=0, max_value=10, step=1, key=f"score_{key_id}")
                 st.text_area("Comentario:", key=f"comment_{key_id}", height=120); st.text_input("Camión / Unidad:", key=f"truck_{key_id}")
         render_dynamic_card(col_t1, "c1", "Secondary Driver 1:"); render_dynamic_card(col_t2, "c2", "Secondary Driver 2:"); render_dynamic_card(col_t3, "c3", "Secondary Driver 3:")
-    else: st.warning("Cargando datos desde la nube o la hoja está vacía...")
+    else: st.warning("Cargando datos...")
 
 # ==========================================
 # VISTA 3: MONTHLY EVOLUTION
@@ -280,9 +270,20 @@ elif st.session_state.page == "monthly":
         .section-banner { background-color: #FFFF00; color: black !important; padding: 4px 10px; border-radius: 5px; text-align: center; margin-top: 15px; margin-bottom: 15px; font-weight: bold; }
         .logo-img { height: 70px; }
         div.stButton > button { background-color: #FFFF00; color: black; border: None; font-weight: bold; }
+        .stTextArea label {
+            color: #FFFF00 !important;
+            font-size: 22px !important; 
+            font-weight: bold !important;
+            border: 2px solid #FFFF00; 
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
         .detractores-table { width: 100%; border-collapse: collapse; color: black; background-color: white; margin-bottom: 20px; }
         .detractores-table th { background-color: #1a3a4a; color: white; padding: 10px; border: 1px solid #ddd; font-size: 12px; }
         .detractores-table td { padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 12px; color: black; }
+        .detractores-table .text-col { text-align: left; background-color: #f9f9f9; width: 25%; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -327,23 +328,32 @@ elif st.session_state.page == "monthly":
             bu_m = pd.to_numeric(df.iloc[row_start_idx + 1, 3:15], errors='coerce').tolist()
             y24_m = pd.to_numeric(df.iloc[row_start_idx + 2, 3:15], errors='coerce').tolist()
             val_ytd_25, val_ytd_bu, val_ytd_24 = pd.to_numeric(df.iloc[row_start_idx, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 1, 2], errors='coerce'), pd.to_numeric(df.iloc[row_start_idx + 2, 2], errors='coerce')
+            label_25, label_bu, label_24 = str(df.iloc[row_start_idx, 1]), str(df.iloc[row_start_idx + 1, 1]), str(df.iloc[row_start_idx + 2, 1])
             valid_data = [i for i, v in enumerate(y25_m) if pd.notnull(v) and v != 0]
             last_idx = valid_data[-1] if valid_data else 0
             mes_txt = meses[last_idx]
             st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
-                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+            all_vals = [x for x in (y25_m + bu_m + y24_m) if pd.notnull(x)]
+            max_l, min_l = max(all_vals) if all_vals else 100, min(all_vals) if all_vals else 0
             col_a, col_b = st.columns([3, 1.2])
             with col_a:
                 fig_l = go.Figure()
-                fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name="2025", line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
-                fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name="BGT", line=dict(color='#FFD700', width=2, dash='dash')))
-                fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name="2024", line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
-                fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min(y25_m+y24_m)-10, max(y25_m+y24_m)+20]), height=400)
+                fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white")))
+                fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
+                fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white")))
+                fig_l.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[min_l - 15, max_l + 25]), legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center", font=dict(color="white")), height=500, margin=dict(t=50))
                 st.plotly_chart(fig_l, use_container_width=True)
             with col_b:
                 fig_b = go.Figure()
-                fig_b.add_trace(go.Bar(x=["2024", "BGT", "2025"], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
-                fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False), yaxis=dict(visible=False), height=400)
+                fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
+                y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
+                p25, p24 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0, ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
+                fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
+                fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
+                fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
+                fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
+                fig_b.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), xaxis=dict(showgrid=False, tickfont=dict(color="white")), yaxis=dict(visible=False, range=[0, y_t + 30]), height=500, margin=dict(t=50))
                 st.plotly_chart(fig_b, use_container_width=True)
 
         render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
@@ -355,7 +365,7 @@ elif st.session_state.page == "monthly":
         for m in months: table_html += f'<th>{m}</th>'
         table_html += '</tr></thead><tbody>'
         for r in rows_det:
-            table_html += f'<tr><td style="font-weight:bold;">{str(df_raw_evo.iloc[r, 0])}</td>'
+            table_html += f'<tr><td class="text-col">{str(df_raw_evo.iloc[r, 0])}</td>'
             for c in range(3, 15): table_html += f'<td>{df_raw_evo.iloc[r, c] if pd.notnull(df_raw_evo.iloc[r, c]) else "-"}</td>'
             table_html += '</tr>'
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
@@ -375,3 +385,4 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+
