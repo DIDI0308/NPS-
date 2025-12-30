@@ -391,112 +391,94 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (VERSIÓN FINAL GARANTIZADA)
+# VISTA 4: EA / LP (CÓDIGO CORREGIDO Y ESTÉTICO)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función con cache_bust para asegurar datos frescos
-    def load_data_fresh(url):
-        try:
-            base_url = url.split('/edit')[0]
-            # El timestamp evita que Google o Streamlit usen una copia guardada
-            csv_url = f"{base_url}/export?format=csv&cache_bust={pd.Timestamp.now().timestamp()}"
-            response = requests.get(csv_url)
-            return pd.read_csv(StringIO(response.text))
-        except: return pd.DataFrame()
+    def get_data_absolute():
+        u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
+        # Forzamos descarga limpia
+        csv = f"{u}/export?format=csv&token={pd.Timestamp.now().timestamp()}"
+        return pd.read_csv(StringIO(requests.get(csv).text))
 
-    st.markdown("""
-        <style>
-        .stApp { background-color: #000000; color: #FFFFFF; }
-        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 25px; }
-        .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
-        .titulo-texto h1 { margin: 0; font-size: 40px; font-weight: 900; }
-        </style>
-        """, unsafe_allow_html=True)
+    st.markdown("<style>.stApp { background-color: #000000; }</style>", unsafe_allow_html=True)
 
-    # --- NAVEGACIÓN Y BOTÓN ACTUALIZAR ---
-    c_nav1, c_nav2 = st.columns([8, 1.2])
+    # --- NAVEGACIÓN Y ACTUALIZAR ---
+    c_nav1, c_nav2 = st.columns([8, 1.5])
     with c_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="back_final"):
+        if st.button("⬅ INICIO", key="btn_home_final"):
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
-            st.cache_data.clear() # Limpia el cache interno
+        if st.button("🔄 ACTUALIZAR", key="btn_refresh_final"):
+            st.cache_data.clear()
             st.rerun()
 
     # Banner
-    st.markdown(f'<div class="banner-amarillo"><div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div></div>', unsafe_allow_html=True)
+    st.markdown('<div style="background-color:#FFFF00; padding:10px; border-radius:5px; text-align:center; margin-bottom:20px;">'
+                '<h1 style="color:black; margin:0; font-family:Arial Black; font-size:35px;">EA / LP PERFORMANCE</h1></div>', unsafe_allow_html=True)
 
-    # Carga de datos
-    df_ea_lp = load_data_fresh("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
+    df_raw = get_data_absolute()
 
-    if not df_ea_lp.empty:
-        df_ea_lp.columns = df_ea_lp.columns.str.strip()
+    if not df_raw.empty:
+        df_raw.columns = df_raw.columns.str.strip()
         
-        # Filtro Riguroso: Delivery + Regiones
-        df_f = df_ea_lp.copy()
-        df_f['Primary Driver'] = df_f['Primary Driver'].astype(str).str.strip()
-        df_f['Sales Region'] = df_f['Sales Region'].astype(str).str.strip()
+        # Filtros de Limpieza
+        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip()
+        df_f = df_raw[df_raw['Primary Driver'].str.upper() == 'DELIVERY'].copy()
+
+        def fix_reg(v):
+            v = str(v).upper()
+            if 'ALTO' in v or 'EA' in v: return 'EA'
+            if 'PAZ' in v or 'LP' in v: return 'LP'
+            return 'OTRO'
         
-        # Filtrado para que solo tome Delivery y las regiones correspondientes
-        df_filtrado = df_f[
-            (df_f['Sales Region'].str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
-            (df_f['Primary Driver'].str.upper() == 'DELIVERY')
-        ].copy()
+        df_f['REGION'] = df_f['Sales Region'].apply(fix_reg)
+        df_final = df_f[df_f['REGION'].isin(['EA', 'LP'])]
 
-        st.markdown('<p style="color:#FFFF00; font-size:22px; font-weight:bold;">CLIENTS BY CATEGORY & REGION (DELIVERY)</p>', unsafe_allow_html=True)
-
-        if not df_filtrado.empty:
-            # Agrupación: X = Categoría, Valores = Conteo de clientes
-            df_plot = df_filtrado.groupby(['Category', 'Sales Region'])['Customer ID'].count().reset_index()
+        if not df_final.empty:
+            # Agrupación por Categoría (Eje X) y Región (Color)
+            df_plot = df_final.groupby(['Category', 'REGION'])['Customer ID'].count().reset_index()
             
-            # Cálculo para mantener la estructura apilada (stacked) pero con valores reales
-            # Usamos un % invisible para el eje Y para que las barras se vean uniformes
-            df_plot['Total_por_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Percentage_Size'] = (df_plot['Customer ID'] / df_plot['Total_por_Cat']) * 100
+            # Para mantener el 100% stacked pero mostrar números reales:
+            df_plot['Total_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Stack_Size'] = (df_plot['Customer ID'] / df_plot['Total_Cat']) * 100
 
-            # PALETA: Tonos de amarillo diferenciados (Amarillo Puro y Amarillo Dorado/Naranja)
-            color_map = {
-                'EA': '#FFFF00', 'EL ALTO': '#FFFF00',
-                'LP': '#FFB800', 'LA PAZ': '#FFB800' # Tono más oscuro/naranja para LP
-            }
-
-            # Creación del gráfico
-            fig_final = px.bar(
-                df_plot, 
-                x="Category", 
-                y="Percentage_Size", # Mantenemos esto para que todas las barras midan 100% de alto
-                color="Sales Region",
-                text="Customer ID", # <--- CAMBIO: Muestra el NÚMERO REAL
-                color_discrete_map=color_map,
+            # --- GRÁFICA ---
+            fig = px.bar(
+                df_plot,
+                x="Category",        # Eje X: Categorías
+                y="Stack_Size",      # Altura visual (100%)
+                color="REGION",      # División por Región
+                text="Customer ID",  # ETIQUETA: NÚMERO REAL
+                color_discrete_map={'EA': '#FFFF00', 'LP': '#FFBF00'}, # Amarillo vs Ámbar
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="stack",
-                width=500 # Barras más delgadas y estéticas
+                barmode="stack"
             )
 
-            fig_final.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', 
-                plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color="white"),
-                height=550,
-                yaxis=dict(title=None, showticklabels=False, showgrid=False), # Ocultamos el eje Y para que se vea más limpio
-                xaxis=dict(title=None, tickfont=dict(size=14, family="Arial Black")),
-                legend=dict(title=None, orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(t=80, b=20, l=0, r=0)
-            )
-            
-            fig_final.update_traces(
-                textposition='inside', 
-                textfont=dict(color="black", size=18, family="Arial Black"),
-                marker_line_color='black', # Bordes finos para separar tonos de amarillo
-                marker_line_width=1
+            # Estética de barras delgadas
+            fig.update_traces(
+                width=0.4, # <--- Barras más delgadas y estéticas
+                textposition='inside',
+                textfont=dict(color="black", size=22, family="Arial Black"),
+                marker_line_width=0
             )
 
-            # El key dinámico fuerza a Streamlit a redibujar el gráfico cada vez
-            st.plotly_chart(fig_final, use_container_width=True, key=f"chart_ea_lp_{pd.Timestamp.now().timestamp()}")
+            fig.update_layout(
+                paper_bgcolor='black',
+                plot_bgcolor='black',
+                height=600,
+                showlegend=True,
+                legend=dict(title=None, orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=14)),
+                yaxis=dict(showticklabels=False, showgrid=False, title=None), # Limpieza total eje Y
+                xaxis=dict(title=None, tickfont=dict(color="#FFFF00", size=16, family="Arial Black"), showgrid=False),
+                margin=dict(t=50, b=50, l=10, r=10)
+            )
+
+            # Key dinámico para evitar que el gráfico se quede pegado
+            st.plotly_chart(fig, use_container_width=True, key=f"v4_chart_{pd.Timestamp.now().timestamp()}")
             
-            st.write(f"✅ Total registros analizados: **{len(df_filtrado)}**")
+            st.markdown(f'<p style="text-align:right; color:#888;">Muestra: {len(df_final)} encuestas analizadas</p>', unsafe_allow_html=True)
         else:
-            st.warning("No se encontraron registros que coincidan con 'Delivery' en EA o LP.")
+            st.warning("No hay datos de 'Delivery' para estas regiones.")
     else:
-        st.error("No se pudo cargar la base de datos.")
+        st.error("No se pudo conectar con la base de datos.")
