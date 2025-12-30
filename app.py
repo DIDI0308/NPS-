@@ -390,109 +390,63 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-# ==========================================
-# VISTA 4: EA / LP (GRÁFICA 100% APILADA POR CATEGORÍA)
-# ==========================================
-elif st.session_state.page == "ea_lp":
-    def load_data_ea_lp(url):
-        try:
-            base_url = url.split('/edit')[0]
-            csv_url = f"{base_url}/export?format=csv"
-            response = requests.get(csv_url)
-            response.raise_for_status()
-            df = pd.read_csv(StringIO(response.text))
-            if 'Score' in df.columns:
-                df['Score'] = pd.to_numeric(df['Score'], errors='coerce').fillna(0)
-            return df
-        except: return pd.DataFrame()
-
-    st.markdown("""
-        <style>
-        .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
-        div[data-testid="stButton"] button { background-color: #FFFF00 !important; color: #000000 !important; border: none !important; font-weight: bold !important; padding: 0.5rem 1rem !important; }
-        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-top: 10px; margin-bottom: 25px; }
-        .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
-        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
-        .card-region { background-color: rgba(255, 255, 255, 0.03); border-left: 5px solid #FFFF00; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        </style>
-        """, unsafe_allow_html=True)
-
-    # --- NAVEGACIÓN ---
-    c_nav_ea1, c_nav_ea2 = st.columns([8, 1.2])
-    with c_nav_ea1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_home_ea"):
-            st.session_state.page = "home"
-            st.rerun()
-    with c_nav_ea2:
-        if st.button("🔄 ACTUALIZAR", key="btn_ref_ea"):
-            st.cache_data.clear()
-            st.rerun()
-
-    # --- BANNER ---
-    b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
-    st.markdown(f'''
-        <div class="banner-amarillo">
-            <img src="data:image/png;base64,{b64_logo2 if b64_logo2 else ""}" style="max-height:80px;">
-            <div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div>
-            <img src="data:image/png;base64,{b64_logo if b64_logo else ""}" style="max-height:80px;">
-        </div>
-        ''', unsafe_allow_html=True)
-
-    df_ea_lp = load_data_ea_lp("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
-
-    if not df_ea_lp.empty:
-        # Normalizamos nombres de Sales Region
-        df_ea_lp['Sales Region'] = df_ea_lp['Sales Region'].astype(str).str.upper()
-        df_region = df_ea_lp[df_ea_lp['Sales Region'].str.contains('EA|LP|ALTO|PAZ', na=False)].copy()
-        # Etiquetamos simple para la gráfica
-        df_region['Region'] = df_region['Sales Region'].apply(lambda x: 'EA' if any(k in x for k in ['EA', 'ALTO']) else 'LP')
-
+# ---------------------------------------------------------
+        # 1. GRÁFICA DE BARRAS 100% APILADAS (CATEGORÍAS EN X)
         # ---------------------------------------------------------
-        # GRÁFICA: 100% STACKED POR CATEGORÍA (X=CATEGORÍA, COLOR=REGION)
-        # ---------------------------------------------------------
-        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">CATEGORY COMPOSITION BY REGION (100% STACKED)</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">COMPOSICIÓN DE CATEGORÍAS POR REGIÓN (DELIVERY)</p>', unsafe_allow_html=True)
         
-        # Filtro Delivery
         df_delivery = df_region[df_region['Primary Driver'] == 'Delivery'].copy()
 
         if not df_delivery.empty:
-            # Agrupar por Categoría y Región
-            df_stacked = df_delivery.groupby(['Category', 'Region'])['Customer ID'].count().reset_index()
-            # Calcular % relativo a cada Categoría
-            df_total_cat = df_stacked.groupby('Category')['Customer ID'].transform('sum')
-            df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total_cat) * 100
+            # Agrupar por Categoría (X) y Región (Color)
+            df_stacked = df_delivery.groupby(['Category', 'Sales Region'])['Customer ID'].count().reset_index()
+            
+            # Calcular porcentajes para que cada barra de Categoría sume 100% entre las regiones
+            df_total = df_stacked.groupby('Category')['Customer ID'].transform('sum')
+            df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total) * 100
 
-            # Paleta de Amarillos
-            paleta_amarilla = {'EA': '#FFFF00', 'LP': '#B8860B'} # Amarillo brillante y Oro viejo
+            # PALETA DE AMARILLOS (Dorado para LP, Amarillo Brillante para EA)
+            color_paleta_amarilla = {
+                'EA': '#FFFF00',      # Amarillo puro
+                'EL ALTO': '#FFFF00', 
+                'LP': '#D4AF37',      # Dorado (Gold)
+                'LA PAZ': '#D4AF37'
+            }
             
             fig_100 = px.bar(
-                df_stacked, x="Category", y="Percentage", color="Region",
+                df_stacked, 
+                x="Category", 
+                y="Percentage", 
+                color="Sales Region",
                 text=df_stacked['Percentage'].apply(lambda x: f'{x:.1f}%'),
-                color_discrete_map=paleta_amarilla,
+                color_discrete_map=color_paleta_amarilla,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
             )
 
             fig_100.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
-                font=dict(color="white"), height=500,
-                yaxis=dict(title="Porcentaje", ticksuffix="%", range=[0, 105], gridcolor='#333'),
-                xaxis=dict(title=None),
-                legend=dict(title="Región", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)', 
+                font=dict(color="white"), 
+                height=500,
+                yaxis=dict(
+                    title="Distribución %", 
+                    ticksuffix="%", 
+                    range=[0, 105], 
+                    gridcolor='#333'
+                ),
+                xaxis=dict(title="Categoría NPS"),
+                legend=dict(
+                    title="Región",
+                    orientation="h", 
+                    yanchor="bottom", 
+                    y=1.02, 
+                    xanchor="right", 
+                    x=1
+                )
             )
+            # Mejorar legibilidad del texto en las barras
+            fig_100.update_traces(textposition='inside', textfont=dict(color="black", size=14, family="Arial Black"))
+            
             st.plotly_chart(fig_100, use_container_width=True)
         else:
-            st.info("No hay datos de 'Delivery' para mostrar.")
-
-        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
-
-        # Métrica de Score Promedio
-        col1, col2 = st.columns(2)
-        with col1:
-            avg_ea = df_region[df_region['Region'] == 'EA']['Score'].mean()
-            st.metric("Avg Score EL ALTO", f"{avg_ea:.2f}")
-        with col2:
-            avg_lp = df_region[df_region['Region'] == 'LP']['Score'].mean()
-            st.metric("Avg Score LA PAZ", f"{avg_lp:.2f}")
-
-    else:
-        st.warning("Cargando datos...")
+            st.info("No hay datos de 'Delivery' para graficar.")
