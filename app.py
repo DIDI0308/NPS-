@@ -391,10 +391,9 @@ elif st.session_state.page == "monthly":
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 # ==========================================
-# VISTA 4: EA / LP (NUEVA SECCIÓN)
+# VISTA 4: EA / LP (Copia y pega esto al final)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # Estilos iguales al Dashboard principal
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
@@ -402,21 +401,23 @@ elif st.session_state.page == "ea_lp":
         .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-top: 10px; margin-bottom: 25px; }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
         .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
+        .card-ea { background-color: rgba(255, 255, 0, 0.05); border: 1px solid #FFFF00; border-radius: 15px; padding: 20px; }
+        .card-lp { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #FFFFFF; border-radius: 15px; padding: 20px; }
         </style>
         """, unsafe_allow_html=True)
 
-    # Navegación
+    # Navegación Superior
     c_nav_ea1, c_nav_ea2 = st.columns([8, 1.2])
     with c_nav_ea1:
-        if st.button("⬅ VOLVER AL INICIO", key="back_ea"):
+        if st.button("⬅ VOLVER AL INICIO", key="btn_home_ea"):
             st.session_state.page = "home"
             st.rerun()
     with c_nav_ea2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_ea"):
+        if st.button("🔄 ACTUALIZAR", key="btn_ref_ea"):
             st.cache_data.clear()
             st.rerun()
 
-    # Banner Superior
+    # Banner
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     st.markdown(f'''
         <div class="banner-amarillo">
@@ -426,50 +427,49 @@ elif st.session_state.page == "ea_lp":
         </div>
         ''', unsafe_allow_html=True)
 
-    # Carga de datos (Misma hoja que el dashboard)
-    SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
-    df_ea_lp = load_data_from_sheets(SHEET_URL_CURRENT)
+    # Carga de datos
+    df_ea_lp = load_data_from_sheets("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
     if not df_ea_lp.empty:
-        # 1. Filtramos solo EA y LP (Asegúrate que coincidan con los nombres en tu Excel)
-        # Aquí asumo que están en 'Primary Driver', si están en otra columna, cámbialo abajo:
-        df_filtered = df_ea_lp[df_ea_lp['Primary Driver'].isin(['EA', 'LP'])]
+        # Ajustamos los nombres según lo que suele haber en tu columna 'Primary Driver'
+        # Si en tu Excel dice "EL ALTO" en lugar de "EA", cámbialo aquí:
+        df_ea = df_ea_lp[df_ea_lp['Primary Driver'].str.contains('EA|ALTO', case=False, na=False)]
+        df_lp = df_ea_lp[df_ea_lp['Primary Driver'].str.contains('LP|PAZ', case=False, na=False)]
 
-        if df_filtered.empty:
-            st.warning("No se encontraron datos registrados como 'EA' o 'LP' en la columna Primary Driver.")
-        else:
-            # MÉTRICAS COMPARATIVAS
-            col_m1, col_m2 = st.columns(2)
+        col_ea, col_lp = st.columns(2)
+
+        with col_ea:
+            st.markdown('<div class="card-ea">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#FFFF00; text-align:center;">EL ALTO (EA)</h2>', unsafe_allow_html=True)
+            score_ea = df_ea['Score'].mean() if not df_ea.empty else 0
+            st.metric("NPS Score", f"{score_ea:.2f}")
             
-            with col_m1:
-                st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; text-align:center;">MÉTRICAS EA</p>', unsafe_allow_html=True)
-                val_ea = df_filtered[df_filtered['Primary Driver'] == 'EA']['Score'].mean()
-                st.metric(label="Average Score EA", value=f"{val_ea:.2f}")
-                
-                # Gráfico circular EA
-                pie_ea = px.pie(df_filtered[df_filtered['Primary Driver'] == 'EA'], names='Category', hole=0.5, 
-                                color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
-                st.plotly_chart(pie_ea, use_container_width=True)
+            fig_ea = px.pie(df_ea, names='Category', hole=0.6, 
+                            color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
+            fig_ea.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=350, showlegend=False)
+            st.plotly_chart(fig_ea, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            with col_m2:
-                st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; text-align:center;">MÉTRICAS LP</p>', unsafe_allow_html=True)
-                val_lp = df_filtered[df_filtered['Primary Driver'] == 'LP']['Score'].mean()
-                st.metric(label="Average Score LP", value=f"{val_lp:.2f}")
-                
-                # Gráfico circular LP
-                pie_lp = px.pie(df_filtered[df_filtered['Primary Driver'] == 'LP'], names='Category', hole=0.5,
-                                color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
-                st.plotly_chart(pie_lp, use_container_width=True)
-
-            st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+        with col_lp:
+            st.markdown('<div class="card-lp">', unsafe_allow_html=True)
+            st.markdown('<h2 style="color:#FFFFFF; text-align:center;">LA PAZ (LP)</h2>', unsafe_allow_html=True)
+            score_lp = df_lp['Score'].mean() if not df_lp.empty else 0
+            st.metric("NPS Score", f"{score_lp:.2f}")
             
-            # Gráfico de barras comparativo por Secondary Driver
-            st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">COMPARATIVA DRIVERS: EA vs LP</p>', unsafe_allow_html=True)
-            df_comp = df_filtered.groupby(['Primary Driver', 'Secondary Driver'])['Score'].mean().reset_index()
-            fig_comp = px.bar(df_comp, x='Secondary Driver', y='Score', color='Primary Driver', barmode='group',
-                              color_discrete_map={'EA': '#FFFF00', 'LP': '#FFFFFF'})
-            fig_comp.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-            st.plotly_chart(fig_comp, use_container_width=True)
+            fig_lp = px.pie(df_lp, names='Category', hole=0.6,
+                            color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
+            fig_lp.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=350, showlegend=False)
+            st.plotly_chart(fig_lp, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
+        # Gráfico de barras comparativo
+        st.markdown("<br>", unsafe_allow_html=True)
+        df_both = pd.concat([df_ea, df_lp])
+        if not df_both.empty:
+            st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">SCORE POR CATEGORÍA</p>', unsafe_allow_html=True)
+            fig_bar = px.histogram(df_both, x="Category", y="Score", color="Primary Driver", barmode="group",
+                                   histfunc="avg", color_discrete_map={'EA':'#FFFF00', 'LP':'#FFFFFF', 'EL ALTO':'#FFFF00', 'LA PAZ':'#FFFFFF'})
+            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+            st.plotly_chart(fig_bar, use_container_width=True)
     else:
-        st.error("No se pudo conectar con la base de datos.")
+        st.warning("No se pudieron cargar los datos de la hoja.")
