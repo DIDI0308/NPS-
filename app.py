@@ -389,103 +389,71 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-
 # ==========================================
-# VISTA 4: EA / LP (CÓDIGO DE REEMPLAZO TOTAL)
+# VISTA 4: EA / LP (GRÁFICA COMPACTA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función para descargar datos ignorando cualquier caché
-    def get_data_no_cache():
+    def get_data_fresh():
         u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
-        # Token aleatorio para forzar descarga nueva de Google
         csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
-        res = requests.get(csv_url)
-        return pd.read_csv(StringIO(res.text))
+        return pd.read_csv(StringIO(requests.get(csv_url).text))
 
     st.markdown("<style>.stApp { background-color: #000000; }</style>", unsafe_allow_html=True)
 
-    # NAVEGACIÓN
     col_nav1, col_nav2 = st.columns([8, 2])
     with col_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_final_back"):
-            st.session_state.page = "home"
-            st.rerun()
+        if st.button("⬅ VOLVER", key="btn_back"):
+            st.session_state.page = "home"; st.rerun()
     with col_nav2:
-        if st.button("🔄 ACTUALIZAR DATOS", key="btn_final_refresh"):
-            st.cache_data.clear()
-            st.rerun()
+        if st.button("🔄 ACTUALIZAR", key="btn_refresh"):
+            st.cache_data.clear(); st.rerun()
 
     st.markdown('<div style="background-color:#FFFF00; padding:10px; border-radius:5px; text-align:center; margin-bottom:20px;">'
-                '<h1 style="color:black; margin:0; font-family:Arial Black; font-size:30px;">PERFORMANCE EA / LP (DELIVERY)</h1></div>', unsafe_allow_html=True)
+                '<h1 style="color:black; margin:0; font-family:Arial Black; font-size:25px;">PERFORMANCE EA / LP (DELIVERY)</h1></div>', unsafe_allow_html=True)
 
-    # Cargar datos
-    df_raw = get_data_no_cache()
+    df_raw = get_data_fresh()
 
     if not df_raw.empty:
-        # Limpiar nombres de columnas (Quitar espacios)
         df_raw.columns = df_raw.columns.str.strip()
-        
-        # Filtrar por DELIVERY (Ignorando mayúsculas/minúsculas y espacios)
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
+        
+        # FILTRO DE DATOS
         df_d = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
-
-        # Normalizar REGIONES a EA y LP
         def clean_reg(x):
             x = str(x).upper()
-            if 'ALTO' in x or 'EA' in x: return 'EA'
-            if 'PAZ' in x or 'LP' in x: return 'LP'
-            return 'OTRO'
+            return 'EA' if ('ALTO' in x or 'EA' in x) else ('LP' if ('PAZ' in x or 'LP' in x) else 'OTRO')
         
         df_d['REG_GROUP'] = df_d['Sales Region'].apply(clean_reg)
         df_final = df_d[df_d['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            # AGRUPAR: Eje X = Category, Color = REG_GROUP (EA/LP)
-            # Valor = Conteo real de Customer ID
             df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            
-            # Para que el gráfico sea 100% apilado (mismo alto) pero con números reales
-            df_plot['Total_por_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Altura_Visual'] = (df_plot['Customer ID'] / df_plot['Total_por_Barra']) * 100
+            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Altura'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
 
-            # --- CREACIÓN DEL GRÁFICO ---
-            # X: Category (Detractor, Passive, Promoter)
-            # Color: REG_GROUP (EA, LP)
-            # Texto: Customer ID (NÚMERO REAL)
-            fig_ea_lp = px.bar(
-                df_plot,
-                x="Category",
-                y="Altura_Visual",
-                color="REG_GROUP",
-                text="Customer ID",  # <--- AQUÍ ESTÁ EL NÚMERO REAL QUE PEDISTE
-                color_discrete_map={'EA': '#FFFF00', 'LP': '#D4AF37'}, # Amarillo vs Dorado
+            # --- GRÁFICA MÁS PEQUEÑA ---
+            fig = px.bar(
+                df_plot, x="Category", y="Altura", color="REG_GROUP", text="Customer ID",
+                color_discrete_map={'EA': '#FFFF00', 'LP': '#D4AF37'},
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
                 barmode="stack",
-                width=450 # Barras delgadas y estéticas
+                width=350 # Reducción de ancho de barras
             )
 
-            # Ajustes de diseño
-            fig_ea_lp.update_traces(
-                textposition='inside',
-                textfont=dict(color="black", size=22, family="Arial Black"),
-                marker_line_width=0
-            )
-
-            fig_ea_lp.update_layout(
-                paper_bgcolor='black',
-                plot_bgcolor='black',
-                height=600,
+            fig.update_layout(
+                paper_bgcolor='black', plot_bgcolor='black',
+                height=400, # Reducción de altura total de la gráfica
                 yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                xaxis=dict(title=None, tickfont=dict(color="white", size=16, family="Arial Black"), showgrid=False),
-                legend=dict(title=None, font=dict(color="white", size=14), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                margin=dict(t=50, b=50, l=10, r=10)
+                xaxis=dict(title=None, tickfont=dict(color="white", size=12), showgrid=False),
+                legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                margin=dict(t=20, b=20, l=50, r=50) # Márgenes laterales para centrar y achicar
             )
-
-            # ESTO ES LO MÁS IMPORTANTE: El key dinámico obliga a Streamlit a redibujar
-            st.plotly_chart(fig_ea_lp, use_container_width=True, key=f"ea_lp_final_{pd.Timestamp.now().microsecond}")
             
-            st.markdown(f'<p style="text-align:right; color:#FFFF00;">Muestra analizada: {len(df_final)} encuestas</p>', unsafe_allow_html=True)
+            fig.update_traces(textfont=dict(color="black", size=16, family="Arial Black"))
+
+            # Contenedor para centrar la gráfica pequeña
+            _, col_center, _ = st.columns([1, 2, 1])
+            with col_center:
+                st.plotly_chart(fig, use_container_width=True, key=f"mini_chart_{pd.Timestamp.now().microsecond}")
         else:
-            st.warning("No se encontraron datos de 'Delivery' para EA o LP.")
-    else:
-        st.error("No se pudo cargar la base de datos.")
+            st.warning("Sin datos de Delivery.")
