@@ -392,84 +392,94 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (ETIQUETAS EN NÚMEROS ABSOLUTOS)
+# VISTA 4: EA / LP (CÓDIGO FINAL CORREGIDO)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def get_data_fresh(url):
+    # 1. Función de carga local para asegurar frescura de datos
+    def load_ea_lp_direct():
+        url = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
         base_url = url.split('/edit')[0]
-        csv_url = f"{base_url}/export?format=csv&timestamp={pd.Timestamp.now().timestamp()}"
+        csv_url = f"{base_url}/export?format=csv&cache_bust={pd.Timestamp.now().timestamp()}"
         res = requests.get(csv_url)
         return pd.read_csv(StringIO(res.text))
 
     st.markdown("<style>.stApp { background-color: #000000; color: #FFFFFF; }</style>", unsafe_allow_html=True)
 
-    if st.button("⬅ VOLVER AL INICIO", key="btn_home_ea_final"):
+    # Navegación y Banner
+    if st.button("⬅ VOLVER AL INICIO"):
         st.session_state.page = "home"
         st.rerun()
 
     st.markdown('<div style="background-color:#FFFF00; padding:15px; border-radius:5px; text-align:center; margin-bottom:20px;">'
                 '<h1 style="color:black; margin:0; font-family:Arial Black;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_fresh("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
+    df_raw = load_ea_lp_direct()
 
     if not df_raw.empty:
-        df_raw.columns = df_raw.columns.str.strip()
+        # --- LIMPIEZA TOTAL DE COLUMNAS Y DATOS ---
+        df_raw.columns = df_raw.columns.str.strip() # Quitar espacios en nombres de columnas
         
-        # Filtros de Limpieza
+        # Filtro de seguridad: Solo Driver "Delivery" (ignorando espacios y mayúsculas)
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip()
-        df_delivery = df_raw[df_raw['Primary Driver'].str.upper() == 'DELIVERY'].copy()
+        df_clean = df_raw[df_raw['Primary Driver'].str.upper() == 'DELIVERY'].copy()
 
-        def normalize_region(val):
-            val = str(val).upper().strip()
-            if 'ALTO' in val or 'EA' in val: return 'EA'
-            if 'PAZ' in val or 'LP' in val: return 'LP'
+        # Normalizar Regiones para que solo existan "EA" y "LP"
+        def simplify_region(reg):
+            reg = str(reg).upper()
+            if 'ALTO' in reg or 'EA' in reg: return 'EA'
+            if 'PAZ' in reg or 'LP' in reg: return 'LP'
             return 'OTRO'
 
-        df_delivery['Region_Map'] = df_delivery['Sales Region'].apply(normalize_region)
-        df_final = df_delivery[df_delivery['Region_Map'].isin(['EA', 'LP'])]
+        df_clean['Region_Group'] = df_clean['Sales Region'].apply(simplify_region)
+        # Filtrar solo las que nos interesan
+        df_final = df_clean[df_clean['Region_Group'].isin(['EA', 'LP'])]
+
+        # --- GRÁFICA: X = CATEGORY, COLOR = REGION ---
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">100% STACKED: CATEGORY COMPOSITION (DELIVERY)</p>', unsafe_allow_html=True)
 
         if not df_final.empty:
-            # Agrupación: Eje X = Category, Segmento = Region_Map
-            df_plot = df_final.groupby(['Category', 'Region_Map'])['Customer ID'].count().reset_index()
+            # Agrupar: Contamos Customer ID por Categoría y por nuestro nuevo grupo de Región
+            df_plot = df_final.groupby(['Category', 'Region_Group'])['Customer ID'].count().reset_index()
             
-            # Calculamos el % solo para el tamaño de la barra (para que sea 100% stacked)
-            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Porcentaje_Size'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+            # Calcular el porcentaje para que la barra de cada Categoría sume 100%
+            df_plot['Total_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['%'] = (df_plot['Customer ID'] / df_plot['Total_Cat']) * 100
 
-            # GRÁFICA CON ETIQUETAS NUMÉRICAS
-            fig_ea_lp = px.bar(
+            # Paleta de Amarillos (EA: Amarillo Eléctrico, LP: Amarillo Ámbar/Dorado)
+            custom_yellows = {'EA': '#FFFF00', 'LP': '#FFCC00'}
+
+            fig = px.bar(
                 df_plot,
                 x="Category",
-                y="Porcentaje_Size", # Mantenemos el tamaño en % para el efecto 100% stacked
-                color="Region_Map",
-                # CAMBIO CLAVE: El texto ahora es el conteo real de Customer ID
-                text="Customer ID", 
-                color_discrete_map={'EA': '#FFFF00', 'LP': '#FFCC00'},
+                y="%",
+                color="Region_Group",
+                text=df_plot['%'].apply(lambda x: f'{x:.1f}%'),
+                color_discrete_map=custom_yellows,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="stack"
+                barmode="relative" # Esto crea el efecto Stacked
             )
 
-            fig_ea_lp.update_layout(
+            fig.update_layout(
                 paper_bgcolor='black',
                 plot_bgcolor='black',
                 font=dict(color="white"),
-                height=600,
-                yaxis=dict(title="Composición Relativa (%)", range=[0, 100], gridcolor='#333'),
-                xaxis=dict(title="NPS Category (Delivery Driver)"),
+                height=550,
+                yaxis=dict(title="Porcentaje (%)", range=[0, 100], gridcolor='#333'),
+                xaxis=dict(title="NPS Category"),
                 legend=dict(title="Región", orientation="h", y=1.1)
             )
             
-            # Formato de la etiqueta (Número grande y centrado)
-            fig_ea_lp.update_traces(
+            # Formato de texto dentro de las barras
+            fig.update_traces(
                 textposition='inside',
-                textfont=dict(color="black", size=18, family="Arial Black"),
-                cliponaxis=False
+                textfont=dict(color="black", size=14, family="Arial Black")
             )
 
-            st.plotly_chart(fig_ea_lp, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
             
-            st.write(f"📌 Los números dentro de las barras representan la cantidad total de clientes por región.")
+            # Resumen de datos para verificar
+            st.write(f"📊 Registros totales analizados (Delivery): {len(df_final)}")
         else:
-            st.warning("No se encontraron datos para graficar.")
+            st.warning("No se encontraron datos de 'Delivery' para las regiones EA o LP. Revisa que la columna 'Primary Driver' diga exactamente 'Delivery'.")
     else:
-        st.error("No se pudo conectar con la fuente de datos.")
+        st.error("No se pudo obtener datos de la hoja de Google Sheets.")
