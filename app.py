@@ -74,7 +74,7 @@ if st.session_state.page == "home":
     st.markdown(style_home, unsafe_allow_html=True)
     st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
             st.session_state.page = "monthly"
@@ -82,6 +82,10 @@ if st.session_state.page == "home":
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
             st.session_state.page = "dashboard"
+            st.rerun()
+    with col3:
+        if st.button("EA / LP", use_container_width=True):
+            st.session_state.page = "ea_lp"
             st.rerun()
 
 # ==========================================
@@ -387,3 +391,18 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+# ==========================================
+# VISTA 4: EA / LP
+# ==========================================
+elif st.session_state.page == "ea_lp":
+    st.markdown("<style>.stApp { background-color: #000000; color: #FFFFFF; }</style>", unsafe_allow_html=True)
+    
+    if st.button("⬅ VOLVER AL INICIO"):
+        st.session_state.page = "home"
+        st.rerun()
+        
+    st.markdown('<p style="color:#FFFF00; font-size:40px; font-weight:bold; text-align:center;">EA / LP PERFORMANCE</p>', unsafe_allow_html=True)
+    
+    # Aquí puedes añadir el contenido específico para EA y LP
+    st.info("Sección EA/LP en construcción. Aquí puedes replicar gráficas específicas por región.")
+    
