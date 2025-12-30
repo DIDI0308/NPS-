@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 # ==========================================
-# VISTA 4: EA / LP (Copia y pega esto al final)
+# VISTA 4: EA / LP (SECCIÓN ENTERA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     st.markdown("""
@@ -401,12 +401,11 @@ elif st.session_state.page == "ea_lp":
         .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-top: 10px; margin-bottom: 25px; }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
         .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
-        .card-ea { background-color: rgba(255, 255, 0, 0.05); border: 1px solid #FFFF00; border-radius: 15px; padding: 20px; }
-        .card-lp { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #FFFFFF; border-radius: 15px; padding: 20px; }
+        .card-region { background-color: rgba(255, 255, 255, 0.03); border-left: 5px solid #FFFF00; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
         </style>
         """, unsafe_allow_html=True)
 
-    # Navegación Superior
+    # --- NAVEGACIÓN ---
     c_nav_ea1, c_nav_ea2 = st.columns([8, 1.2])
     with c_nav_ea1:
         if st.button("⬅ VOLVER AL INICIO", key="btn_home_ea"):
@@ -417,7 +416,7 @@ elif st.session_state.page == "ea_lp":
             st.cache_data.clear()
             st.rerun()
 
-    # Banner
+    # --- BANNER ---
     b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
     st.markdown(f'''
         <div class="banner-amarillo">
@@ -427,49 +426,83 @@ elif st.session_state.page == "ea_lp":
         </div>
         ''', unsafe_allow_html=True)
 
-    # Carga de datos
+    # --- CARGA DE DATOS ---
     df_ea_lp = load_data_from_sheets("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
     if not df_ea_lp.empty:
-        # Ajustamos los nombres según lo que suele haber en tu columna 'Primary Driver'
-        # Si en tu Excel dice "EL ALTO" en lugar de "EA", cámbialo aquí:
-        df_ea = df_ea_lp[df_ea_lp['Primary Driver'].str.contains('EA|ALTO', case=False, na=False)]
-        df_lp = df_ea_lp[df_ea_lp['Primary Driver'].str.contains('LP|PAZ', case=False, na=False)]
+        # Filtrar para trabajar solo con datos de EA y LP (usando Sales Region)
+        # Ajustamos los nombres según tu columna 'Sales Region'
+        df_region = df_ea_lp[df_ea_lp['Sales Region'].str.contains('EA|LP|EL ALTO|LA PAZ', case=False, na=False)].copy()
 
-        col_ea, col_lp = st.columns(2)
+        # ---------------------------------------------------------
+        # 1. GRÁFICA DE BARRAS 100% APILADAS (SOLO DELIVERY)
+        # ---------------------------------------------------------
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">DELIVERY PERFORMANCE BY REGION (100% STACKED)</p>', unsafe_allow_html=True)
+        
+        df_delivery = df_region[df_region['Primary Driver'] == 'Delivery'].copy()
 
-        with col_ea:
-            st.markdown('<div class="card-ea">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#FFFF00; text-align:center;">EL ALTO (EA)</h2>', unsafe_allow_html=True)
-            score_ea = df_ea['Score'].mean() if not df_ea.empty else 0
-            st.metric("NPS Score", f"{score_ea:.2f}")
+        if not df_delivery.empty:
+            # Agrupar y contar
+            df_stacked = df_delivery.groupby(['Sales Region', 'Category'])['Customer ID'].count().reset_index()
+            # Calcular porcentajes para el 100%
+            df_total = df_stacked.groupby('Sales Region')['Customer ID'].transform('sum')
+            df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total) * 100
+
+            # Colores corporativos
+            color_map_nps = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
             
-            fig_ea = px.pie(df_ea, names='Category', hole=0.6, 
-                            color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
-            fig_ea.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=350, showlegend=False)
+            fig_100 = px.bar(
+                df_stacked, x="Sales Region", y="Percentage", color="Category",
+                text=df_stacked['Percentage'].apply(lambda x: f'{x:.1f}%'),
+                color_discrete_map=color_map_nps,
+                category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
+            )
+
+            fig_100.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
+                font=dict(color="white"), height=500,
+                yaxis=dict(title="Porcentaje", ticksuffix="%", range=[0, 105], gridcolor='#333'),
+                xaxis=dict(title=None),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_100, use_container_width=True)
+        else:
+            st.info("No se encontraron registros de 'Delivery' para EA/LP.")
+
+        st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+
+        # ---------------------------------------------------------
+        # 2. COMPARATIVA DE SCORES EA VS LP
+        # ---------------------------------------------------------
+        col1, col2 = st.columns(2)
+        
+        # Filtrar datos específicos para los indicadores
+        data_ea = df_region[df_region['Sales Region'].str.contains('EA|ALTO', case=False, na=False)]
+        data_lp = df_region[df_region['Sales Region'].str.contains('LP|PAZ', case=False, na=False)]
+
+        with col1:
+            st.markdown('<div class="card-region">', unsafe_allow_html=True)
+            avg_ea = data_ea['Score'].mean() if not data_ea.empty else 0
+            st.markdown(f'<h3 style="color:#FFFF00; margin:0;">EL ALTO (EA)</h3>', unsafe_allow_html=True)
+            st.metric("Avg Score", f"{avg_ea:.2f}")
+            
+            fig_ea = px.pie(data_ea, names='Category', hole=0.6, color='Category',
+                            color_discrete_map=color_map_nps)
+            fig_ea.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(t=0,b=0,l=0,r=0))
             st.plotly_chart(fig_ea, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with col_lp:
-            st.markdown('<div class="card-lp">', unsafe_allow_html=True)
-            st.markdown('<h2 style="color:#FFFFFF; text-align:center;">LA PAZ (LP)</h2>', unsafe_allow_html=True)
-            score_lp = df_lp['Score'].mean() if not df_lp.empty else 0
-            st.metric("NPS Score", f"{score_lp:.2f}")
+        with col2:
+            st.markdown('<div class="card-region">', unsafe_allow_html=True)
+            avg_lp = data_lp['Score'].mean() if not data_lp.empty else 0
+            st.markdown(f'<h3 style="color:#FFFFFF; margin:0;">LA PAZ (LP)</h3>', unsafe_allow_html=True)
+            st.metric("Avg Score", f"{avg_lp:.2f}")
             
-            fig_lp = px.pie(df_lp, names='Category', hole=0.6,
-                            color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
-            fig_lp.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=350, showlegend=False)
+            fig_lp = px.pie(data_lp, names='Category', hole=0.6, color='Category',
+                            color_discrete_map=color_map_nps)
+            fig_lp.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(t=0,b=0,l=0,r=0))
             st.plotly_chart(fig_lp, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Gráfico de barras comparativo
-        st.markdown("<br>", unsafe_allow_html=True)
-        df_both = pd.concat([df_ea, df_lp])
-        if not df_both.empty:
-            st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">SCORE POR CATEGORÍA</p>', unsafe_allow_html=True)
-            fig_bar = px.histogram(df_both, x="Category", y="Score", color="Primary Driver", barmode="group",
-                                   histfunc="avg", color_discrete_map={'EA':'#FFFF00', 'LP':'#FFFFFF', 'EL ALTO':'#FFFF00', 'LA PAZ':'#FFFFFF'})
-            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-            st.plotly_chart(fig_bar, use_container_width=True)
     else:
-        st.warning("No se pudieron cargar los datos de la hoja.")
+        st.warning("Cargando datos desde la fuente...")
