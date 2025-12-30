@@ -382,5 +382,5 @@ elif st.session_state.page == "ealp":
         st.session_state.page = "home"
         st.rerun()
     
-    st.title("📊 EA / LP ANALYSIS")
+    st.title("EA / LP ANALYSIS")
     st.write("Contenido de análisis EA / LP en desarrollo...")
