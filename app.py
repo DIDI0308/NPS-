@@ -391,17 +391,85 @@ elif st.session_state.page == "monthly":
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 # ==========================================
-# VISTA 4: EA / LP
+# VISTA 4: EA / LP (NUEVA SECCIÓN)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    st.markdown("<style>.stApp { background-color: #000000; color: #FFFFFF; }</style>", unsafe_allow_html=True)
-    
-    if st.button("⬅ VOLVER AL INICIO"):
-        st.session_state.page = "home"
-        st.rerun()
-        
-    st.markdown('<p style="color:#FFFF00; font-size:40px; font-weight:bold; text-align:center;">EA / LP PERFORMANCE</p>', unsafe_allow_html=True)
-    
-    # Aquí puedes añadir el contenido específico para EA y LP
-    st.info("Sección EA/LP en construcción. Aquí puedes replicar gráficas específicas por región.")
-    
+    # Estilos iguales al Dashboard principal
+    st.markdown("""
+        <style>
+        .stApp { background-color: #000000; color: #FFFFFF; overflow: auto !important; }
+        div[data-testid="stButton"] button { background-color: #FFFF00 !important; color: #000000 !important; border: none !important; font-weight: bold !important; padding: 0.5rem 1rem !important; }
+        .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-top: 10px; margin-bottom: 25px; }
+        .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
+        .titulo-texto h1 { margin: 0; font-size: 50px; font-weight: 900; line-height: 1; }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # Navegación
+    c_nav_ea1, c_nav_ea2 = st.columns([8, 1.2])
+    with c_nav_ea1:
+        if st.button("⬅ VOLVER AL INICIO", key="back_ea"):
+            st.session_state.page = "home"
+            st.rerun()
+    with c_nav_ea2:
+        if st.button("🔄 ACTUALIZAR", key="refresh_ea"):
+            st.cache_data.clear()
+            st.rerun()
+
+    # Banner Superior
+    b64_logo2, b64_logo = get_base64('logo2.png'), get_base64('logo.png')
+    st.markdown(f'''
+        <div class="banner-amarillo">
+            <img src="data:image/png;base64,{b64_logo2 if b64_logo2 else ""}" style="max-height:80px;">
+            <div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div>
+            <img src="data:image/png;base64,{b64_logo if b64_logo else ""}" style="max-height:80px;">
+        </div>
+        ''', unsafe_allow_html=True)
+
+    # Carga de datos (Misma hoja que el dashboard)
+    SHEET_URL_CURRENT = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
+    df_ea_lp = load_data_from_sheets(SHEET_URL_CURRENT)
+
+    if not df_ea_lp.empty:
+        # 1. Filtramos solo EA y LP (Asegúrate que coincidan con los nombres en tu Excel)
+        # Aquí asumo que están en 'Primary Driver', si están en otra columna, cámbialo abajo:
+        df_filtered = df_ea_lp[df_ea_lp['Primary Driver'].isin(['EA', 'LP'])]
+
+        if df_filtered.empty:
+            st.warning("No se encontraron datos registrados como 'EA' o 'LP' en la columna Primary Driver.")
+        else:
+            # MÉTRICAS COMPARATIVAS
+            col_m1, col_m2 = st.columns(2)
+            
+            with col_m1:
+                st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; text-align:center;">MÉTRICAS EA</p>', unsafe_allow_html=True)
+                val_ea = df_filtered[df_filtered['Primary Driver'] == 'EA']['Score'].mean()
+                st.metric(label="Average Score EA", value=f"{val_ea:.2f}")
+                
+                # Gráfico circular EA
+                pie_ea = px.pie(df_filtered[df_filtered['Primary Driver'] == 'EA'], names='Category', hole=0.5, 
+                                color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
+                st.plotly_chart(pie_ea, use_container_width=True)
+
+            with col_m2:
+                st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; text-align:center;">MÉTRICAS LP</p>', unsafe_allow_html=True)
+                val_lp = df_filtered[df_filtered['Primary Driver'] == 'LP']['Score'].mean()
+                st.metric(label="Average Score LP", value=f"{val_lp:.2f}")
+                
+                # Gráfico circular LP
+                pie_lp = px.pie(df_filtered[df_filtered['Primary Driver'] == 'LP'], names='Category', hole=0.5,
+                                color_discrete_map={'Promoter':'#F1C40F', 'Passive':'#BDC3C7', 'Detractor':'#E74C3C'})
+                st.plotly_chart(pie_lp, use_container_width=True)
+
+            st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+            
+            # Gráfico de barras comparativo por Secondary Driver
+            st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">COMPARATIVA DRIVERS: EA vs LP</p>', unsafe_allow_html=True)
+            df_comp = df_filtered.groupby(['Primary Driver', 'Secondary Driver'])['Score'].mean().reset_index()
+            fig_comp = px.bar(df_comp, x='Secondary Driver', y='Score', color='Primary Driver', barmode='group',
+                              color_discrete_map={'EA': '#FFFF00', 'LP': '#FFFFFF'})
+            fig_comp.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+            st.plotly_chart(fig_comp, use_container_width=True)
+
+    else:
+        st.error("No se pudo conectar con la base de datos.")
