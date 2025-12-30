@@ -216,7 +216,6 @@ elif st.session_state.page == "dashboard":
             st.plotly_chart(fig5, use_container_width=True)
 
         # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
-        # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
         busqueda = st.text_input("🔍 Buscar por Código de Cliente (Opcional):", placeholder="Escriba el ID para filtrar el mapa...")
@@ -392,17 +391,17 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (VERSIÓN FINAL FORZADA)
+# VISTA 4: EA / LP (VERSION ESTILIZADA & FIJADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def load_data_ea_lp_fixed(url):
-        try:
-            base_url = url.split('/edit')[0]
-            csv_url = f"{base_url}/export?format=csv"
-            response = requests.get(csv_url)
-            df = pd.read_csv(StringIO(response.text))
-            return df
-        except: return pd.DataFrame()
+    # 1. Función de carga con "Cache Busting" para el botón actualizar
+    def load_data_ea_lp_direct():
+        url = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
+        base_url = url.split('/edit')[0]
+        # El timestamp asegura que el botón "Actualizar" traiga datos nuevos de verdad
+        csv_url = f"{base_url}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
+        res = requests.get(csv_url)
+        return pd.read_csv(StringIO(res.text))
 
     st.markdown("""
         <style>
@@ -413,75 +412,107 @@ elif st.session_state.page == "ea_lp":
         </style>
         """, unsafe_allow_html=True)
 
-    # Navegación
-    if st.button("⬅ VOLVER AL INICIO", key="btn_back_final"):
-        st.session_state.page = "home"
-        st.rerun()
+    # --- NAVEGACIÓN Y ACTUALIZACIÓN ---
+    c_nav1, c_nav2 = st.columns([8, 1.2])
+    with c_nav1:
+        if st.button("⬅ VOLVER AL INICIO", key="btn_back_ea"):
+            st.session_state.page = "home"
+            st.rerun()
+    with c_nav2:
+        if st.button("🔄 ACTUALIZAR", key="btn_refresh_ea"):
+            st.cache_data.clear() # Limpia el caché de Streamlit
+            st.rerun()
 
     # Banner
     st.markdown(f'<div class="banner-amarillo"><div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div></div>', unsafe_allow_html=True)
 
-    df_ea_lp = load_data_ea_lp_fixed("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
+    df_raw = load_data_ea_lp_direct()
 
-    if not df_ea_lp.empty:
-        # Aseguramos limpieza de nombres de columnas y datos
-        df_ea_lp.columns = df_ea_lp.columns.str.strip()
+    if not df_raw.empty:
+        df_raw.columns = df_raw.columns.str.strip()
         
-        # Filtrar solo REGIONES EA y LP y DRIVER Delivery
-        # Usamos .str.contains para capturar "EL ALTO", "EA", "LA PAZ", "LP"
-        df_filtrado = df_ea_lp[
-            (df_ea_lp['Sales Region'].astype(str).str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
-            (df_ea_lp['Primary Driver'].astype(str).str.strip() == 'Delivery')
+        # Filtro estricto: Solo Delivery y Regiones EA/LP
+        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip()
+        df_filtered = df_raw[
+            (df_raw['Sales Region'].astype(str).str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
+            (df_raw['Primary Driver'].str.upper() == 'DELIVERY')
         ].copy()
 
-        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">100% STACKED: CATEGORY COMPOSITION (DELIVERY)</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">CLIENTS BY CATEGORY: EA vs LP (DELIVERY)</p>', unsafe_allow_html=True)
 
-        if not df_filtrado.empty:
-            # AGRUPACIÓN: X = Category, Color = Sales Region
-            df_plot = df_filtrado.groupby(['Category', 'Sales Region'])['Customer ID'].count().reset_index()
+        if not df_filtered.empty:
+            # Agregamos una columna de normalización para que la leyenda sea limpia
+            def normalize_region(val):
+                val = str(val).upper()
+                return 'EL ALTO (EA)' if 'EA' in val or 'ALTO' in val else 'LA PAZ (LP)'
             
-            # Cálculo para que cada barra de Categoría sume 100%
-            df_plot['Total_por_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Percentage'] = (df_plot['Customer ID'] / df_plot['Total_por_Cat']) * 100
+            df_filtered['Region_Label'] = df_filtered['Sales Region'].apply(normalize_region)
 
-            # PALETA AMARILLA EXCLUSIVA
-            # Mapeamos EA a Amarillo y LP a Dorado/Mostaza
-            color_map = {
-                'EA': '#FFFF00', 'EL ALTO': '#FFFF00',
-                'LP': '#FFCC00', 'LA PAZ': '#FFCC00'
+            # Preparar datos: X = Category, Color = Region_Label
+            df_plot = df_filtered.groupby(['Category', 'Region_Label'])['Customer ID'].count().reset_index()
+            
+            # Cálculo para mantener la estructura visual 100% stacked pero con etiquetas reales
+            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Percentage_Width'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+
+            # PALETA DE AMARILLOS VARIADOS (Fijados por región)
+            # EA = Amarillo Neón, LP = Amarillo Ámbar/Dorado
+            color_paleta = {
+                'EL ALTO (EA)': '#FFFF00', 
+                'LA PAZ (LP)': '#FFCC00'
             }
 
-            fig_final = px.bar(
+            fig = px.bar(
                 df_plot, 
                 x="Category", 
-                y="Percentage", 
-                color="Sales Region",
-                text=df_plot['Percentage'].apply(lambda x: f'{x:.1f}%'),
-                color_discrete_map=color_map,
+                y="Percentage_Width", 
+                color="Region_Label",
+                text="Customer ID", # <--- ETIQUETA DE NÚMERO REAL
+                color_discrete_map=color_paleta,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="relative"
+                barmode="stack"
             )
 
-            fig_final.update_layout(
+            # ESTILIZACIÓN: Barras más delgadas y estética premium
+            fig.update_traces(
+                width=0.4, # <--- HACE LAS BARRAS MÁS DELGADAS
+                textposition='inside',
+                textfont=dict(color="black", size=18, family="Arial Black"),
+                marker_line_width=1.5,
+                marker_line_color="black"
+            )
+
+            fig.update_layout(
                 paper_bgcolor='black', 
                 plot_bgcolor='black', 
                 font=dict(color="white"),
-                yaxis=dict(title="Composición %", ticksuffix="%", range=[0, 100], gridcolor='#333'),
-                xaxis=dict(title="NPS Category"),
-                height=500,
-                legend=dict(title="Región", font=dict(color="white"))
-            )
-            
-            fig_final.update_traces(
-                textposition='inside', 
-                textfont=dict(color="black", size=14, family="Arial Black")
+                height=600,
+                yaxis=dict(
+                    title="Distribución Relativa", 
+                    showticklabels=False, # Ocultamos % para no confundir con los números reales
+                    gridcolor='#222'
+                ),
+                xaxis=dict(
+                    title="Categoría NPS", 
+                    tickfont=dict(size=16, color="#FFFF00"),
+                    linecolor="#FFFF00"
+                ),
+                legend=dict(
+                    title=None, 
+                    orientation="h", 
+                    yanchor="bottom", 
+                    y=1.02, 
+                    xanchor="center", 
+                    x=0.5,
+                    font=dict(size=14)
+                ),
+                margin=dict(t=80, b=40, l=40, r=40)
             )
 
-            st.plotly_chart(fig_final, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="chart_ea_lp_unique")
             
-            # --- INFO EXTRA ---
-            st.write(f"Datos analizados: {len(df_filtrado)} registros de Delivery en EA y LP.")
+            st.write(f"📊 **Muestra Total:** {len(df_filtered)} encuestas analizadas para el canal Delivery.")
         else:
-            st.warning("No se encontraron datos que coincidan con 'Delivery' en las regiones EA o LP.")
+            st.warning("No se encontraron datos de 'Delivery' para las regiones seleccionadas.")
     else:
-        st.error("No se pudo cargar la hoja de cálculo.")
+        st.error("No se pudo conectar con la base de datos.")
