@@ -391,115 +391,116 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (DISEÑO LATERAL Y PALETA AJUSTADA)
+# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def load_data_ea_lp_final():
+    # 1. Función con bypass de caché total
+    def get_data_absolute_new():
         try:
             u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
-            csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
+            # El parámetro 'nocache' con timestamp obliga a Google a enviar datos nuevos
+            csv_url = f"{u}/export?format=csv&nocache={pd.Timestamp.now().timestamp()}"
             res = requests.get(csv_url)
             return pd.read_csv(StringIO(res.text))
         except: return pd.DataFrame()
 
+    # 2. Inyección de CSS para Botón Amarillo y Fondo
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
+        /* Botón Actualizar Amarillo */
         div.stButton > button {
             background-color: #FFFF00 !important;
             color: black !important;
             font-weight: bold !important;
-            border: none !important;
+            border: 2px solid #FFFF00 !important;
         }
         .banner-ea-lp {
             background-color: #FFFF00;
-            padding: 10px;
+            padding: 8px;
             border-radius: 5px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         </style>
         """, unsafe_allow_html=True)
 
     # NAVEGACIÓN
-    col_nav1, col_nav2 = st.columns([8, 2])
-    with col_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_nav_home"):
+    c_nav1, c_nav2 = st.columns([8, 2])
+    with c_nav1:
+        if st.button("⬅ VOLVER", key="btn_v_home"):
             st.session_state.page = "home"; st.rerun()
-    with col_nav2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
+    with c_nav2:
+        if st.button("🔄 ACTUALIZAR", key="btn_v_refresh"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div class="banner-ea-lp"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:28px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-ea-lp"><h2 style="color:black; margin:0; font-family:Arial Black; font-size:22px;">PERFORMANCE EA / LP</h2></div>', unsafe_allow_html=True)
 
-    df_raw = load_data_ea_lp_final()
+    df_raw = get_data_absolute_new()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
+        
+        # FILTRO EXCLUSIVO DELIVERY
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
+        # Normalización de Regiones
         def clean_reg(x):
             x = str(x).upper()
             if 'ALTO' in x or 'EA' in x: return 'EA'
             if 'PAZ' in x or 'LP' in x: return 'LP'
             return 'OTRO'
         
-        df_delivery['REGION_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
-        df_final = df_delivery[df_delivery['REGION_GROUP'].isin(['EA', 'LP'])].copy()
+        df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
+        df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            df_plot = df_final.groupby(['Category', 'REGION_GROUP'])['Customer ID'].count().reset_index()
+            # Agrupación para la gráfica
+            df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
             df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Size'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+            df_plot['Altura'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
 
-            # --- ESTRUCTURA LATERAL: GRÁFICA A LA IZQUIERDA ---
-            col_grafica, col_espacio = st.columns([1.5, 2.5]) # La gráfica ocupa el costado izquierdo
+            # --- DISEÑO LATERAL IZQUIERDO ---
+            col_izq, col_der = st.columns([1.5, 2.5])
             
-            with col_grafica:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; margin-bottom:10px;">DISTRIBUCIÓN DE CLIENTES</p>', unsafe_allow_html=True)
+            with col_izq:
+                st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">DISTRIBUCIÓN DE CLIENTES</p>', unsafe_allow_html=True)
                 
-                # Paleta de amarillos contrastados
-                color_paleta = {'EA': '#FFFF00', 'LP': '#FFD700'} 
-                
+                # Paleta de amarillos: Amarillo Neón vs Dorado
                 fig = px.bar(
                     df_plot, 
                     x="Category", 
-                    y="Size", 
-                    color="REGION_GROUP", 
-                    text="Customer ID", # Número real
-                    color_discrete_map=color_paleta,
+                    y="Altura", 
+                    color="REG_GROUP", 
+                    text="Customer ID", # NÚMERO REAL
+                    color_discrete_map={'EA': '#FFFF00', 'LP': '#FFD700'},
                     category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
                     barmode="stack"
                 )
 
                 fig.update_layout(
                     paper_bgcolor='black', plot_bgcolor='black',
-                    height=450,
-                    width=320, # Más esbelta
+                    height=380, width=280,
                     yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                    xaxis=dict(title=None, tickfont=dict(color="white", size=12), showgrid=False),
-                    legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                    margin=dict(t=10, b=10, l=10, r=10)
+                    xaxis=dict(title=None, tickfont=dict(color="white", size=11, family="Arial Black"), showgrid=False),
+                    legend=dict(title=None, font=dict(color="white", size=9), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                    margin=dict(t=5, b=5, l=5, r=5)
                 )
                 
-                # Etiquetas de datos normales (como en tus otras gráficas)
+                # ETIQUETAS NORMALES
                 fig.update_traces(
-                    width=0.6,
-                    textposition='auto', # 'auto' lo hace normal como las demás
-                    textfont=dict(color="black", size=14, family="Arial")
+                    width=0.5,
+                    textposition='auto',
+                    textfont=dict(color="black", size=14)
                 )
 
-                st.plotly_chart(fig, use_container_width=True, key=f"chart_ea_lp_side_{pd.Timestamp.now().microsecond}")
+                # EL KEY DINÁMICO AQUÍ ES LO QUE PARA EL PROBLEMA DE LA CACHÉ
+                st.plotly_chart(fig, use_container_width=True, key=f"force_chart_{pd.Timestamp.now().microsecond}")
             
-            with col_espacio:
-                # Aquí puedes poner texto o dejar vacío para que la gráfica se quede a la izquierda
-                st.markdown("<br><br>", unsafe_allow_html=True)
-                st.write(f"📊 **Resumen Delivery:**")
-                st.write(f"- Total EA: {len(df_final[df_final['REGION_GROUP']=='EA'])}")
-                st.write(f"- Total LP: {len(df_final[df_final['REGION_GROUP']=='LP'])}")
-
+            with col_der:
+                st.write("") # Espacio derecho vacío para mantener la gráfica a la izquierda
         else:
-            st.warning("No hay datos de Delivery para EA/LP.")
+            st.warning("No hay datos de Delivery.")
     else:
-        st.error("Error al cargar la base de datos.")
+        st.error("Error de conexión con la base de datos.")
