@@ -392,114 +392,120 @@ elif st.session_state.page == "monthly":
 
 
 # ==========================================
-# VISTA 4: EA / LP (DISEÑO FINAL APLICADO)
+# VISTA 4: EA / LP (VERSIÓN FINAL GARANTIZADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    def get_data_ea_lp():
+    # 1. Función con Token de tiempo para forzar descarga de datos nuevos
+    def get_data_ea_lp_final():
         u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
         csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
-        return pd.read_csv(StringIO(requests.get(csv_url).text))
+        res = requests.get(csv_url)
+        return pd.read_csv(StringIO(res.text))
 
-    # Estilos CSS específicos para esta pestaña
+    # 2. CSS FORZADO: Botón Amarillo y Fondo Negro
     st.markdown("""
         <style>
-        .stApp { background-color: #000000; color: #FFFFFF; }
+        .stApp { background-color: #000000 !important; }
         
-        /* BOTÓN ACTUALIZAR AMARILLO SÓLIDO */
-        button[kind="secondary"] {
+        /* FUERZA EL BOTÓN DE ACTUALIZAR A AMARILLO */
+        div.stButton > button:first-child {
             background-color: #FFFF00 !important;
-            color: black !important;
+            color: #000000 !important;
             font-weight: bold !important;
-            border: none !important;
-            width: 100%;
+            border: 2px solid #FFFF00 !important;
+            border-radius: 8px !important;
+            text-transform: uppercase;
         }
         
-        .banner-amarillo { 
-            background-color: #FFFF00; 
-            padding: 10px; 
-            border-radius: 5px; 
-            text-align: center; 
-            margin-bottom: 20px; 
+        .banner-ea-lp {
+            background-color: #FFFF00;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 25px;
         }
         </style>
         """, unsafe_allow_html=True)
 
-    # --- NAVEGACIÓN ---
+    # --- BOTONES DE NAVEGACIÓN ---
     col_nav1, col_nav2 = st.columns([8, 2])
     with col_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_back_home"):
+        if st.button("⬅ VOLVER AL INICIO", key="btn_nav_home"):
             st.session_state.page = "home"; st.rerun()
     with col_nav2:
-        # El botón de actualizar ahora es amarillo por el CSS de arriba
-        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
+        # Este botón aparecerá amarillo sí o sí por el CSS de arriba
+        if st.button("🔄 ACTUALIZAR", key="btn_actualizar_final"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div class="banner-amarillo"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:28px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
+    # Banner Título
+    st.markdown('<div class="banner-ea-lp"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:32px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_ea_lp()
+    df_raw = get_data_ea_lp_final()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
         
-        # --- FILTRO EXCLUSIVO DELIVERY ---
+        # --- FILTRO EXCLUSIVO: PRIMARY DRIVER = DELIVERY ---
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
-        # Normalización de Regiones
-        def clean_reg(x):
+        # Normalización de Regiones (EA y LP)
+        def norm_reg(x):
             x = str(x).upper()
             if 'ALTO' in x or 'EA' in x: return 'EA'
             if 'PAZ' in x or 'LP' in x: return 'LP'
             return 'OTRO'
         
-        df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
-        df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
+        df_delivery['REGION_CLEAN'] = df_delivery['Sales Region'].apply(norm_reg)
+        df_final = df_delivery[df_delivery['REGION_CLEAN'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            # Procesamiento para gráfica 100% stacked con etiquetas numéricas
-            df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Altura_Visual'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+            # Preparar datos para el gráfico
+            df_plot = df_final.groupby(['Category', 'REGION_CLEAN'])['Customer ID'].count().reset_index()
+            
+            # Cálculo para Stacked 100% (mismo alto) pero mostrando conteo real
+            df_plot['Total_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Percentage_Height'] = (df_plot['Customer ID'] / df_plot['Total_Cat']) * 100
 
-            # TÍTULO DE LA GRÁFICA
-            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center; margin-top:10px; margin-bottom:0px;">DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
+            st.markdown('<p style="color:#FFFF00; font-size:22px; font-weight:bold; text-align:center;">DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
 
-            # --- GRÁFICA COMPACTA ---
+            # --- GRÁFICA: EJE X = CATEGORY | ETIQUETAS = NÚMEROS REALES ---
             fig = px.bar(
                 df_plot, 
                 x="Category", 
-                y="Altura_Visual", 
-                color="REG_GROUP", 
-                text="Customer ID", # Muestra el número real
-                color_discrete_map={'EA': '#FFFF00', 'LP': '#D4AF37'},
+                y="Percentage_Height", 
+                color="REGION_CLEAN", 
+                text="Customer ID", # <--- ETIQUETA EN NÚMERO REAL
+                color_discrete_map={'EA': '#FFFF00', 'LP': '#FFB800'}, # Tonos de amarillo (Brillante vs Ámbar)
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
                 barmode="stack"
             )
 
             fig.update_layout(
-                paper_bgcolor='black', 
-                plot_bgcolor='black',
-                height=350, 
-                width=350, # Definición de ancho pequeño
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                height=400, 
+                width=400, # Gráfica pequeña y estética
                 yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                xaxis=dict(title=None, tickfont=dict(color="white", size=12, family="Arial Black"), showgrid=False),
-                legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                margin=dict(t=10, b=10, l=10, r=10)
+                xaxis=dict(title=None, tickfont=dict(color="white", size=14, family="Arial Black"), showgrid=False),
+                legend=dict(title=None, font=dict(color="white", size=11), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                margin=dict(t=20, b=20, l=20, r=20)
             )
             
             fig.update_traces(
                 width=0.5, # Barras más delgadas
                 textposition='inside',
-                textfont=dict(color="black", size=18, family="Arial Black")
+                textfont=dict(color="black", size=20, family="Arial Black"),
+                marker_line_color='black',
+                marker_line_width=1
             )
 
-            # Centrar la gráfica en pantalla
-            _, col_center, _ = st.columns([1.5, 2, 1.5])
-            with col_center:
-                st.plotly_chart(fig, use_container_width=True, key=f"ea_lp_final_{pd.Timestamp.now().microsecond}")
+            # --- CENTRADO DE LA GRÁFICA ---
+            _, col_c, _ = st.columns([1.5, 2, 1.5])
+            with col_c:
+                st.plotly_chart(fig, use_container_width=True, key=f"ea_lp_final_chart_{pd.Timestamp.now().microsecond}")
             
-            st.markdown(f'<p style="text-align:center; color:#888; font-size:12px;">Filtro activo: Primary Driver = Delivery | Total: {len(df_final)}</p>', unsafe_allow_html=True)
+            st.markdown(f'<p style="text-align:center; color:#888;">Filtro: Delivery | Muestra Total: {len(df_final)}</p>', unsafe_allow_html=True)
         else:
-            st.warning("No se encontraron registros de 'Delivery' en EA o LP.")
+            st.warning("No se encontraron registros de 'Delivery' para EA o LP.")
     else:
-        st.error("Error al conectar con la base de datos.")
+        st.error("No se pudo conectar con la base de datos.")
