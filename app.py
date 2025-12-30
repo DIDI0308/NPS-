@@ -391,128 +391,112 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (VERSION ESTILIZADA & FIJADA)
+# VISTA 4: EA / LP (VERSIÓN FINAL GARANTIZADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función de carga con "Cache Busting" para el botón actualizar
-    def load_data_ea_lp_direct():
-        url = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing"
-        base_url = url.split('/edit')[0]
-        # El timestamp asegura que el botón "Actualizar" traiga datos nuevos de verdad
-        csv_url = f"{base_url}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
-        res = requests.get(csv_url)
-        return pd.read_csv(StringIO(res.text))
+    # 1. Función con cache_bust para asegurar datos frescos
+    def load_data_fresh(url):
+        try:
+            base_url = url.split('/edit')[0]
+            # El timestamp evita que Google o Streamlit usen una copia guardada
+            csv_url = f"{base_url}/export?format=csv&cache_bust={pd.Timestamp.now().timestamp()}"
+            response = requests.get(csv_url)
+            return pd.read_csv(StringIO(response.text))
+        except: return pd.DataFrame()
 
     st.markdown("""
         <style>
         .stApp { background-color: #000000; color: #FFFFFF; }
         .banner-amarillo { background-color: #FFFF00; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; margin-bottom: 25px; }
         .titulo-texto { text-align: center; flex-grow: 1; color: #000000; font-family: 'Arial Black', sans-serif; }
-        .titulo-texto h1 { margin: 0; font-size: 45px; font-weight: 900; }
+        .titulo-texto h1 { margin: 0; font-size: 40px; font-weight: 900; }
         </style>
         """, unsafe_allow_html=True)
 
-    # --- NAVEGACIÓN Y ACTUALIZACIÓN ---
+    # --- NAVEGACIÓN Y BOTÓN ACTUALIZAR ---
     c_nav1, c_nav2 = st.columns([8, 1.2])
     with c_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_back_ea"):
+        if st.button("⬅ VOLVER AL INICIO", key="back_final"):
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="btn_refresh_ea"):
-            st.cache_data.clear() # Limpia el caché de Streamlit
+        if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
+            st.cache_data.clear() # Limpia el cache interno
             st.rerun()
 
     # Banner
     st.markdown(f'<div class="banner-amarillo"><div class="titulo-texto"><h1>PERFORMANCE EA / LP</h1></div></div>', unsafe_allow_html=True)
 
-    df_raw = load_data_ea_lp_direct()
+    # Carga de datos
+    df_ea_lp = load_data_fresh("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
-    if not df_raw.empty:
-        df_raw.columns = df_raw.columns.str.strip()
+    if not df_ea_lp.empty:
+        df_ea_lp.columns = df_ea_lp.columns.str.strip()
         
-        # Filtro estricto: Solo Delivery y Regiones EA/LP
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip()
-        df_filtered = df_raw[
-            (df_raw['Sales Region'].astype(str).str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
-            (df_raw['Primary Driver'].str.upper() == 'DELIVERY')
+        # Filtro Riguroso: Delivery + Regiones
+        df_f = df_ea_lp.copy()
+        df_f['Primary Driver'] = df_f['Primary Driver'].astype(str).str.strip()
+        df_f['Sales Region'] = df_f['Sales Region'].astype(str).str.strip()
+        
+        # Filtrado para que solo tome Delivery y las regiones correspondientes
+        df_filtrado = df_f[
+            (df_f['Sales Region'].str.contains('EA|LP|ALTO|PAZ', case=False, na=False)) &
+            (df_f['Primary Driver'].str.upper() == 'DELIVERY')
         ].copy()
 
-        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold;">CLIENTS BY CATEGORY: EA vs LP (DELIVERY)</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#FFFF00; font-size:22px; font-weight:bold;">CLIENTS BY CATEGORY & REGION (DELIVERY)</p>', unsafe_allow_html=True)
 
-        if not df_filtered.empty:
-            # Agregamos una columna de normalización para que la leyenda sea limpia
-            def normalize_region(val):
-                val = str(val).upper()
-                return 'EL ALTO (EA)' if 'EA' in val or 'ALTO' in val else 'LA PAZ (LP)'
+        if not df_filtrado.empty:
+            # Agrupación: X = Categoría, Valores = Conteo de clientes
+            df_plot = df_filtrado.groupby(['Category', 'Sales Region'])['Customer ID'].count().reset_index()
             
-            df_filtered['Region_Label'] = df_filtered['Sales Region'].apply(normalize_region)
+            # Cálculo para mantener la estructura apilada (stacked) pero con valores reales
+            # Usamos un % invisible para el eje Y para que las barras se vean uniformes
+            df_plot['Total_por_Cat'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+            df_plot['Percentage_Size'] = (df_plot['Customer ID'] / df_plot['Total_por_Cat']) * 100
 
-            # Preparar datos: X = Category, Color = Region_Label
-            df_plot = df_filtered.groupby(['Category', 'Region_Label'])['Customer ID'].count().reset_index()
-            
-            # Cálculo para mantener la estructura visual 100% stacked pero con etiquetas reales
-            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Percentage_Width'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
-
-            # PALETA DE AMARILLOS VARIADOS (Fijados por región)
-            # EA = Amarillo Neón, LP = Amarillo Ámbar/Dorado
-            color_paleta = {
-                'EL ALTO (EA)': '#FFFF00', 
-                'LA PAZ (LP)': '#FFCC00'
+            # PALETA: Tonos de amarillo diferenciados (Amarillo Puro y Amarillo Dorado/Naranja)
+            color_map = {
+                'EA': '#FFFF00', 'EL ALTO': '#FFFF00',
+                'LP': '#FFB800', 'LA PAZ': '#FFB800' # Tono más oscuro/naranja para LP
             }
 
-            fig = px.bar(
+            # Creación del gráfico
+            fig_final = px.bar(
                 df_plot, 
                 x="Category", 
-                y="Percentage_Width", 
-                color="Region_Label",
-                text="Customer ID", # <--- ETIQUETA DE NÚMERO REAL
-                color_discrete_map=color_paleta,
+                y="Percentage_Size", # Mantenemos esto para que todas las barras midan 100% de alto
+                color="Sales Region",
+                text="Customer ID", # <--- CAMBIO: Muestra el NÚMERO REAL
+                color_discrete_map=color_map,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="stack"
+                barmode="stack",
+                width=500 # Barras más delgadas y estéticas
             )
 
-            # ESTILIZACIÓN: Barras más delgadas y estética premium
-            fig.update_traces(
-                width=0.4, # <--- HACE LAS BARRAS MÁS DELGADAS
-                textposition='inside',
-                textfont=dict(color="black", size=18, family="Arial Black"),
-                marker_line_width=1.5,
-                marker_line_color="black"
-            )
-
-            fig.update_layout(
-                paper_bgcolor='black', 
-                plot_bgcolor='black', 
+            fig_final.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', 
+                plot_bgcolor='rgba(0,0,0,0)', 
                 font=dict(color="white"),
-                height=600,
-                yaxis=dict(
-                    title="Distribución Relativa", 
-                    showticklabels=False, # Ocultamos % para no confundir con los números reales
-                    gridcolor='#222'
-                ),
-                xaxis=dict(
-                    title="Categoría NPS", 
-                    tickfont=dict(size=16, color="#FFFF00"),
-                    linecolor="#FFFF00"
-                ),
-                legend=dict(
-                    title=None, 
-                    orientation="h", 
-                    yanchor="bottom", 
-                    y=1.02, 
-                    xanchor="center", 
-                    x=0.5,
-                    font=dict(size=14)
-                ),
-                margin=dict(t=80, b=40, l=40, r=40)
+                height=550,
+                yaxis=dict(title=None, showticklabels=False, showgrid=False), # Ocultamos el eje Y para que se vea más limpio
+                xaxis=dict(title=None, tickfont=dict(size=14, family="Arial Black")),
+                legend=dict(title=None, orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(t=80, b=20, l=0, r=0)
+            )
+            
+            fig_final.update_traces(
+                textposition='inside', 
+                textfont=dict(color="black", size=18, family="Arial Black"),
+                marker_line_color='black', # Bordes finos para separar tonos de amarillo
+                marker_line_width=1
             )
 
-            st.plotly_chart(fig, use_container_width=True, key="chart_ea_lp_unique")
+            # El key dinámico fuerza a Streamlit a redibujar el gráfico cada vez
+            st.plotly_chart(fig_final, use_container_width=True, key=f"chart_ea_lp_{pd.Timestamp.now().timestamp()}")
             
-            st.write(f"📊 **Muestra Total:** {len(df_filtered)} encuestas analizadas para el canal Delivery.")
+            st.write(f"✅ Total registros analizados: **{len(df_filtrado)}**")
         else:
-            st.warning("No se encontraron datos de 'Delivery' para las regiones seleccionadas.")
+            st.warning("No se encontraron registros que coincidan con 'Delivery' en EA o LP.")
     else:
-        st.error("No se pudo conectar con la base de datos.")
+        st.error("No se pudo cargar la base de datos.")
