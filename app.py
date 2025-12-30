@@ -389,11 +389,11 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+
 # ==========================================
-# VISTA 4: EA / LP (FORZADO TOTAL Y ESTÉTICO)
+# VISTA 4: EA / LP (DISEÑO LATERAL Y PALETA AJUSTADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función de carga ultra-limpia (ignora caché)
     def load_data_ea_lp_final():
         try:
             u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
@@ -402,17 +402,14 @@ elif st.session_state.page == "ea_lp":
             return pd.read_csv(StringIO(res.text))
         except: return pd.DataFrame()
 
-    # 2. CSS para forzar el BOTÓN AMARILLO y la estética negra
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
-        /* Forzar el botón de actualizar a AMARILLO */
         div.stButton > button {
             background-color: #FFFF00 !important;
             color: black !important;
             font-weight: bold !important;
             border: none !important;
-            border-radius: 5px !important;
         }
         .banner-ea-lp {
             background-color: #FFFF00;
@@ -430,7 +427,6 @@ elif st.session_state.page == "ea_lp":
         if st.button("⬅ VOLVER AL INICIO", key="btn_nav_home"):
             st.session_state.page = "home"; st.rerun()
     with col_nav2:
-        # Este botón usa la clase de CSS de arriba para ser amarillo
         if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp"):
             st.cache_data.clear(); st.rerun()
 
@@ -440,12 +436,9 @@ elif st.session_state.page == "ea_lp":
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
-        
-        # --- FILTRO EXCLUSIVO: PRIMARY DRIVER = DELIVERY ---
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
-        # Normalización de nombres de Región
         def clean_reg(x):
             x = str(x).upper()
             if 'ALTO' in x or 'EA' in x: return 'EA'
@@ -456,50 +449,57 @@ elif st.session_state.page == "ea_lp":
         df_final = df_delivery[df_delivery['REGION_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            # Procesar datos para la gráfica
             df_plot = df_final.groupby(['Category', 'REGION_GROUP'])['Customer ID'].count().reset_index()
-            # Calculamos el 100% de la barra pero mantendremos las etiquetas en NÚMEROS REALES
             df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
             df_plot['Size'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
 
-            # TÍTULO DE LA GRÁFICA
-            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center; margin-bottom:0px;">DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
-
-            # --- GRÁFICA COMPACTA, DELGADA Y AMARILLA ---
-            fig = px.bar(
-                df_plot, 
-                x="Category", 
-                y="Size", 
-                color="REGION_GROUP", 
-                text="Customer ID", # <--- AQUÍ MUESTRA EL NÚMERO REAL
-                color_discrete_map={'EA': '#FFFF00', 'LP': '#FFB800'}, # Dos tonos de amarillo
-                category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                barmode="stack",
-                width=300 # Barras más delgadas y estéticas
-            )
-
-            fig.update_layout(
-                paper_bgcolor='black', plot_bgcolor='black',
-                height=400,
-                yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                xaxis=dict(title=None, tickfont=dict(color="white", size=12, family="Arial Black"), showgrid=False),
-                legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                margin=dict(t=10, b=10, l=10, r=10)
-            )
+            # --- ESTRUCTURA LATERAL: GRÁFICA A LA IZQUIERDA ---
+            col_grafica, col_espacio = st.columns([1.5, 2.5]) # La gráfica ocupa el costado izquierdo
             
-            fig.update_traces(
-                textposition='inside',
-                textfont=dict(color="black", size=20, family="Arial Black")
-            )
+            with col_grafica:
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; margin-bottom:10px;">DISTRIBUCIÓN DE CLIENTES</p>', unsafe_allow_html=True)
+                
+                # Paleta de amarillos contrastados
+                color_paleta = {'EA': '#FFFF00', 'LP': '#FFD700'} 
+                
+                fig = px.bar(
+                    df_plot, 
+                    x="Category", 
+                    y="Size", 
+                    color="REGION_GROUP", 
+                    text="Customer ID", # Número real
+                    color_discrete_map=color_paleta,
+                    category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
+                    barmode="stack"
+                )
 
-            # Centrar la gráfica pequeña
-            _, col_c, _ = st.columns([1.5, 2, 1.5])
-            with col_c:
-                # El KEY dinámico es vital para que Streamlit detecte el cambio de ejes
-                st.plotly_chart(fig, use_container_width=True, key=f"chart_ea_lp_new_{pd.Timestamp.now().microsecond}")
+                fig.update_layout(
+                    paper_bgcolor='black', plot_bgcolor='black',
+                    height=450,
+                    width=320, # Más esbelta
+                    yaxis=dict(showticklabels=False, showgrid=False, title=None),
+                    xaxis=dict(title=None, tickfont=dict(color="white", size=12), showgrid=False),
+                    legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"),
+                    margin=dict(t=10, b=10, l=10, r=10)
+                )
+                
+                # Etiquetas de datos normales (como en tus otras gráficas)
+                fig.update_traces(
+                    width=0.6,
+                    textposition='auto', # 'auto' lo hace normal como las demás
+                    textfont=dict(color="black", size=14, family="Arial")
+                )
+
+                st.plotly_chart(fig, use_container_width=True, key=f"chart_ea_lp_side_{pd.Timestamp.now().microsecond}")
             
-            st.markdown(f'<p style="text-align:center; color:#888;">Filtro: Delivery | Total Registros: {len(df_final)}</p>', unsafe_allow_html=True)
+            with col_espacio:
+                # Aquí puedes poner texto o dejar vacío para que la gráfica se quede a la izquierda
+                st.markdown("<br><br>", unsafe_allow_html=True)
+                st.write(f"📊 **Resumen Delivery:**")
+                st.write(f"- Total EA: {len(df_final[df_final['REGION_GROUP']=='EA'])}")
+                st.write(f"- Total LP: {len(df_final[df_final['REGION_GROUP']=='LP'])}")
+
         else:
-            st.warning("No se encontraron registros de 'Delivery' para EA o LP.")
+            st.warning("No hay datos de Delivery para EA/LP.")
     else:
-        st.error("Error al conectar con la base de datos.")
+        st.error("Error al cargar la base de datos.")
