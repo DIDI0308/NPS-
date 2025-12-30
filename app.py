@@ -45,7 +45,7 @@ if st.session_state.page == "home":
     .block-container {{padding: 0 !important;}}
     .main-title {{
         position: fixed;
-        top: 50%; left: 50%;
+        top: 40%; left: 50%;
         transform: translate(-50%, -50%);
         color: white; font-size: 4rem; font-weight: 800;
         text-align: center; width: 100%;
@@ -56,7 +56,7 @@ if st.session_state.page == "home":
         position: fixed;
         bottom: 10%; left: 50%;
         transform: translateX(-50%);
-        width: 50% !important;
+        width: 70% !important;
         z-index: 1001;
     }}
     div.stButton > button {{
@@ -74,7 +74,7 @@ if st.session_state.page == "home":
     st.markdown(style_home, unsafe_allow_html=True)
     st.markdown('<div class="main-title">NET PROMOTER SCORE PERFORMANCE</div>', unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("MONTHLY EVOLUTION", use_container_width=True):
             st.session_state.page = "monthly"
@@ -82,6 +82,10 @@ if st.session_state.page == "home":
     with col2:
         if st.button("CURRENT MONTH", use_container_width=True):
             st.session_state.page = "dashboard"
+            st.rerun()
+    with col3:
+        if st.button("EA / LP", use_container_width=True):
+            st.session_state.page = "ealp"
             st.rerun()
 
 # ==========================================
@@ -219,20 +223,13 @@ elif st.session_state.page == "dashboard":
 
         if not df_coords.empty:
             df_c = df_coords.copy()
-            # Posiciones estáticas: A (ID), B (Lon), C (Lat)
             df_c.columns = ['ID', 'Lon', 'Lat'] + list(df_c.columns[3:])
-            
-            # Limpieza exhaustiva de IDs
             df_c['ID'] = df_c['ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-            
-            # Preparamos la base filtrada
             df_filt_map = df_filt3.copy()
             df_filt_map['Customer ID'] = df_filt_map['Customer ID'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             
-            # Cruce de datos
             df_map = pd.merge(df_filt_map, df_c[['ID', 'Lon', 'Lat']], left_on='Customer ID', right_on='ID', how='inner')
             
-            # LÓGICA DE BÚSQUEDA: Si el usuario escribe algo, filtramos para que solo aparezca ese cliente
             if busqueda:
                 busqueda_clean = str(busqueda).strip()
                 df_map = df_map[df_map['Customer ID'] == busqueda_clean]
@@ -245,7 +242,7 @@ elif st.session_state.page == "dashboard":
                 fig_map = px.density_mapbox(
                     df_map, lat='Lat', lon='Lon', z='Score', radius=25 if busqueda else 18, 
                     center=dict(lat=df_map['Lat'].mean(), lon=df_map['Lon'].mean()), 
-                    zoom=15 if busqueda else 11, # Zoom más profundo si busca un cliente específico
+                    zoom=15 if busqueda else 11, 
                     mapbox_style="open-street-map",
                     hover_name='Customer ID', 
                     hover_data={'Score': True, 'Category': True, 'Lat': False, 'Lon': False},
@@ -355,7 +352,7 @@ elif st.session_state.page == "monthly":
         for m in months: table_html += f'<th>{m}</th>'
         table_html += '</tr></thead><tbody>'
         for r in rows_det:
-            table_html += f'<tr><td style="font-weight:bold;">{str(df_raw_evo.iloc[r, 0])}</td>'
+            table_html += f'<tr><td style="font-weight:bold; color:black;">{str(df_raw_evo.iloc[r, 0])}</td>'
             for c in range(3, 15): table_html += f'<td>{df_raw_evo.iloc[r, c] if pd.notnull(df_raw_evo.iloc[r, c]) else "-"}</td>'
             table_html += '</tr>'
         st.markdown(table_html + '</tbody></table>', unsafe_allow_html=True)
@@ -375,3 +372,15 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+
+# ==========================================
+# VISTA 4: EA / LP (NUEVA PESTAÑA)
+# ==========================================
+elif st.session_state.page == "ealp":
+    st.markdown("""<style>.stApp { background-color: #000000; color: #FFFFFF; }</style>""", unsafe_allow_html=True)
+    if st.button("⬅ VOLVER AL INICIO"):
+        st.session_state.page = "home"
+        st.rerun()
+    
+    st.title("📊 EA / LP ANALYSIS")
+    st.write("Contenido de análisis EA / LP en desarrollo...")
