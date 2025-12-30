@@ -487,11 +487,8 @@ elif st.session_state.page == "ea_lp":
                 textfont=dict(color="black", size=14, family="Arial Black")
             )
 
-            # Usamos un key dinámico para forzar el renderizado correcto
             st.plotly_chart(fig_horiz, use_container_width=True, key=f"horiz_bar_v4_{pd.Timestamp.now().microsecond}")
             
             st.markdown(f'<p style="color:#888; font-size:12px; text-align:center;">Mostrando {len(df_filtered)} registros filtrados.</p>', unsafe_allow_html=True)
         else:
             st.warning("No hay datos para las categorías seleccionadas.")
-    else:
-        st.error("No se pudo conectar con la base de datos.")
