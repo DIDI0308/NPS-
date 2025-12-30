@@ -391,11 +391,10 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP - PERFORMANCE DELIVERY
+# VISTA 4: EA / LP (AMBAS GRÁFICAS INTEGRADAS)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función de carga con bypass de caché
-    def get_data_delivery_v4():
+    def get_data_v4():
         try:
             u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
             csv_url = f"{u}/export?format=csv&v={pd.Timestamp.now().timestamp()}"
@@ -403,7 +402,6 @@ elif st.session_state.page == "ea_lp":
             return pd.read_csv(StringIO(res.text))
         except: return pd.DataFrame()
 
-    # 2. Inyección de CSS (Fondo negro y Botón Amarillo)
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
@@ -413,7 +411,6 @@ elif st.session_state.page == "ea_lp":
             font-weight: bold !important;
             border: none !important;
         }
-        .stMultiSelect label { color: #FFFF00 !important; font-weight: bold; }
         .banner-ea-lp {
             background-color: #FFFF00;
             padding: 10px;
@@ -424,71 +421,90 @@ elif st.session_state.page == "ea_lp":
         </style>
         """, unsafe_allow_html=True)
 
-    # --- NAVEGACIÓN ---
+    # NAVEGACIÓN
     c_nav1, c_nav2 = st.columns([8, 2])
     with c_nav1:
-        if st.button("⬅ VOLVER AL INICIO", key="btn_back_v4"):
+        if st.button("⬅ VOLVER AL INICIO", key="btn_v4_home"):
             st.session_state.page = "home"; st.rerun()
     with c_nav2:
         if st.button("🔄 ACTUALIZAR", key="refresh_ea_lp_v4"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div class="banner-ea-lp"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:24px;">DELIVERY PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-ea-lp"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:24px;">PERFORMANCE EA / LP</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_delivery_v4()
+    df_raw = get_data_v4()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
-        
-        # --- FILTRO BASE: SOLO DELIVERY ---
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
-        df_del = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
-
-        # --- FILTRO DE CATEGORÍA (MULTISELECT) ---
-        st.markdown('<p style="color:#FFFF00; margin-bottom:0px; font-weight:bold;">Filtrar por Categoría NPS:</p>', unsafe_allow_html=True)
-        categorias = sorted(df_del['Category'].unique().tolist())
-        selected_cats = st.multiselect("", categorias, default=categorias, key="ms_cats")
         
-        df_filtered = df_del[df_del['Category'].isin(selected_cats)].copy()
+        # FILTRO BASE: DELIVERY
+        df_del = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
+        
+        def clean_reg(x):
+            x = str(x).upper()
+            if 'ALTO' in x or 'EA' in x: return 'EA'
+            if 'PAZ' in x or 'LP' in x: return 'LP'
+            return 'OTRO'
+        
+        df_del['REG_GROUP'] = df_del['Sales Region'].apply(clean_reg)
+        df_final = df_del[df_del['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
-        if not df_filtered.empty:
-            # Agrupación para la gráfica horizontal
-            # Filas: Secondary Driver | Columnas (Color): Sales Region | Valores: Conteo
-            df_plot = df_filtered.groupby(['Secondary Driver', 'Sales Region']).size().reset_index(name='Cuenta')
-
-            # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS ---
-            # EA = Amarillo Neón (#FFFF00) | LP = Amarillo Mostaza (#CC9900)
-            fig_horiz = px.bar(
-                df_plot,
-                y="Secondary Driver",
-                x="Cuenta",
-                color="Sales Region",
-                orientation='h',
-                text="Cuenta",
-                color_discrete_map={
-                    'EL ALTO': '#FFFF00', 'EA': '#FFFF00',
-                    'LA PAZ': '#CC9900', 'LP': '#CC9900'
-                },
-                template="plotly_dark"
-            )
-
-            fig_horiz.update_layout(
-                paper_bgcolor='black',
-                plot_bgcolor='black',
-                height=500,
-                xaxis=dict(title="Número de Clientes (Customer ID)", showgrid=False, tickfont=dict(color="white")),
-                yaxis=dict(title=None, tickfont=dict(color="white", size=12)),
-                legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                margin=dict(l=10, r=10, t=30, b=10)
-            )
-
-            fig_horiz.update_traces(
-                textposition='inside',
-                textfont=dict(color="black", size=14, family="Arial Black")
-            )
-
-            st.plotly_chart(fig_horiz, use_container_width=True, key=f"horiz_bar_v4_{pd.Timestamp.now().microsecond}")
+        if not df_final.empty:
+            # ---------------------------------------------------------
+            # GRÁFICA 1: COMPOSICIÓN POR CATEGORÍA (LA QUE YA TENÍAS)
+            # ---------------------------------------------------------
+            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center;">1. DISTRIBUCIÓN DE CLIENTES POR CATEGORÍA</p>', unsafe_allow_html=True)
             
-            st.markdown(f'<p style="color:#888; font-size:12px; text-align:center;">Mostrando {len(df_filtered)} registros filtrados.</p>', unsafe_allow_html=True)
+            df_p1 = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
+            df_p1['Total_Barra'] = df_p1.groupby('Category')['Customer ID'].transform('sum')
+            df_p1['Altura'] = (df_p1['Customer ID'] / df_p1['Total_Barra']) * 100
+
+            fig1 = px.bar(df_p1, x="Category", y="Altura", color="REG_GROUP", text="Customer ID",
+                          color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
+                          category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
+                          barmode="stack", width=300)
+
+            fig1.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=350,
+                               yaxis=dict(showticklabels=False, showgrid=False, title=None),
+                               xaxis=dict(title=None, tickfont=dict(color="white", size=12, family="Arial Black")),
+                               legend=dict(title=None, font=dict(color="white", size=10), orientation="h", y=1.1, x=0.5, xanchor="center"))
+            
+            fig1.update_traces(textposition='inside', textfont=dict(color="black", size=18, family="Arial Black"))
+            
+            _, col_c1, _ = st.columns([1.5, 2, 1.5])
+            with col_c1:
+                st.plotly_chart(fig1, use_container_width=True, key=f"g1_{pd.Timestamp.now().microsecond}")
+
+            st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
+
+            # ---------------------------------------------------------
+            # GRÁFICA 2: BARRAS HORIZONTALES CON FILTRO MULTISELECT
+            # ---------------------------------------------------------
+            st.markdown('<p style="color:#FFFF00; font-size:20px; font-weight:bold; text-align:center;">2. VOLUMEN POR SECONDARY DRIVER</p>', unsafe_allow_html=True)
+            
+            cats = sorted(df_final['Category'].unique().tolist())
+            sel_cats = st.multiselect("Filtrar Categorías para esta gráfica:", cats, default=cats, key="ms_v4")
+            
+            df_filtered2 = df_final[df_final['Category'].isin(sel_cats)].copy()
+
+            if not df_filtered2.empty:
+                df_p2 = df_filtered2.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
+                
+                fig2 = px.bar(df_p2, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
+                              orientation='h', text="Cuenta",
+                              color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
+                              template="plotly_dark")
+
+                fig2.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=500,
+                                   xaxis=dict(title="Número de Clientes", showgrid=False),
+                                   yaxis=dict(title=None, tickfont=dict(color="white", size=11)),
+                                   legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"))
+                
+                fig2.update_traces(textposition='inside', textfont=dict(color="black", size=14, family="Arial Black"))
+                
+                st.plotly_chart(fig2, use_container_width=True, key=f"g2_{pd.Timestamp.now().microsecond}")
+            else:
+                st.warning("Selecciona al menos una categoría.")
         else:
-            st.warning("No hay datos para las categorías seleccionadas.")
+            st.warning("No hay datos de Delivery para EA/LP.")
