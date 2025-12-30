@@ -391,10 +391,9 @@ elif st.session_state.page == "monthly":
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 # ==========================================
-# VISTA 4: EA / LP (CORREGIDA PARA EVITAR NAMEERROR)
+# VISTA 4: EA / LP (GRÁFICA 100% APILADA POR CATEGORÍA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Definición interna para evitar NameError si no se movió al inicio
     def load_data_ea_lp(url):
         try:
             base_url = url.split('/edit')[0]
@@ -439,29 +438,37 @@ elif st.session_state.page == "ea_lp":
         </div>
         ''', unsafe_allow_html=True)
 
-    # --- CARGA DE DATOS ---
     df_ea_lp = load_data_ea_lp("https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing")
 
     if not df_ea_lp.empty:
-        # Filtrar solo EA y LP
-        df_region = df_ea_lp[df_ea_lp['Sales Region'].astype(str).str.contains('EA|LP|EL ALTO|LA PAZ', case=False, na=False)].copy()
+        # Normalizamos nombres de Sales Region
+        df_ea_lp['Sales Region'] = df_ea_lp['Sales Region'].astype(str).str.upper()
+        df_region = df_ea_lp[df_ea_lp['Sales Region'].str.contains('EA|LP|ALTO|PAZ', na=False)].copy()
+        # Etiquetamos simple para la gráfica
+        df_region['Region'] = df_region['Sales Region'].apply(lambda x: 'EA' if any(k in x for k in ['EA', 'ALTO']) else 'LP')
 
-        # 1. GRÁFICA 100% APILADAS (DELIVERY)
-        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">DELIVERY PERFORMANCE BY REGION (100% STACKED)</p>', unsafe_allow_html=True)
+        # ---------------------------------------------------------
+        # GRÁFICA: 100% STACKED POR CATEGORÍA (X=CATEGORÍA, COLOR=REGION)
+        # ---------------------------------------------------------
+        st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:10px;">CATEGORY COMPOSITION BY REGION (100% STACKED)</p>', unsafe_allow_html=True)
         
+        # Filtro Delivery
         df_delivery = df_region[df_region['Primary Driver'] == 'Delivery'].copy()
 
         if not df_delivery.empty:
-            df_stacked = df_delivery.groupby(['Sales Region', 'Category'])['Customer ID'].count().reset_index()
-            df_total = df_stacked.groupby('Sales Region')['Customer ID'].transform('sum')
-            df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total) * 100
+            # Agrupar por Categoría y Región
+            df_stacked = df_delivery.groupby(['Category', 'Region'])['Customer ID'].count().reset_index()
+            # Calcular % relativo a cada Categoría
+            df_total_cat = df_stacked.groupby('Category')['Customer ID'].transform('sum')
+            df_stacked['Percentage'] = (df_stacked['Customer ID'] / df_total_cat) * 100
 
-            color_map_nps = {'Detractor': '#E74C3C', 'Passive': '#BDC3C7', 'Promoter': '#F1C40F'}
+            # Paleta de Amarillos
+            paleta_amarilla = {'EA': '#FFFF00', 'LP': '#B8860B'} # Amarillo brillante y Oro viejo
             
             fig_100 = px.bar(
-                df_stacked, x="Sales Region", y="Percentage", color="Category",
+                df_stacked, x="Category", y="Percentage", color="Region",
                 text=df_stacked['Percentage'].apply(lambda x: f'{x:.1f}%'),
-                color_discrete_map=color_map_nps,
+                color_discrete_map=paleta_amarilla,
                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
             )
 
@@ -470,38 +477,22 @@ elif st.session_state.page == "ea_lp":
                 font=dict(color="white"), height=500,
                 yaxis=dict(title="Porcentaje", ticksuffix="%", range=[0, 105], gridcolor='#333'),
                 xaxis=dict(title=None),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                legend=dict(title="Región", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig_100, use_container_width=True)
         else:
-            st.info("No se encontraron registros de 'Delivery' para EA/LP.")
+            st.info("No hay datos de 'Delivery' para mostrar.")
 
         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
 
-        # 2. COMPARATIVA DE SCORES
+        # Métrica de Score Promedio
         col1, col2 = st.columns(2)
-        
-        data_ea = df_region[df_region['Sales Region'].astype(str).str.contains('EA|ALTO', case=False, na=False)]
-        data_lp = df_region[df_region['Sales Region'].astype(str).str.contains('LP|PAZ', case=False, na=False)]
-
         with col1:
-            st.markdown('<div class="card-region">', unsafe_allow_html=True)
-            avg_ea = data_ea['Score'].mean() if not data_ea.empty else 0
-            st.markdown(f'<h3 style="color:#FFFF00; margin:0;">EL ALTO (EA)</h3>', unsafe_allow_html=True)
-            st.metric("Avg Score", f"{avg_ea:.2f}")
-            fig_ea = px.pie(data_ea, names='Category', hole=0.6, color='Category', color_discrete_map=color_map_nps)
-            fig_ea.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig_ea, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
+            avg_ea = df_region[df_region['Region'] == 'EA']['Score'].mean()
+            st.metric("Avg Score EL ALTO", f"{avg_ea:.2f}")
         with col2:
-            st.markdown('<div class="card-region">', unsafe_allow_html=True)
-            avg_lp = data_lp['Score'].mean() if not data_lp.empty else 0
-            st.markdown(f'<h3 style="color:#FFFFFF; margin:0;">LA PAZ (LP)</h3>', unsafe_allow_html=True)
-            st.metric("Avg Score", f"{avg_lp:.2f}")
-            fig_lp = px.pie(data_lp, names='Category', hole=0.6, color='Category', color_discrete_map=color_map_nps)
-            fig_lp.update_layout(height=300, paper_bgcolor='rgba(0,0,0,0)', showlegend=False)
-            st.plotly_chart(fig_lp, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            avg_lp = df_region[df_region['Region'] == 'LP']['Score'].mean()
+            st.metric("Avg Score LA PAZ", f"{avg_lp:.2f}")
+
     else:
-        st.warning("Cargando datos desde la fuente...")
+        st.warning("Cargando datos...")
