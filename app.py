@@ -487,28 +487,61 @@ elif st.session_state.page == "ea_lp":
                     )
                     fig_h.update_traces(textposition='inside', textfont=dict(color="black", size=12)) # Sin negrita
                     st.plotly_chart(fig_h, use_container_width=True, key="horiz_v4")
-
-                # Fila 2: Gráfica de Líneas (Trend por Score)
+                # Fila 2: Gráfica de Líneas (Ajustada con texto envuelto y etiquetas)
                 if 'Score' in df_final.columns:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SECONDARY DRIVER VS AVG SCORE TREND</p>', unsafe_allow_html=True)
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SECONDARY DRIVER VS AVG SCORE (STACKED TREND)</p>', unsafe_allow_html=True)
                     
                     df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
                     df_line = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
 
-                    fig_line = px.line(df_line, x="Secondary Driver", y="Score", color="REG_GROUP", markers=True,
-                                       color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'})
-                    fig_line.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                        xaxis=dict(title=None, showgrid=False, tickfont=dict(color="white")),
-                        yaxis=dict(title="Avg Score", showgrid=True, gridcolor="#333333", tickfont=dict(color="white")),
-                        legend=dict(font=dict(color="white"), title=None, orientation="h", y=1.1, x=0.5, xanchor="center")
+                    # Envolver texto para que no salga en diagonal
+                    df_line['Driver_Wrapped'] = df_line['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=15)))
+
+                    # Crear gráfica de líneas
+                    fig_line = px.line(
+                        df_line, 
+                        x="Driver_Wrapped", 
+                        y="Score", 
+                        color="REG_GROUP", 
+                        markers=True,
+                        text=df_line['Score'].round(2), # Añadir etiquetas de datos
+                        color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'}
                     )
-                    fig_line.update_traces(line=dict(width=3), marker=dict(size=10))
-                    st.plotly_chart(fig_line, use_container_width=True, key="line_score_v4")
-            else:
-                st.warning("No hay datos para los filtros seleccionados.")
-        else:
-            st.error("No se encontró la columna 'Primary Driver' en el archivo.")
-    else:
-        st.error("No se pudo conectar con la base de datos de Google Sheets.")
+
+                    fig_line.update_layout(
+                        paper_bgcolor='black', 
+                        plot_bgcolor='black', 
+                        height=500, # Un poco más alta por el texto envuelto
+                        font=dict(color="white"),
+                        xaxis=dict(
+                            title=None, 
+                            showgrid=False, 
+                            tickangle=0, # Forzar a que no esté en diagonal
+                            tickfont=dict(size=10, color="white")
+                        ),
+                        yaxis=dict(
+                            title="Avg Score", 
+                            showgrid=True, 
+                            gridcolor="#333333",
+                            # Para hacerla "apilada" (stack)
+                            stackgroup='one' 
+                        ),
+                        legend=dict(
+                            font=dict(color="white"), 
+                            title=None, 
+                            orientation="h", 
+                            y=1.1, x=0.5, 
+                            xanchor="center"
+                        )
+                    )
+
+                    # Ajustar posición de etiquetas de datos y quitar negrita
+                    fig_line.update_traces(
+                        textposition="top center",
+                        textfont=dict(color="white", size=11), # Etiquetas visibles en blanco
+                        line=dict(width=3),
+                        marker=dict(size=8)
+                    )
+
+                    st.plotly_chart(fig_line, use_container_width=True, key="line_score_v4_final")
