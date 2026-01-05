@@ -400,7 +400,8 @@ elif st.session_state.page == "ea_lp":
             csv_url = f"{u}/export?format=csv&nocache={pd.Timestamp.now().timestamp()}"
             res = requests.get(csv_url)
             return pd.read_csv(StringIO(res.text))
-        except: return pd.DataFrame()
+        except: 
+            return pd.DataFrame()
 
     st.markdown("""
         <style>
@@ -418,13 +419,16 @@ elif st.session_state.page == "ea_lp":
         </style>
         """, unsafe_allow_html=True)
 
+    # NAVEGACIÓN (Corregido: c_nav1 y c_nav2)
     c_nav1, c_nav2 = st.columns([8, 2])
     with c_nav1:
         if st.button("⬅ VOLVER", key="btn_v_home"):
-            st.session_state.page = "home"; st.rerun()
+            st.session_state.page = "home"
+            st.rerun()
     with c_nav2:
         if st.button("🔄 ACTUALIZAR", key="btn_v_refresh"):
-            st.cache_data.clear(); st.rerun()
+            st.cache_data.clear()
+            st.rerun()
 
     st.markdown('<div class="banner-ea-lp"><h2 style="color:black; margin:0; font-family:Arial Black; font-size:22px;">PERFORMANCE EA / LP</h2></div>', unsafe_allow_html=True)
 
@@ -445,7 +449,7 @@ elif st.session_state.page == "ea_lp":
         df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            # --- COLUMNAS PRINCIPALES ---
+            # --- COLUMNAS DE GRÁFICAS ---
             col_izq, col_der = st.columns([1.5, 2.5])
             
             with col_izq:
