@@ -388,20 +388,19 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-        # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
+error("Error de conexión con la base de datos.")
+# ==========================================
+# VISTA 4: PERFORMANCE DELIVERY (BARRAS HORIZONTALES)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función con bypass de caché total
-    def get_data_absolute_new():
+    def get_data_delivery():
         try:
             u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
             csv_url = f"{u}/export?format=csv&nocache={pd.Timestamp.now().timestamp()}"
-            res = requests.get(csv_url)
-            return pd.read_csv(StringIO(res.text))
+            return pd.read_csv(StringIO(requests.get(csv_url).text))
         except: return pd.DataFrame()
 
-    # 2. Inyección de CSS
+    # CSS PARA BOTÓN AMARILLO Y FONDO NEGRO
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
@@ -409,98 +408,86 @@ elif st.session_state.page == "ea_lp":
             background-color: #FFFF00 !important;
             color: black !important;
             font-weight: bold !important;
-            border: 2px solid #FFFF00 !important;
+            border: none !important;
         }
-        .banner-ea-lp {
+        .banner-del {
             background-color: #FFFF00;
-            padding: 8px;
+            padding: 10px;
             border-radius: 5px;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
+        /* Estilo para el multiselect */
+        .stMultiSelect label { color: #FFFF00 !important; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
-    c_nav1, c_nav2 = st.columns([8, 2])
-    with c_nav1:
-        if st.button("⬅ VOLVER", key="btn_v_home"):
+    # NAVEGACIÓN
+    c1, c2 = st.columns([8, 2])
+    with c1:
+        if st.button("⬅ VOLVER AL INICIO", key="back_home"):
             st.session_state.page = "home"; st.rerun()
-    with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="btn_v_refresh"):
+    with c2:
+        if st.button("🔄 ACTUALIZAR", key="ref_del"):
             st.cache_data.clear(); st.rerun()
 
-    st.markdown('<div class="banner-ea-lp"><h2 style="color:black; margin:0; font-family:Arial Black; font-size:22px;">PERFORMANCE EA / LP</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-del"><h1 style="color:black; margin:0; font-family:Arial Black; font-size:24px;">DELIVERY PERFORMANCE BY REGION</h1></div>', unsafe_allow_html=True)
 
-    df_raw = get_data_absolute_new()
+    df_raw = get_data_delivery()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
-        df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
-
-        def clean_reg(x):
-            x = str(x).upper()
-            if 'ALTO' in x or 'EA' in x: return 'EA'
-            if 'PAZ' in x or 'LP' in x: return 'LP'
-            return 'OTRO'
         
-        df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
-        df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
+        # 1. FILTRO BASE: SOLO DELIVERY
+        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
+        df_del = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
-        if not df_final.empty:
-            df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Altura'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+        # 2. FILTRO DE CATEGORÍA (MULTISELECCIÓN)
+        categorias = sorted(df_del['Category'].unique().tolist())
+        selected_cats = st.multiselect("Filtrar por Categoría:", categorias, default=categorias)
+        
+        df_filtered = df_del[df_del['Category'].isin(selected_cats)].copy()
 
-            col_izq, col_der = st.columns([1.5, 2.5])
+        if not df_filtered.empty:
+            # 3. PREPARAR DATOS (Filas: Secondary Driver, Columnas: Sales Region)
+            df_plot = df_filtered.groupby(['Secondary Driver', 'Sales Region']).size().reset_index(name='Count')
+
+            # 4. GRÁFICA DE BARRAS HORIZONTALES APILADAS
+            # Usamos Amarillo Neón (#FFFF00) y el Amarillo Oscuro/Mostaza (#CC9900)
+            fig = px.bar(
+                df_plot,
+                y="Secondary Driver",
+                x="Count",
+                color="Sales Region",
+                orientation='h',
+                text="Count",
+                color_discrete_map={
+                    'EL ALTO': '#FFFF00', 
+                    'LA PAZ': '#CC9900'
+                },
+                template="plotly_dark"
+            )
+
+            fig.update_layout(
+                paper_bgcolor='black',
+                plot_bgcolor='black',
+                height=500,
+                xaxis=dict(title="Cuenta de Customer ID", showgrid=False, tickfont=dict(color="white")),
+                yaxis=dict(title=None, tickfont=dict(color="white", size=12)),
+                legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1),
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+
+            fig.update_traces(
+                textposition='inside',
+                textfont=dict(color="black", size=14, family="Arial Black")
+            )
+
+            # Mostrar gráfica
+            st.plotly_chart(fig, use_container_width=True, key=f"horiz_bar_{pd.Timestamp.now().microsecond}")
             
-            with col_izq:
-                st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">DISTRIBUCIÓN DE CLIENTES</p>', unsafe_allow_html=True)
-                fig = px.bar(
-                    df_plot, 
-                    x="Category", 
-                    y="Altura", 
-                    color="REG_GROUP", 
-                    text="Customer ID",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
-                    category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                    barmode="stack"
-                )
-                fig.update_layout(
-                    paper_bgcolor='black', plot_bgcolor='black',
-                    height=380, yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                    xaxis=dict(title=None, tickfont=dict(color="white", size=11), showgrid=False),
-                    legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                    margin=dict(t=5, b=5, l=5, r=5)
-                )
-                st.plotly_chart(fig, use_container_width=True, key=f"force_chart_{pd.Timestamp.now().microsecond}")
-            
-            with col_der:
-                # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS ---
-                # Agrupamos por Secondary Driver y Región para la gráfica horizontal
-                df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Customer ID'].count().reset_index()
-                
-                fig_horiz = px.bar(
-                    df_horiz_data,
-                    y="Secondary Driver",
-                    x="Customer ID",
-                    color="REG_GROUP",
-                    orientation='h',
-                    text="Customer ID",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
-                    template="plotly_dark"
-                )
-                fig_horiz.update_layout(
-                    paper_bgcolor='black', plot_bgcolor='black',
-                    height=500,
-                    xaxis=dict(title="Número de Clientes", showgrid=False, tickfont=dict(color="white")),
-                    yaxis=dict(title=None, tickfont=dict(color="white", size=12)),
-                    legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
-                    margin=dict(l=10, r=10, t=30, b=10)
-                )
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=14))
-                st.plotly_chart(fig_horiz, use_container_width=True, key=f"horiz_bar_v4_{pd.Timestamp.now().microsecond}")
+            st.markdown(f'<p style="color:#888; font-size:12px; text-align:center;">Registros mostrados: {len(df_filtered)}</p>', unsafe_allow_html=True)
         else:
-            st.warning("No hay datos de Delivery.")
+            st.warning("No hay datos para las categorías seleccionadas.")
     else:
-        st.error("Error de conexión con la base de datos.")
+        st.error("No se pudo cargar la base de datos.")
