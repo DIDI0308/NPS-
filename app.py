@@ -464,7 +464,7 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # --- FILA 1: BARRAS (Distribución y Volumen) ---
+                # --- FILA 1: BARRAS ---
                 col_izq, col_der = st.columns([1.5, 2.5])
                 with col_izq:
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
@@ -493,7 +493,7 @@ elif st.session_state.page == "ea_lp":
                     fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     st.plotly_chart(fig_horiz, use_container_width=True)
 
-                # --- FILA 2: DUMBBELL CHART "TOP LEVEL" ---
+                # --- FILA 2: DUMBBELL CHART (GAP ANALYSIS - TOP LEVEL) ---
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (EA vs LP)</p>', unsafe_allow_html=True)
                 
@@ -502,7 +502,7 @@ elif st.session_state.page == "ea_lp":
                 if col_score in df_final.columns:
                     df_final[col_score] = pd.to_numeric(df_final[col_score], errors='coerce')
                     
-                    # 1. Preparar datos
+                    # 1. Pivotar y Calcular Brecha (Gap)
                     df_stats = df_final.groupby(['Secondary Driver', 'REG_GROUP'])[col_score].mean().reset_index()
                     df_pivot = df_stats.pivot(index='Secondary Driver', columns='REG_GROUP', values=col_score)
                     
@@ -510,28 +510,29 @@ elif st.session_state.page == "ea_lp":
                     if 'LP' not in df_pivot.columns: df_pivot['LP'] = None
                     
                     df_pivot = df_pivot.reset_index()
-                    
-                    # 2. STORYTELLING: Ordenar por mayor BRECHA (Absoluta)
-                    # Queremos que la mayor brecha esté arriba en el gráfico.
-                    # Plotly dibuja de abajo hacia arriba en el eje Y categórico.
-                    # Por tanto, ordenamos el DF ascendente por brecha para que el mayor quede al final (arriba).
+                    # Rellenar ceros solo para el cálculo de gap (opcional), mejor dejar NaN si no existe
                     df_pivot['Gap'] = abs(df_pivot['EA'].fillna(0) - df_pivot['LP'].fillna(0))
+                    
+                    # 2. Ordenar por Brecha (Mayor diferencia arriba)
+                    # En Plotly eje Y (categoría) dibuja de abajo hacia arriba por defecto.
+                    # Ordenamos ascendente por Gap para que el más grande quede al final del DF (y Plotly lo dibuje arriba si es category array)
                     df_pivot = df_pivot.sort_values(by='Gap', ascending=True)
 
                     fig_dumb = go.Figure()
 
-                    # 3. DIBUJAR LÍNEAS CONECTORAS (Clave visual)
+                    # 3. CONECTORES (Línea gris delgada)
+                    # Iteramos para dibujar la línea entre los puntos
                     for i, row in df_pivot.iterrows():
                         if pd.notnull(row['EA']) and pd.notnull(row['LP']):
                             fig_dumb.add_shape(
                                 type="line",
                                 x0=row['EA'], y0=row['Secondary Driver'],
                                 x1=row['LP'], y1=row['Secondary Driver'],
-                                line=dict(color="#666666", width=2), # Gris medio, grosor visible pero sutil
+                                line=dict(color="#666666", width=1), # Gris claro sutil
                                 layer="below"
                             )
 
-                    # 4. Puntos EA
+                    # 4. Puntos EA (Amarillo Neón)
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['EA'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='EA',
@@ -540,7 +541,7 @@ elif st.session_state.page == "ea_lp":
                         textfont=dict(color="#FFFF00", size=11)
                     ))
 
-                    # 5. Puntos LP
+                    # 5. Puntos LP (Dorado)
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['LP'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='LP',
@@ -551,22 +552,21 @@ elif st.session_state.page == "ea_lp":
 
                     fig_dumb.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black',
-                        height=max(600, len(df_pivot) * 60), # Altura dinámica
+                        height=max(600, len(df_pivot) * 60), # Altura adaptativa
                         font=dict(color="white"),
-                        margin=dict(t=30, b=50, l=200, r=20), # Margen izquierdo grande para nombres
+                        margin=dict(t=30, b=50, l=200, r=20), # Margen izq amplio para nombres
                         xaxis=dict(
                             title="Avg Score", 
                             showgrid=False, # SIN CUADRÍCULA
-                            showline=True, 
-                            linecolor="#333",
-                            range=[3, 8.5], # ESCALA FOCUS (3 a 8.5)
-                            dtick=1
+                            showline=True, linecolor="#444",
+                            range=[3, 8], # RANGO OPTIMIZADO (3 a 8)
+                            dtick=1 # Pasos de 1 en 1
                         ),
                         yaxis=dict(
                             title=None, 
                             showgrid=False, # SIN CUADRÍCULA
                             categoryorder='array', 
-                            categoryarray=df_pivot['Secondary Driver'] # Forzar orden por brecha
+                            categoryarray=df_pivot['Secondary Driver'] # Aplica el orden del DF (Gap)
                         ),
                         legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white"))
                     )
