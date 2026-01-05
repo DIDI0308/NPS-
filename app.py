@@ -400,22 +400,31 @@ elif st.session_state.page == "ea_lp":
             csv_url = f"{u}/export?format=csv&nocache={pd.Timestamp.now().timestamp()}"
             res = requests.get(csv_url)
             return pd.read_csv(StringIO(res.text))
-        except:
+        except: 
             return pd.DataFrame()
 
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
-        .banner-ea-lp { background-color: #FFFF00; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 20px; }
-        h2 { color: black !important; }
-        div.stButton > button { background-color: #FFFF00 !important; color: black !important; font-weight: bold !important; }
+        div.stButton > button {
+            background-color: #FFFF00 !important;
+            color: black !important;
+            font-weight: bold !important;
+            border: 2px solid #FFFF00 !important;
+        }
+        .banner-ea-lp {
+            background-color: #FFFF00; padding: 10px; border-radius: 5px;
+            text-align: center; margin-bottom: 20px;
+        }
+        /* Estilo para el multiselect */
+        .stMultiSelect label { color: #FFFF00 !important; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
 
     # NAVEGACIÓN
     c_nav1, c_nav2 = st.columns([8, 2])
     with c_nav1:
-        if st.button("⬅ VOLVER", key="btn_v_home"):
+        if st.button("⬅ VOLVER AL INICIO", key="btn_v_home"):
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
@@ -429,7 +438,9 @@ elif st.session_state.page == "ea_lp":
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.upper()
+        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
+        
+        # Filtro base por DELIVERY
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
         def clean_reg(x):
@@ -439,18 +450,48 @@ elif st.session_state.page == "ea_lp":
             return 'OTRO'
         
         df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
-        df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
+        
+        # --- NUEVO FILTRO DE CATEGORÍA ---
+        st.markdown("<br>", unsafe_allow_html=True)
+        cat_options = sorted([c for c in df_delivery['Category'].unique() if str(c) != 'nan'])
+        # Seleccionamos todos por defecto
+        selected_cats = st.multiselect("Filtrar por Categoría:", options=cat_options, default=cat_options)
+        
+        # Aplicamos filtros
+        df_final = df_delivery[
+            (df_delivery['REG_GROUP'].isin(['EA', 'LP'])) & 
+            (df_delivery['Category'].isin(selected_cats))
+        ].copy()
 
         if not df_final.empty:
             col_izq, col_der = st.columns([1.5, 2.5])
             
             with col_izq:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DISTRIBUCIÓN</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
                 df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
-                fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", barmode="stack",
-                             color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'})
-                fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white"), height=400)
-                st.plotly_chart(fig, use_container_width=True, key="chart_dist_v4")
+                
+                # Gráfica con Etiquetas de Datos (text="Counts")
+                fig = px.bar(
+                    df_plot, 
+                    x="Category", 
+                    y="Counts", 
+                    color="REG_GROUP", 
+                    text="Counts", # Muestra el número sobre la barra
+                    barmode="stack",
+                    color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
+                    category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
+                )
+                fig.update_layout(
+                    paper_bgcolor='black', 
+                    plot_bgcolor='black', 
+                    height=450, 
+                    font=dict(color="white"),
+                    xaxis=dict(title=None, showgrid=False),
+                    yaxis=dict(title="Número de Clientes", showgrid=False),
+                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center")
+                )
+                fig.update_traces(textposition='inside', textfont=dict(color="black", size=14, family="Arial Black"))
+                st.plotly_chart(fig, use_container_width=True, key="dist_v4_labeled")
             
             with col_der:
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
@@ -466,10 +507,17 @@ elif st.session_state.page == "ea_lp":
                     color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
                     template="plotly_dark"
                 )
-                fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=450)
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
-                st.plotly_chart(fig_horiz, use_container_width=True, key="chart_horiz_v4")
+                fig_horiz.update_layout(
+                    paper_bgcolor='black', 
+                    plot_bgcolor='black', 
+                    height=450,
+                    xaxis=dict(title="Clientes", showgrid=False),
+                    yaxis=dict(title=None),
+                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center")
+                )
+                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12, family="Arial Black"))
+                st.plotly_chart(fig_horiz, use_container_width=True, key="horiz_v4_filtered")
         else:
-            st.warning("No hay datos de Delivery para EA o LP.")
+            st.warning("No hay datos para los filtros seleccionados.")
     else:
         st.error("No se pudo conectar con la base de datos.")
