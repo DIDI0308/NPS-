@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (ESCALA AJUSTADA)
+# VISTA 4: EA / LP (ESCALA Y VISUALIZACIÓN OPTIMIZADA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -420,6 +420,7 @@ elif st.session_state.page == "ea_lp":
         </style>
         """, unsafe_allow_html=True)
 
+    # NAVEGACIÓN
     c_nav1, c_nav2 = st.columns([8, 2])
     with c_nav1:
         if st.button("⬅ VOLVER AL INICIO", key="btn_v_home"):
@@ -457,43 +458,43 @@ elif st.session_state.page == "ea_lp":
         ].copy()
 
         if not df_final.empty:
-            # FILA 1: Barras
+            # FILA 1: Barras Superiores
             col_izq, col_der = st.columns([1.5, 2.5])
             with col_izq:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
                 df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
                 fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
                              barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                              category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
                 fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=350, font=dict(color="white"),
-                                  margin=dict(t=20, b=50),
-                                  xaxis=dict(title=None, showgrid=False, showline=False),
-                                  yaxis=dict(showgrid=False, showline=False, showticklabels=False),
+                                  margin=dict(t=10, b=80, l=10, r=10),
+                                  xaxis=dict(title=None, showgrid=False),
+                                  yaxis=dict(showgrid=False, showticklabels=False, title=None),
                                   legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center"))
-                fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
+                fig.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                 st.plotly_chart(fig, use_container_width=True)
             
             with col_der:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
                 df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
                 fig_horiz = px.bar(df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
                                    orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
                 fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=350, font=dict(color="white"),
-                                        margin=dict(t=20, b=50),
-                                        xaxis=dict(showgrid=False, showline=False, showticklabels=False),
-                                        yaxis=dict(title=None, showgrid=False, showline=False),
+                                        margin=dict(t=10, b=80, l=10, r=10),
+                                        xaxis=dict(showgrid=False, showticklabels=False, title=None),
+                                        yaxis=dict(title=None, showgrid=False),
                                         legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center"))
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
+                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=11))
                 st.plotly_chart(fig_horiz, use_container_width=True)
 
-            # --- FILA 2: LÍNEAS - ESCALA Y TEXTO CORREGIDO ---
+            # --- FILA 2: GRÁFICA DE ÁREA APILADA (LÍNEAS) OPTIMIZADA ---
             st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
-            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER (0-10 SCALE)</p>', unsafe_allow_html=True)
+            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
             
             df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
             df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
             
-            # Ajuste de texto a 12 caracteres
+            # Wrapping más agresivo para juntar los puntos horizontalmente
             df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=12)))
 
             fig_line = go.Figure()
@@ -507,38 +508,38 @@ elif st.session_state.page == "ea_lp":
                         y=d['Score'], 
                         name=reg, 
                         mode='lines+markers+text',
-                        # QUITAMOS EL STACKGROUP PARA QUE LA ESCALA SEA 0-10
+                        stackgroup='one', # Mantiene el estilo de área apilada
                         text=d['Score'].round(1), 
                         textposition="top center",
-                        line=dict(color=colors[reg], width=4), 
-                        marker=dict(size=10),
-                        textfont=dict(color="white", size=12)
+                        line=dict(color=colors[reg], width=2),
+                        fill='tonexty', # Refuerza el efecto visual de área
+                        marker=dict(size=6),
+                        textfont=dict(color="white", size=9)
                     ))
 
             fig_line.update_layout(
-                paper_bgcolor='black', plot_bgcolor='black', height=600,
+                paper_bgcolor='black', 
+                plot_bgcolor='black', 
+                height=600, # Altura ajustada para visualización sin zoom
                 font=dict(color="white"),
                 margin=dict(t=20, b=200, l=10, r=10), 
                 xaxis=dict(
                     showgrid=False, 
-                    showline=True,
-                    linecolor="#333",
                     tickangle=0, 
                     type='category',
+                    tickfont=dict(size=9), # Texto de eje un poco más pequeño para que entre todo
                     automargin=True
                 ),
                 yaxis=dict(
-                    title="Average Score", 
-                    range=[0, 11], # Escala fija de 0 a 10 (con margen para etiquetas)
+                    title="Avg Score (Stacked)", 
                     showgrid=False, 
-                    showline=True,
-                    linecolor="#333",
-                    dtick=2 # Marcas cada 2 puntos para limpiar la vista
+                    showticklabels=True,
+                    autorange=True # Escala automática para evitar zoom
                 ),
                 legend=dict(font=dict(color="white"), orientation="h", y=-0.5, x=0.5, xanchor="center")
             )
 
-            st.plotly_chart(fig_line, use_container_width=True, key="line_score_fixed_scale")
+            st.plotly_chart(fig_line, use_container_width=True, key="line_final_optimized")
             
         else:
             st.warning("No hay datos para los filtros seleccionados.")
