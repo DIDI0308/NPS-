@@ -111,7 +111,7 @@ elif st.session_state.page == "dashboard":
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_dash"):
+        if st.button("ACTUALIZAR", key="refresh_dash"):
             st.cache_data.clear()
             st.rerun()
 
@@ -218,7 +218,7 @@ elif st.session_state.page == "dashboard":
         # --- BLOQUE EXCLUSIVO: MAPA DE CALOR CON BUSCADOR ---
         st.markdown('<p style="color:#FFFF00; font-size:25px; font-weight:bold; margin-top:20px;">GEOGRAPHIC HEATMAP</p>', unsafe_allow_html=True)
         
-        busqueda = st.text_input("🔍 Buscar por Código de Cliente (Opcional):", placeholder="Escriba el ID para filtrar el mapa...")
+        busqueda = st.text_input("Buscar por Código de Cliente:", placeholder="Escriba el ID para filtrar el mapa...")
 
         if not df_coords.empty:
             df_c = df_coords.copy()
@@ -297,7 +297,7 @@ elif st.session_state.page == "monthly":
             st.session_state.page = "home"
             st.rerun()
     with c_nav_m2:
-        if st.button("🔄 ACTUALIZAR", key="refresh_m"):
+        if st.button("ACTUALIZAR", key="refresh_m"):
             st.cache_data.clear()
             st.rerun()
 
@@ -428,7 +428,7 @@ elif st.session_state.page == "ea_lp":
             st.session_state.page = "home"
             st.rerun()
     with c_nav2:
-        if st.button("🔄 ACTUALIZAR", key="btn_v_refresh"):
+        if st.button("ACTUALIZAR", key="btn_v_refresh"):
             st.cache_data.clear()
             st.rerun()
 
@@ -498,7 +498,7 @@ elif st.session_state.page == "ea_lp":
                     st.plotly_chart(fig, use_container_width=True)
                 
                 with col_der:
-                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION (CLICK PARA DETALLES)</p>', unsafe_allow_html=True)
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
                     df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
                     
                     # Gráfica interactiva
@@ -538,7 +538,7 @@ elif st.session_state.page == "ea_lp":
                     
                     if selected_drivers:
                         driver_name = selected_drivers[0]
-                        st.markdown(f'<p style="color:#FFFF00; font-size:20px; font-weight:bold;">📋 DETALLES: {driver_name}</p>', unsafe_allow_html=True)
+                        st.markdown(f'<p style="color:#FFFF00; font-size:20px; font-weight:bold;">DETALLES: {driver_name}</p>', unsafe_allow_html=True)
                         
                         # Filtrar datos
                         df_details = df_final[
@@ -561,7 +561,7 @@ elif st.session_state.page == "ea_lp":
 
                 # --- FILA 2: DUMBBELL CHART (GAP ANALYSIS) ---
                 st.markdown("<br>", unsafe_allow_html=True)
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (EA vs LP)</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS</p>', unsafe_allow_html=True)
                 
                 # Buscar columna de Score (Prom Score o Score)
                 col_score = 'Score'
