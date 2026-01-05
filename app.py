@@ -442,7 +442,6 @@ elif st.session_state.page == "ea_lp":
             
             df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
             
-            # Filtro Multiselect
             st.markdown("<br>", unsafe_allow_html=True)
             cat_list = sorted([c for c in df_delivery['Category'].unique() if str(c) not in ['nan', 'N/A']])
             selected_cats = st.multiselect("Filtrar Categorías:", options=cat_list, default=cat_list)
@@ -453,7 +452,6 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # FILA 1: Gráficas de Barras
                 col_izq, col_der = st.columns([1.5, 2.5])
                 
                 with col_izq:
@@ -487,39 +485,45 @@ elif st.session_state.page == "ea_lp":
                     fig_h.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     st.plotly_chart(fig_h, use_container_width=True)
 
-                # FILA 2: Gráfica de Líneas Ajustada para evitar cortes
+                # --- FILA 2: GRÁFICA DE LÍNEAS (GRÁFICA 3) OPTIMIZADA ---
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
                 
                 df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
                 df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
                 
-                # Ajuste de texto a 15 caracteres para mayor verticalidad y evitar amontonamiento
-                df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=15)))
+                # Ajuste: width=12 hace el texto más estrecho para reducir espacio horizontal entre puntos
+                df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=12)))
 
                 fig_line = go.Figure()
                 for reg, color in zip(['EA', 'LP'], ['#FFFF00', '#DAA520']):
                     d = df_line_data[df_line_data['REG_GROUP'] == reg]
                     fig_line.add_trace(go.Scatter(
                         x=d['Driver_Wrapped'], y=d['Score'], name=reg, mode='lines+markers+text',
-                        stackgroup='one', text=d['Score'].round(2), textposition="top center",
-                        line=dict(color=color, width=3), marker=dict(size=10),
-                        textfont=dict(color="white", size=11)
+                        stackgroup='one', text=d['Score'].round(1), textposition="top center",
+                        line=dict(color=color, width=2), marker=dict(size=8),
+                        textfont=dict(color="white", size=9) # Texto de datos más pequeño
                     ))
 
                 fig_line.update_layout(
                     paper_bgcolor='black', plot_bgcolor='black', 
-                    height=700, # Aumentado para dar espacio a los textos
+                    height=650, 
                     font=dict(color="white"),
-                    margin=dict(t=20, b=250, l=50, r=50), # Margen inferior amplio para los textos
-                    xaxis=dict(showgrid=False, tickangle=0, title=None, automargin=True),
-                    yaxis=dict(title="Stacked Avg Score", showgrid=True, gridcolor="#333333"),
-                    legend=dict(font=dict(color="white"), orientation="h", y=-0.4, x=0.5, xanchor="center")
+                    margin=dict(t=20, b=180, l=40, r=40),
+                    xaxis=dict(
+                        showgrid=False, 
+                        tickangle=0, 
+                        title=None, 
+                        automargin=True,
+                        tickfont=dict(size=9) # Fuente del eje X más pequeña para que quepa todo
+                    ),
+                    yaxis=dict(title="Stacked Avg Score", showgrid=True, gridcolor="#222222", tickfont=dict(size=10)),
+                    legend=dict(font=dict(color="white"), orientation="h", y=-0.35, x=0.5, xanchor="center")
                 )
-                st.plotly_chart(fig_line, use_container_width=True)
+                st.plotly_chart(fig_line, use_container_width=True, key="line_score_v4_compact")
             
-            st.markdown(f'<p style="color:#888; font-size:12px; text-align:center;">Muestra actual: {len(df_final)} registros filtrados.</p>', unsafe_allow_html=True)
+            st.markdown(f'<p style="color:#888; font-size:11px; text-align:center;">Muestra: {len(df_final)} registros.</p>', unsafe_allow_html=True)
         else:
             st.warning("No hay datos para los filtros seleccionados.")
     else:
-        st.error("No se pudo conectar con la base de datos.")
+        st.error("Error en la base de datos.")
