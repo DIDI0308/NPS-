@@ -459,6 +459,7 @@ elif st.session_state.page == "ea_lp":
         ].copy()
 
         if not df_final.empty:
+            # FILA 1: Dos columnas para las gráficas de barras
             col_izq, col_der = st.columns([1.5, 2.5])
             
             with col_izq:
@@ -466,31 +467,15 @@ elif st.session_state.page == "ea_lp":
                 df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
                 
                 fig = px.bar(
-                    df_plot, 
-                    x="Category", 
-                    y="Counts", 
-                    color="REG_GROUP", 
-                    text="Counts",
-                    barmode="stack",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
+                    df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
+                    barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                     category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
                 )
                 fig.update_layout(
-                    paper_bgcolor='black', 
-                    plot_bgcolor='black', 
-                    height=450, 
-                    font=dict(color="white"),
-                    xaxis=dict(title=None, showgrid=False, tickfont=dict(color="white")),
-                    yaxis=dict(title="Número de Clientes", showgrid=False, tickfont=dict(color="white")),
-                    legend=dict(
-                        title=None, 
-                        orientation="h", 
-                        y=1.1, x=0.5, 
-                        xanchor="center",
-                        font=dict(color="white") # Leyenda Blanca
-                    )
+                    paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                    xaxis=dict(title=None, showgrid=False), yaxis=dict(showgrid=False),
+                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white"))
                 )
-                # Etiquetas de datos sin negrita
                 fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
                 st.plotly_chart(fig, use_container_width=True, key="dist_v4_plain")
             
@@ -499,32 +484,45 @@ elif st.session_state.page == "ea_lp":
                 df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
                 
                 fig_horiz = px.bar(
-                    df_horiz_data, 
-                    y="Secondary Driver", 
-                    x="Cuenta", 
-                    color="REG_GROUP",
-                    orientation='h', 
-                    text="Cuenta",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
-                    template="plotly_dark"
+                    df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
+                    orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'}
                 )
                 fig_horiz.update_layout(
-                    paper_bgcolor='black', 
-                    plot_bgcolor='black', 
-                    height=450,
-                    xaxis=dict(title="Clientes", showgrid=False, tickfont=dict(color="white")),
-                    yaxis=dict(title=None, tickfont=dict(color="white")),
-                    legend=dict(
-                        title=None, 
-                        orientation="h", 
-                        y=1.1, x=0.5, 
-                        xanchor="center",
-                        font=dict(color="white") # Leyenda Blanca
-                    )
+                    paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                    xaxis=dict(showgrid=False), yaxis=dict(title=None),
+                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white"))
                 )
-                # Etiquetas de datos sin negrita
                 fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                 st.plotly_chart(fig_horiz, use_container_width=True, key="horiz_v4_plain")
+
+            # FILA 2: Gráfica de Líneas (Debajo de las anteriores)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SECONDARY DRIVER VS PROM SCORE TREND</p>', unsafe_allow_html=True)
+            
+            # Aseguramos que Prom Score sea numérico para promediar
+            df_final['Prom Score'] = pd.to_numeric(df_final['Prom Score'], errors='coerce')
+            df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Prom Score'].mean().reset_index()
+
+            fig_line = px.line(
+                df_line_data, 
+                x="Secondary Driver", 
+                y="Prom Score", 
+                color="REG_GROUP",
+                markers=True,
+                color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'}
+            )
+            fig_line.update_layout(
+                paper_bgcolor='black', 
+                plot_bgcolor='black', 
+                height=400, 
+                font=dict(color="white"),
+                xaxis=dict(title="Secondary Driver", showgrid=False),
+                yaxis=dict(title="Avg Prom Score", showgrid=True, gridcolor="#333333"),
+                legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white"))
+            )
+            fig_line.update_traces(line=dict(width=3), marker=dict(size=10))
+            st.plotly_chart(fig_line, use_container_width=True, key="line_score_v4")
+
         else:
             st.warning("No hay datos para los filtros seleccionados.")
     else:
