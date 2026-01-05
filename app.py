@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA - VISUALIZACIÓN COMPLETA)
+# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -437,9 +437,16 @@ elif st.session_state.page == "ea_lp":
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
         
-        if 'Primary Driver' in df_raw.columns:
-            df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
-            df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
+        # Validación de columna Primary Driver
+        target_col = None
+        for c in df_raw.columns:
+            if 'PRIMARY' in c.upper() and 'DRIVER' in c.upper():
+                target_col = c
+                break
+        
+        if target_col:
+            df_raw[target_col] = df_raw[target_col].astype(str).str.strip().str.upper()
+            df_delivery = df_raw[df_raw[target_col] == 'DELIVERY'].copy()
 
             def clean_reg(x):
                 val = str(x).upper()
@@ -480,70 +487,75 @@ elif st.session_state.page == "ea_lp":
                     df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
                     fig_horiz = px.bar(df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
                                        orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
-                fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                                        margin=dict(t=20, b=80),
-                                        xaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
-                                        yaxis=dict(title=None, showgrid=False, showline=False),
-                                        legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
-                st.plotly_chart(fig_horiz, use_container_width=True)
+                    fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                                            margin=dict(t=20, b=80),
+                                            xaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
+                                            yaxis=dict(title=None, showgrid=False, showline=False),
+                                            legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
+                    fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
+                    st.plotly_chart(fig_horiz, use_container_width=True)
 
-            # --- FILA 2: LÍNEAS APILADAS (AJUSTE FINAL DE ESCALA Y MARGEN) ---
-            st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
-            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
-            
-            df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
-            df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
-            
-            # Cálculo del máximo para el eje Y
-            score_sums = df_line_data.groupby('Secondary Driver')['Score'].sum()
-            max_y_value = score_sums.max() if not score_sums.empty else 10
-            
-            # Envoltorio estrecho (width=10)
-            df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=10)))
+                # --- FILA 2: LÍNEAS APILADAS (AJUSTE "ANTI-CORTE") ---
+                st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
+                
+                # Validación de columna Score
+                col_score = 'Score' if 'Score' in df_final.columns else 'Prom Score'
+                
+                if col_score in df_final.columns:
+                    df_final[col_score] = pd.to_numeric(df_final[col_score], errors='coerce')
+                    df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])[col_score].mean().reset_index()
+                    
+                    # 1. Calculamos el máximo acumulado para dar AIRE al techo del gráfico
+                    score_sums = df_line_data.groupby('Secondary Driver')[col_score].sum()
+                    max_y_value = score_sums.max() if not score_sums.empty else 10
+                    
+                    # 2. Wrapper ajustado: width=10 mantiene el texto vertical y compacto
+                    df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=10)))
 
-            fig_line = go.Figure()
-            colors = {'EA': '#FFFF00', 'LP': '#DAA520'}
+                    fig_line = go.Figure()
+                    colors = {'EA': '#FFFF00', 'LP': '#DAA520'}
 
-            for reg in ['EA', 'LP']:
-                d = df_line_data[df_line_data['REG_GROUP'] == reg]
-                if not d.empty:
-                    fig_line.add_trace(go.Scatter(
-                        x=d['Driver_Wrapped'], y=d['Score'], name=reg, mode='lines+markers+text',
-                        stackgroup='one', text=d['Score'].round(2), textposition="top center",
-                        line=dict(color=colors[reg], width=3), marker=dict(size=8),
-                        textfont=dict(color="white", size=10)
-                    ))
+                    for reg in ['EA', 'LP']:
+                        d = df_line_data[df_line_data['REG_GROUP'] == reg]
+                        if not d.empty:
+                            fig_line.add_trace(go.Scatter(
+                                x=d['Driver_Wrapped'], y=d[col_score], name=reg, mode='lines+markers+text',
+                                stackgroup='one', text=d[col_score].round(2), 
+                                textposition="top center",
+                                cliponaxis=False, # CRUCIAL: Permite que el texto se dibuje fuera del marco si es necesario
+                                line=dict(color=colors[reg], width=3), marker=dict(size=9),
+                                textfont=dict(color="white", size=11) # Tamaño legible
+                            ))
 
-            fig_line.update_layout(
-                paper_bgcolor='black', plot_bgcolor='black', 
-                height=850, # Aumentamos altura total
-                font=dict(color="white"),
-                # MARGEN INFERIOR (b) AUMENTADO DRASTÍCAMENTE A 400
-                margin=dict(t=30, b=400, l=10, r=10), 
-                xaxis=dict(
-                    showgrid=False, showline=False,
-                    tickangle=0, type='category', 
-                    fixedrange=True,
-                    automargin=True
-                ),
-                yaxis=dict(
-                    showgrid=False, showline=False,
-                    showticklabels=True, 
-                    tickfont=dict(size=10, color="gray"),
-                    range=[0, max_y_value * 1.2], # Un poco más de aire arriba
-                    fixedrange=True
-                ),
-                # Leyenda movida mucho más abajo para no chocar
-                legend=dict(font=dict(color="white"), orientation="h", y=-0.5, x=0.5, xanchor="center")
-            )
-            
-            # Desactivamos zoom y herramientas para asegurar la vista fija
-            st.plotly_chart(fig_line, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
-            
+                    fig_line.update_layout(
+                        paper_bgcolor='black', plot_bgcolor='black', height=750,
+                        font=dict(color="white"),
+                        # Márgenes expandidos para evitar cualquier corte
+                        margin=dict(t=50, b=250, l=20, r=20), 
+                        xaxis=dict(
+                            showgrid=False, showline=False,
+                            tickangle=0, type='category', 
+                            fixedrange=True,
+                            automargin=True # Ajuste automático si el texto crece
+                        ),
+                        yaxis=dict(
+                            showgrid=False, showline=False,
+                            showticklabels=True, 
+                            tickfont=dict(size=10, color="gray"),
+                            # Damos un 30% extra de aire arriba para las etiquetas
+                            range=[0, max_y_value * 1.3], 
+                            fixedrange=True
+                        ),
+                        legend=dict(font=dict(color="white"), orientation="h", y=-0.25, x=0.5, xanchor="center")
+                    )
+                    
+                    st.plotly_chart(fig_line, use_container_width=True, config={'displayModeBar': False})
+                else:
+                    st.warning("No se encontró columna de Score.")
+            else:
+                st.warning("No hay datos para los filtros seleccionados.")
         else:
-            st.warning("No hay datos para los filtros seleccionados.")
+            st.error("No se encontró la columna 'Primary Driver'.")
     else:
-        st.error("No se encontró la columna 'Primary Driver' en el archivo.")
-else:
-    st.error("No se pudo conectar con la base de datos.")
+        st.error("No se pudo conectar con la base de datos.")
