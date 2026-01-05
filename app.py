@@ -783,7 +783,6 @@ elif st.session_state.page == "monthly":
 # VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
-    # 1. Función con bypass de caché total
     def get_data_absolute_new():
         try:
             u = "https://docs.google.com/spreadsheets/d/1Xxm55SMKuWPMt9EDji0-ccotPzZzLcdj623wqYcwlBs/edit?usp=sharing".split('/edit')[0]
@@ -792,7 +791,6 @@ elif st.session_state.page == "ea_lp":
             return pd.read_csv(StringIO(res.text))
         except: return pd.DataFrame()
 
-    # 2. Inyección de CSS
     st.markdown("""
         <style>
         .stApp { background-color: #000000 !important; }
@@ -803,11 +801,8 @@ elif st.session_state.page == "ea_lp":
             border: 2px solid #FFFF00 !important;
         }
         .banner-ea-lp {
-            background-color: #FFFF00;
-            padding: 8px;
-            border-radius: 5px;
-            text-align: center;
-            margin-bottom: 15px;
+            background-color: #FFFF00; padding: 8px; border-radius: 5px;
+            text-align: center; margin-bottom: 15px;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -839,59 +834,48 @@ elif st.session_state.page == "ea_lp":
         df_final = df_delivery[df_delivery['REG_GROUP'].isin(['EA', 'LP'])].copy()
 
         if not df_final.empty:
-            df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
-            df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
-            df_plot['Altura'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
-
+            # --- COLUMNAS PRINCIPALES ---
             col_izq, col_der = st.columns([1.5, 2.5])
             
             with col_izq:
                 st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">DISTRIBUCIÓN DE CLIENTES</p>', unsafe_allow_html=True)
+                df_plot = df_final.groupby(['Category', 'REG_GROUP'])['Customer ID'].count().reset_index()
+                df_plot['Total_Barra'] = df_plot.groupby('Category')['Customer ID'].transform('sum')
+                df_plot['Altura'] = (df_plot['Customer ID'] / df_plot['Total_Barra']) * 100
+
                 fig = px.bar(
-                    df_plot, 
-                    x="Category", 
-                    y="Altura", 
-                    color="REG_GROUP", 
-                    text="Customer ID",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
-                    category_orders={"Category": ["Detractor", "Passive", "Promoter"]},
-                    barmode="stack"
+                    df_plot, x="Category", y="Altura", color="REG_GROUP", 
+                    text="Customer ID", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
+                    category_orders={"Category": ["Detractor", "Passive", "Promoter"]}, barmode="stack"
                 )
                 fig.update_layout(
-                    paper_bgcolor='black', plot_bgcolor='black',
-                    height=380, yaxis=dict(showticklabels=False, showgrid=False, title=None),
-                    xaxis=dict(title=None, tickfont=dict(color="white", size=11), showgrid=False),
+                    paper_bgcolor='black', plot_bgcolor='black', height=400,
+                    yaxis=dict(showticklabels=False, showgrid=False, title=None),
+                    xaxis=dict(title=None, tickfont=dict(color="white"), showgrid=False),
                     legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
                     margin=dict(t=5, b=5, l=5, r=5)
                 )
-                st.plotly_chart(fig, use_container_width=True, key=f"force_chart_{pd.Timestamp.now().microsecond}")
+                st.plotly_chart(fig, use_container_width=True, key="chart_dist_v4")
             
             with col_der:
-                # --- GRÁFICA DE BARRAS HORIZONTALES APILADAS ---
-                # Agrupamos por Secondary Driver y Región para la gráfica horizontal
-                df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Customer ID'].count().reset_index()
+                st.markdown('<p style="color:#FFFF00; font-size:16px; font-weight:bold; text-align:center;">SECONDARY DRIVER BY REGION</p>', unsafe_allow_html=True)
+                df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
                 
                 fig_horiz = px.bar(
-                    df_horiz_data,
-                    y="Secondary Driver",
-                    x="Customer ID",
-                    color="REG_GROUP",
-                    orientation='h',
-                    text="Customer ID",
-                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
-                    template="plotly_dark"
+                    df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
+                    orientation='h', text="Cuenta",
+                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'}, template="plotly_dark"
                 )
                 fig_horiz.update_layout(
-                    paper_bgcolor='black', plot_bgcolor='black',
-                    height=500,
-                    xaxis=dict(title="Número de Clientes", showgrid=False, tickfont=dict(color="white")),
-                    yaxis=dict(title=None, tickfont=dict(color="white", size=12)),
+                    paper_bgcolor='black', plot_bgcolor='black', height=400,
+                    xaxis=dict(title="Clientes", showgrid=False, tickfont=dict(color="white")),
+                    yaxis=dict(title=None, tickfont=dict(color="white", size=11)),
                     legend=dict(title=None, font=dict(color="white"), orientation="h", y=1.1, x=0.5, xanchor="center"),
                     margin=dict(l=10, r=10, t=30, b=10)
                 )
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=14))
-                st.plotly_chart(fig_horiz, use_container_width=True, key=f"horiz_bar_v4_{pd.Timestamp.now().microsecond}")
+                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
+                st.plotly_chart(fig_horiz, use_container_width=True, key="chart_horiz_v4")
         else:
-            st.warning("No hay datos de Delivery.")
+            st.warning("No hay datos de Delivery para EA o LP.")
     else:
-        st.error("Error de conexión con la base de datos.")
+        st.error("No se pudieron cargar los datos desde Google Sheets.")
