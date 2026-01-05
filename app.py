@@ -416,7 +416,6 @@ elif st.session_state.page == "ea_lp":
             background-color: #FFFF00; padding: 10px; border-radius: 5px;
             text-align: center; margin-bottom: 20px;
         }
-        /* Estilo para el multiselect */
         .stMultiSelect label { color: #FFFF00 !important; font-weight: bold; }
         </style>
         """, unsafe_allow_html=True)
@@ -432,15 +431,13 @@ elif st.session_state.page == "ea_lp":
             st.cache_data.clear()
             st.rerun()
 
-    st.markdown('<div class="banner-ea-lp"><h2>PERFORMANCE EA / LP</h2></div>', unsafe_allow_html=True)
+    st.markdown('<div class="banner-ea-lp"><h2 style="color:black; margin:0; font-family:Arial Black; font-size:22px;">PERFORMANCE EA / LP</h2></div>', unsafe_allow_html=True)
 
     df_raw = get_data_absolute_new()
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
         df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
-        
-        # Filtro base por DELIVERY
         df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
         def clean_reg(x):
@@ -451,13 +448,11 @@ elif st.session_state.page == "ea_lp":
         
         df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
         
-        # --- NUEVO FILTRO DE CATEGORÍA ---
+        # FILTRO DE CATEGORÍA
         st.markdown("<br>", unsafe_allow_html=True)
-        cat_options = sorted([c for c in df_delivery['Category'].unique() if str(c) != 'nan'])
-        # Seleccionamos todos por defecto
+        cat_options = sorted([c for c in df_delivery['Category'].unique() if str(c) != 'nan' and str(c) != 'N/A'])
         selected_cats = st.multiselect("Filtrar por Categoría:", options=cat_options, default=cat_options)
         
-        # Aplicamos filtros
         df_final = df_delivery[
             (df_delivery['REG_GROUP'].isin(['EA', 'LP'])) & 
             (df_delivery['Category'].isin(selected_cats))
@@ -470,13 +465,12 @@ elif st.session_state.page == "ea_lp":
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
                 df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
                 
-                # Gráfica con Etiquetas de Datos (text="Counts")
                 fig = px.bar(
                     df_plot, 
                     x="Category", 
                     y="Counts", 
                     color="REG_GROUP", 
-                    text="Counts", # Muestra el número sobre la barra
+                    text="Counts",
                     barmode="stack",
                     color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                     category_orders={"Category": ["Detractor", "Passive", "Promoter"]}
@@ -486,12 +480,19 @@ elif st.session_state.page == "ea_lp":
                     plot_bgcolor='black', 
                     height=450, 
                     font=dict(color="white"),
-                    xaxis=dict(title=None, showgrid=False),
-                    yaxis=dict(title="Número de Clientes", showgrid=False),
-                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center")
+                    xaxis=dict(title=None, showgrid=False, tickfont=dict(color="white")),
+                    yaxis=dict(title="Número de Clientes", showgrid=False, tickfont=dict(color="white")),
+                    legend=dict(
+                        title=None, 
+                        orientation="h", 
+                        y=1.1, x=0.5, 
+                        xanchor="center",
+                        font=dict(color="white") # Leyenda Blanca
+                    )
                 )
-                fig.update_traces(textposition='inside', textfont=dict(color="black", size=14, family="Arial Black"))
-                st.plotly_chart(fig, use_container_width=True, key="dist_v4_labeled")
+                # Etiquetas de datos sin negrita
+                fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
+                st.plotly_chart(fig, use_container_width=True, key="dist_v4_plain")
             
             with col_der:
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
@@ -511,12 +512,19 @@ elif st.session_state.page == "ea_lp":
                     paper_bgcolor='black', 
                     plot_bgcolor='black', 
                     height=450,
-                    xaxis=dict(title="Clientes", showgrid=False),
-                    yaxis=dict(title=None),
-                    legend=dict(title=None, orientation="h", y=1.1, x=0.5, xanchor="center")
+                    xaxis=dict(title="Clientes", showgrid=False, tickfont=dict(color="white")),
+                    yaxis=dict(title=None, tickfont=dict(color="white")),
+                    legend=dict(
+                        title=None, 
+                        orientation="h", 
+                        y=1.1, x=0.5, 
+                        xanchor="center",
+                        font=dict(color="white") # Leyenda Blanca
+                    )
                 )
-                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12, family="Arial Black"))
-                st.plotly_chart(fig_horiz, use_container_width=True, key="horiz_v4_filtered")
+                # Etiquetas de datos sin negrita
+                fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
+                st.plotly_chart(fig_horiz, use_container_width=True, key="horiz_v4_plain")
         else:
             st.warning("No hay datos para los filtros seleccionados.")
     else:
