@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN FINAL)
+# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -453,7 +453,7 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # FILA 1: Gráficas de Barras con espacio suficiente
+                # FILA 1: Gráficas de Barras
                 col_izq, col_der = st.columns([1.5, 2.5])
                 
                 with col_izq:
@@ -463,8 +463,8 @@ elif st.session_state.page == "ea_lp":
                                  barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                                  category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
                     fig.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black', height=450, font=dict(color="white"),
-                        margin=dict(t=20, b=100), # Espacio para leyenda abajo
+                        paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                        margin=dict(t=20, b=100),
                         xaxis=dict(title=None, showgrid=False),
                         yaxis=dict(title="Clientes", showgrid=False),
                         legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center")
@@ -478,8 +478,8 @@ elif st.session_state.page == "ea_lp":
                     fig_h = px.bar(df_horiz, y="Secondary Driver", x="Cuenta", color="REG_GROUP", orientation='h', text="Cuenta",
                                    color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
                     fig_h.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black', height=450, font=dict(color="white"),
-                        margin=dict(t=20, b=100), # Espacio para leyenda abajo
+                        paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                        margin=dict(t=20, b=100),
                         xaxis=dict(title="Clientes", showgrid=False),
                         yaxis=dict(title=None),
                         legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center")
@@ -487,14 +487,15 @@ elif st.session_state.page == "ea_lp":
                     fig_h.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     st.plotly_chart(fig_h, use_container_width=True)
 
-                # FILA 2: Gráfica de Líneas Apiladas con etiquetas y texto ajustado
+                # FILA 2: Gráfica de Líneas Ajustada para evitar cortes
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
                 
                 df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
                 df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
-                # Ajuste de texto para que entren todos los drivers sin amontonarse
-                df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=20)))
+                
+                # Ajuste de texto a 15 caracteres para mayor verticalidad y evitar amontonamiento
+                df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=15)))
 
                 fig_line = go.Figure()
                 for reg, color in zip(['EA', 'LP'], ['#FFFF00', '#DAA520']):
@@ -507,11 +508,13 @@ elif st.session_state.page == "ea_lp":
                     ))
 
                 fig_line.update_layout(
-                    paper_bgcolor='black', plot_bgcolor='black', height=600, font=dict(color="white"),
-                    margin=dict(t=20, b=150), # Mucho espacio abajo para drivers largos
-                    xaxis=dict(showgrid=False, tickangle=0, title=None),
+                    paper_bgcolor='black', plot_bgcolor='black', 
+                    height=700, # Aumentado para dar espacio a los textos
+                    font=dict(color="white"),
+                    margin=dict(t=20, b=250, l=50, r=50), # Margen inferior amplio para los textos
+                    xaxis=dict(showgrid=False, tickangle=0, title=None, automargin=True),
                     yaxis=dict(title="Stacked Avg Score", showgrid=True, gridcolor="#333333"),
-                    legend=dict(font=dict(color="white"), orientation="h", y=-0.3, x=0.5, xanchor="center")
+                    legend=dict(font=dict(color="white"), orientation="h", y=-0.4, x=0.5, xanchor="center")
                 )
                 st.plotly_chart(fig_line, use_container_width=True)
             
