@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
+# VISTA 4: EA / LP (MÁXIMA COMPRESIÓN Y LIMPIEZA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -457,7 +457,7 @@ elif st.session_state.page == "ea_lp":
         ].copy()
 
         if not df_final.empty:
-            # FILA 1: Barras
+            # FILA 1: Barras sin cuadrícula
             col_izq, col_der = st.columns([1.5, 2.5])
             with col_izq:
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
@@ -466,6 +466,9 @@ elif st.session_state.page == "ea_lp":
                              barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                              category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
                 fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                                  margin=dict(t=20, b=100),
+                                  xaxis=dict(title=None, showgrid=False, showline=False),
+                                  yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
                                   legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center"))
                 fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
                 st.plotly_chart(fig, use_container_width=True)
@@ -476,57 +479,53 @@ elif st.session_state.page == "ea_lp":
                 fig_horiz = px.bar(df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
                                    orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
                 fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                                        margin=dict(t=20, b=100),
+                                        xaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
+                                        yaxis=dict(title=None, showgrid=False, showline=False),
                                         legend=dict(font=dict(color="white"), orientation="h", y=-0.2, x=0.5, xanchor="center"))
                 fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                 st.plotly_chart(fig_horiz, use_container_width=True)
 
-            # --- FILA 2: GRÁFICA DE LÍNEAS APILADAS CON AJUSTE DE ESPACIO ---
+            # --- FILA 2: LÍNEAS APILADAS - MÁXIMA COMPRESIÓN ---
             st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
-            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE (STACKED TREND) BY DRIVER</p>', unsafe_allow_html=True)
+            st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
             
             df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
             df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
             
-            # Reducimos 'width' a 11 para que los textos sean más angostos y los datos se acerquen entre sí
-            df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=11)))
+            # Ajuste de texto ultra-estrecho (width=9) para reducir espacio horizontal
+            df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=9)))
 
             fig_line = go.Figure()
-            regions = ['EA', 'LP']
             colors = {'EA': '#FFFF00', 'LP': '#DAA520'}
 
-            for reg in regions:
+            for reg in ['EA', 'LP']:
                 d = df_line_data[df_line_data['REG_GROUP'] == reg]
                 if not d.empty:
                     fig_line.add_trace(go.Scatter(
-                        x=d['Driver_Wrapped'], 
-                        y=d['Score'],
-                        mode='lines+markers+text',
-                        name=reg,
-                        stackgroup='one', 
-                        text=d['Score'].round(2),
-                        textposition="top center",
-                        line=dict(color=colors[reg], width=3),
-                        marker=dict(size=8),
-                        textfont=dict(color="white", size=10) # Etiquetas legibles pero no negritas
+                        x=d['Driver_Wrapped'], y=d['Score'], name=reg, mode='lines+markers+text',
+                        stackgroup='one', text=d['Score'].round(1), textposition="top center",
+                        line=dict(color=colors[reg], width=3), marker=dict(size=8),
+                        textfont=dict(color="white", size=10)
                     ))
 
             fig_line.update_layout(
-                paper_bgcolor='black', 
-                plot_bgcolor='black', 
-                height=750, # Aumentamos altura para dar aire a los textos largos
+                paper_bgcolor='black', plot_bgcolor='black', height=800,
                 font=dict(color="white"),
-                margin=dict(t=20, b=300, l=50, r=50), # Margen inferior amplio para que no se corten los textos
+                margin=dict(t=20, b=350, l=10, r=10), # Márgenes laterales mínimos
                 xaxis=dict(
                     showgrid=False, 
+                    showline=False,
                     tickangle=0, 
                     type='category',
-                    automargin=True # Permite que Plotly ajuste el espacio para el texto
+                    automargin=True,
+                    categoryorder='trace' # Mantiene los puntos lo más juntos posible
                 ),
-                yaxis=dict(title="Stacked Avg Score", showgrid=True, gridcolor="#333333"),
-                legend=dict(font=dict(color="white"), orientation="h", y=-0.3, x=0.5, xanchor="center")
+                yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=True),
+                legend=dict(font=dict(color="white"), orientation="h", y=-0.35, x=0.5, xanchor="center")
             )
 
-            st.plotly_chart(fig_line, use_container_width=True, key="line_score_v4_compact")
+            st.plotly_chart(fig_line, use_container_width=True, key="line_ultra_compact")
             
         else:
             st.warning("No hay datos para los filtros seleccionados.")
