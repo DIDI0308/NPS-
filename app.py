@@ -464,7 +464,7 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # --- FILA 1: BARRAS (Sin cambios, solo layout limpio) ---
+                # --- FILA 1: BARRAS (Distribución y Volumen) ---
                 col_izq, col_der = st.columns([1.5, 2.5])
                 with col_izq:
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
@@ -495,14 +495,14 @@ elif st.session_state.page == "ea_lp":
 
                 # --- FILA 2: DUMBBELL CHART "TOP LEVEL" ---
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (Ordered by Gap)</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (EA vs LP)</p>', unsafe_allow_html=True)
                 
                 col_score = 'Score' if 'Score' in df_final.columns else 'Prom Score'
                 
                 if col_score in df_final.columns:
                     df_final[col_score] = pd.to_numeric(df_final[col_score], errors='coerce')
                     
-                    # 1. Pivotar datos
+                    # 1. Preparar datos
                     df_stats = df_final.groupby(['Secondary Driver', 'REG_GROUP'])[col_score].mean().reset_index()
                     df_pivot = df_stats.pivot(index='Secondary Driver', columns='REG_GROUP', values=col_score)
                     
@@ -511,67 +511,62 @@ elif st.session_state.page == "ea_lp":
                     
                     df_pivot = df_pivot.reset_index()
                     
-                    # 2. CALCULAR BRECHA Y ORDENAR
-                    # Calculamos valor absoluto de la diferencia para ver "qué driver tiene más discrepancia"
+                    # 2. STORYTELLING: Ordenar por mayor BRECHA (Absoluta)
+                    # Queremos que la mayor brecha esté arriba en el gráfico.
+                    # Plotly dibuja de abajo hacia arriba en el eje Y categórico.
+                    # Por tanto, ordenamos el DF ascendente por brecha para que el mayor quede al final (arriba).
                     df_pivot['Gap'] = abs(df_pivot['EA'].fillna(0) - df_pivot['LP'].fillna(0))
-                    
-                    # Ordenamos Ascendente para que Plotly dibuje el mayor Gap ARRIBA (Plotly dibuja de abajo hacia arriba)
                     df_pivot = df_pivot.sort_values(by='Gap', ascending=True)
-
-                    # 3. Definir Rango Dinámico Eje X (Zoom In)
-                    # Tomamos el min y max de todos los puntos para ajustar el foco
-                    all_scores = pd.concat([df_pivot['EA'], df_pivot['LP']])
-                    min_x = all_scores.min()
-                    max_x = all_scores.max()
-                    # Margen de seguridad de 0.5 puntos
-                    range_x = [max(0, min_x - 0.5), min(10, max_x + 0.5)]
 
                     fig_dumb = go.Figure()
 
-                    # 4. Dibujar LÍNEAS CONECTORAS (Gris Claro, visibles)
+                    # 3. DIBUJAR LÍNEAS CONECTORAS (Clave visual)
                     for i, row in df_pivot.iterrows():
                         if pd.notnull(row['EA']) and pd.notnull(row['LP']):
                             fig_dumb.add_shape(
                                 type="line",
                                 x0=row['EA'], y0=row['Secondary Driver'],
                                 x1=row['LP'], y1=row['Secondary Driver'],
-                                line=dict(color="#666666", width=2), # Gris visible sobre negro
+                                line=dict(color="#666666", width=2), # Gris medio, grosor visible pero sutil
                                 layer="below"
                             )
 
-                    # 5. Puntos EA (Amarillo Neón)
+                    # 4. Puntos EA
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['EA'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='EA',
                         marker=dict(color='#FFFF00', size=14, line=dict(color='black', width=1)),
                         text=df_pivot['EA'].round(2), textposition="top center",
-                        textfont=dict(color="#FFFF00", size=11, family="Arial")
+                        textfont=dict(color="#FFFF00", size=11)
                     ))
 
-                    # 6. Puntos LP (Dorado)
+                    # 5. Puntos LP
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['LP'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='LP',
                         marker=dict(color='#DAA520', size=14, line=dict(color='black', width=1)),
                         text=df_pivot['LP'].round(2), textposition="bottom center",
-                        textfont=dict(color="#DAA520", size=11, family="Arial")
+                        textfont=dict(color="#DAA520", size=11)
                     ))
 
                     fig_dumb.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black',
-                        height=max(600, len(df_pivot) * 55), # Altura dinámica
+                        height=max(600, len(df_pivot) * 60), # Altura dinámica
                         font=dict(color="white"),
-                        margin=dict(t=30, b=50, l=150, r=20),
+                        margin=dict(t=30, b=50, l=200, r=20), # Margen izquierdo grande para nombres
                         xaxis=dict(
                             title="Avg Score", 
-                            showgrid=False, showline=True, linecolor="#444",
-                            range=range_x, # RANGO AJUSTADO (Zoom)
-                            zeroline=False
+                            showgrid=False, # SIN CUADRÍCULA
+                            showline=True, 
+                            linecolor="#333",
+                            range=[3, 8.5], # ESCALA FOCUS (3 a 8.5)
+                            dtick=1
                         ),
                         yaxis=dict(
                             title=None, 
-                            showgrid=True, gridcolor="#222", gridwidth=1, # Guías horizontales sutiles
-                            type='category'
+                            showgrid=False, # SIN CUADRÍCULA
+                            categoryorder='array', 
+                            categoryarray=df_pivot['Secondary Driver'] # Forzar orden por brecha
                         ),
                         legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white"))
                     )
