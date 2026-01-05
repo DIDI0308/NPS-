@@ -391,7 +391,7 @@ elif st.session_state.page == "monthly":
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
 
 # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA)
+# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA - VISUALIZACIÓN COMPLETA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -436,48 +436,50 @@ elif st.session_state.page == "ea_lp":
 
     if not df_raw.empty:
         df_raw.columns = df_raw.columns.str.strip()
-        df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
-        df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
+        
+        if 'Primary Driver' in df_raw.columns:
+            df_raw['Primary Driver'] = df_raw['Primary Driver'].astype(str).str.strip().str.upper()
+            df_delivery = df_raw[df_raw['Primary Driver'] == 'DELIVERY'].copy()
 
-        def clean_reg(x):
-            val = str(x).upper()
-            if 'ALTO' in val or 'EA' in val: return 'EA'
-            if 'PAZ' in val or 'LP' in val: return 'LP'
-            return 'OTRO'
-        
-        df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        cat_options = sorted([c for c in df_delivery['Category'].unique() if str(c) not in ['nan', 'N/A']])
-        selected_cats = st.multiselect("Filtrar por Categoría:", options=cat_options, default=cat_options)
-        
-        df_final = df_delivery[
-            (df_delivery['REG_GROUP'].isin(['EA', 'LP'])) & 
-            (df_delivery['Category'].isin(selected_cats))
-        ].copy()
-
-        if not df_final.empty:
-            # --- FILA 1 ---
-            col_izq, col_der = st.columns([1.5, 2.5])
-            with col_izq:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
-                df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
-                fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
-                             barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
-                             category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
-                fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                                  margin=dict(t=20, b=80),
-                                  xaxis=dict(title=None, showgrid=False, showline=False),
-                                  yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
-                                  legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
-                fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
-                st.plotly_chart(fig, use_container_width=True)
+            def clean_reg(x):
+                val = str(x).upper()
+                if 'ALTO' in val or 'EA' in val: return 'EA'
+                if 'PAZ' in val or 'LP' in val: return 'LP'
+                return 'OTRO'
             
-            with col_der:
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
-                df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
-                fig_horiz = px.bar(df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
-                                   orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
+            df_delivery['REG_GROUP'] = df_delivery['Sales Region'].apply(clean_reg)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            cat_options = sorted([c for c in df_delivery['Category'].unique() if str(c) not in ['nan', 'N/A']])
+            selected_cats = st.multiselect("Filtrar por Categoría:", options=cat_options, default=cat_options)
+            
+            df_final = df_delivery[
+                (df_delivery['REG_GROUP'].isin(['EA', 'LP'])) & 
+                (df_delivery['Category'].isin(selected_cats))
+            ].copy()
+
+            if not df_final.empty:
+                # --- FILA 1 ---
+                col_izq, col_der = st.columns([1.5, 2.5])
+                with col_izq:
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
+                    df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
+                    fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
+                                 barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
+                                 category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
+                    fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
+                                      margin=dict(t=20, b=80),
+                                      xaxis=dict(title=None, showgrid=False, showline=False),
+                                      yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
+                                      legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
+                    fig.update_traces(textposition='inside', textfont=dict(color="black", size=13))
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col_der:
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
+                    df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
+                    fig_horiz = px.bar(df_horiz_data, y="Secondary Driver", x="Cuenta", color="REG_GROUP",
+                                       orientation='h', text="Cuenta", color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'})
                 fig_horiz.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
                                         margin=dict(t=20, b=80),
                                         xaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
@@ -486,19 +488,18 @@ elif st.session_state.page == "ea_lp":
                 fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                 st.plotly_chart(fig_horiz, use_container_width=True)
 
-            # --- FILA 2: LÍNEAS APILADAS AJUSTADAS ---
+            # --- FILA 2: LÍNEAS APILADAS (AJUSTE FINAL DE ESCALA Y MARGEN) ---
             st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
             st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">AVG SCORE TREND BY DRIVER</p>', unsafe_allow_html=True)
             
             df_final['Score'] = pd.to_numeric(df_final['Score'], errors='coerce')
             df_line_data = df_final.groupby(['Secondary Driver', 'REG_GROUP'])['Score'].mean().reset_index()
             
-            # 1. Calculamos el máximo acumulado para fijar la escala Y
-            # Como es 'stackgroup', sumamos los valores de EA y LP por cada driver
+            # Cálculo del máximo para el eje Y
             score_sums = df_line_data.groupby('Secondary Driver')['Score'].sum()
             max_y_value = score_sums.max() if not score_sums.empty else 10
             
-            # 2. Ajuste de texto (ancho 10 para compactar horizontalmente)
+            # Envoltorio estrecho (width=10)
             df_line_data['Driver_Wrapped'] = df_line_data['Secondary Driver'].apply(lambda x: "<br>".join(textwrap.wrap(str(x), width=10)))
 
             fig_line = go.Figure()
@@ -515,28 +516,34 @@ elif st.session_state.page == "ea_lp":
                     ))
 
             fig_line.update_layout(
-                paper_bgcolor='black', plot_bgcolor='black', height=680,
+                paper_bgcolor='black', plot_bgcolor='black', 
+                height=850, # Aumentamos altura total
                 font=dict(color="white"),
-                margin=dict(t=30, b=280, l=10, r=10), # Margen inferior amplio para texto
+                # MARGEN INFERIOR (b) AUMENTADO DRASTÍCAMENTE A 400
+                margin=dict(t=30, b=400, l=10, r=10), 
                 xaxis=dict(
                     showgrid=False, showline=False,
                     tickangle=0, type='category', 
-                    fixedrange=True, # Evita zoom horizontal accidental
+                    fixedrange=True,
+                    automargin=True
                 ),
                 yaxis=dict(
                     showgrid=False, showline=False,
-                    showticklabels=True, # Mostramos etiquetas pequeñas
-                    tickfont=dict(size=10, color="gray"), # Texto Y pequeño y discreto
-                    range=[0, max_y_value * 1.15], # ESCALA AJUSTADA AL DATO MÁXIMO
-                    fixedrange=True # Evita zoom vertical accidental
+                    showticklabels=True, 
+                    tickfont=dict(size=10, color="gray"),
+                    range=[0, max_y_value * 1.2], # Un poco más de aire arriba
+                    fixedrange=True
                 ),
-                legend=dict(font=dict(color="white"), orientation="h", y=-0.3, x=0.5, xanchor="center")
+                # Leyenda movida mucho más abajo para no chocar
+                legend=dict(font=dict(color="white"), orientation="h", y=-0.5, x=0.5, xanchor="center")
             )
             
-            # Configuración para desactivar la barra de herramientas y zoom de Plotly
+            # Desactivamos zoom y herramientas para asegurar la vista fija
             st.plotly_chart(fig_line, use_container_width=True, config={'displayModeBar': False, 'staticPlot': False, 'scrollZoom': False})
             
         else:
             st.warning("No hay datos para los filtros seleccionados.")
     else:
-        st.error("No se pudo conectar con la base de datos.")
+        st.error("No se encontró la columna 'Primary Driver' en el archivo.")
+else:
+    st.error("No se pudo conectar con la base de datos.")
