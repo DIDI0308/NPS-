@@ -389,9 +389,8 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-
 # ==========================================
-# VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA - DUMBBELL)
+# VISTA 4: EA / LP (TOP LEVEL DUMBBELL)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -465,7 +464,7 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # --- FILA 1: BARRAS ---
+                # --- FILA 1: BARRAS (Sin cambios, solo layout limpio) ---
                 col_izq, col_der = st.columns([1.5, 2.5])
                 with col_izq:
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
@@ -494,76 +493,84 @@ elif st.session_state.page == "ea_lp":
                     fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     st.plotly_chart(fig_horiz, use_container_width=True)
 
-                # --- FILA 2: DUMBBELL CHART (GAP ANALYSIS) ---
+                # --- FILA 2: DUMBBELL CHART "TOP LEVEL" ---
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
-                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (EA vs LP)</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (Ordered by Gap)</p>', unsafe_allow_html=True)
                 
                 col_score = 'Score' if 'Score' in df_final.columns else 'Prom Score'
                 
                 if col_score in df_final.columns:
                     df_final[col_score] = pd.to_numeric(df_final[col_score], errors='coerce')
                     
-                    # 1. Pivotar datos para tener EA y LP en columnas
+                    # 1. Pivotar datos
                     df_stats = df_final.groupby(['Secondary Driver', 'REG_GROUP'])[col_score].mean().reset_index()
                     df_pivot = df_stats.pivot(index='Secondary Driver', columns='REG_GROUP', values=col_score)
                     
-                    # Asegurar que existan ambas columnas
                     if 'EA' not in df_pivot.columns: df_pivot['EA'] = None
                     if 'LP' not in df_pivot.columns: df_pivot['LP'] = None
                     
                     df_pivot = df_pivot.reset_index()
-                    # Ordenar por el score máximo para visualización limpia
-                    df_pivot['Max_Score'] = df_pivot[['EA', 'LP']].max(axis=1)
-                    df_pivot = df_pivot.sort_values(by='Max_Score', ascending=True)
+                    
+                    # 2. CALCULAR BRECHA Y ORDENAR
+                    # Calculamos valor absoluto de la diferencia para ver "qué driver tiene más discrepancia"
+                    df_pivot['Gap'] = abs(df_pivot['EA'].fillna(0) - df_pivot['LP'].fillna(0))
+                    
+                    # Ordenamos Ascendente para que Plotly dibuje el mayor Gap ARRIBA (Plotly dibuja de abajo hacia arriba)
+                    df_pivot = df_pivot.sort_values(by='Gap', ascending=True)
+
+                    # 3. Definir Rango Dinámico Eje X (Zoom In)
+                    # Tomamos el min y max de todos los puntos para ajustar el foco
+                    all_scores = pd.concat([df_pivot['EA'], df_pivot['LP']])
+                    min_x = all_scores.min()
+                    max_x = all_scores.max()
+                    # Margen de seguridad de 0.5 puntos
+                    range_x = [max(0, min_x - 0.5), min(10, max_x + 0.5)]
 
                     fig_dumb = go.Figure()
 
-                    # 2. Dibujar las líneas conectoras (La "barra" de la mancuerna)
+                    # 4. Dibujar LÍNEAS CONECTORAS (Gris Claro, visibles)
                     for i, row in df_pivot.iterrows():
                         if pd.notnull(row['EA']) and pd.notnull(row['LP']):
                             fig_dumb.add_shape(
                                 type="line",
                                 x0=row['EA'], y0=row['Secondary Driver'],
                                 x1=row['LP'], y1=row['Secondary Driver'],
-                                line=dict(color="gray", width=1),
+                                line=dict(color="#666666", width=2), # Gris visible sobre negro
                                 layer="below"
                             )
 
-                    # 3. Puntos EA (Amarillo Neón)
+                    # 5. Puntos EA (Amarillo Neón)
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['EA'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='EA',
-                        marker=dict(color='#FFFF00', size=12, line=dict(color='black', width=1)),
+                        marker=dict(color='#FFFF00', size=14, line=dict(color='black', width=1)),
                         text=df_pivot['EA'].round(2), textposition="top center",
-                        textfont=dict(color="#FFFF00", size=11)
+                        textfont=dict(color="#FFFF00", size=11, family="Arial")
                     ))
 
-                    # 4. Puntos LP (Dorado)
+                    # 6. Puntos LP (Dorado)
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['LP'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='LP',
-                        marker=dict(color='#DAA520', size=12, line=dict(color='black', width=1)),
+                        marker=dict(color='#DAA520', size=14, line=dict(color='black', width=1)),
                         text=df_pivot['LP'].round(2), textposition="bottom center",
-                        textfont=dict(color="#DAA520", size=11)
+                        textfont=dict(color="#DAA520", size=11, family="Arial")
                     ))
 
                     fig_dumb.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black',
-                        height=max(500, len(df_pivot) * 50), # Altura dinámica según cantidad de drivers
+                        height=max(600, len(df_pivot) * 55), # Altura dinámica
                         font=dict(color="white"),
-                        margin=dict(t=30, b=50, l=150, r=20), # Margen izquierdo amplio para los nombres
+                        margin=dict(t=30, b=50, l=150, r=20),
                         xaxis=dict(
                             title="Avg Score", 
-                            showgrid=False, 
-                            showline=True, 
-                            linecolor="#333",
-                            range=[0, 11] # Escala fija de 0 a 10 (con margen)
+                            showgrid=False, showline=True, linecolor="#444",
+                            range=range_x, # RANGO AJUSTADO (Zoom)
+                            zeroline=False
                         ),
                         yaxis=dict(
                             title=None, 
-                            showgrid=True, # Líneas horizontales guías
-                            gridcolor="#222", # Muy sutiles
-                            gridwidth=1,
+                            showgrid=True, gridcolor="#222", gridwidth=1, # Guías horizontales sutiles
                             type='category'
                         ),
                         legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white"))
