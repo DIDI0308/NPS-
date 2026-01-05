@@ -389,8 +389,9 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
+
 # ==========================================
-# VISTA 4: EA / LP (TOP LEVEL DUMBBELL)
+# VISTA 4: EA / LP (DUMBBELL "TOP LEVEL" - EJE X AUTOMÁTICO)
 # ==========================================
 elif st.session_state.page == "ea_lp":
     def get_data_absolute_new():
@@ -493,7 +494,7 @@ elif st.session_state.page == "ea_lp":
                     fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     st.plotly_chart(fig_horiz, use_container_width=True)
 
-                # --- FILA 2: DUMBBELL CHART (GAP ANALYSIS - TOP LEVEL) ---
+                # --- FILA 2: DUMBBELL CHART (EJE X DINÁMICO) ---
                 st.markdown("<br><hr style='border: 1px solid #333;'><br>", unsafe_allow_html=True)
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS (EA vs LP)</p>', unsafe_allow_html=True)
                 
@@ -510,29 +511,26 @@ elif st.session_state.page == "ea_lp":
                     if 'LP' not in df_pivot.columns: df_pivot['LP'] = None
                     
                     df_pivot = df_pivot.reset_index()
-                    # Rellenar ceros solo para el cálculo de gap (opcional), mejor dejar NaN si no existe
+                    # Rellenar con 0 temporalmente solo para ordenar, evitando errores de NaN en sort
                     df_pivot['Gap'] = abs(df_pivot['EA'].fillna(0) - df_pivot['LP'].fillna(0))
                     
-                    # 2. Ordenar por Brecha (Mayor diferencia arriba)
-                    # En Plotly eje Y (categoría) dibuja de abajo hacia arriba por defecto.
-                    # Ordenamos ascendente por Gap para que el más grande quede al final del DF (y Plotly lo dibuje arriba si es category array)
+                    # 2. Ordenar por Brecha
                     df_pivot = df_pivot.sort_values(by='Gap', ascending=True)
 
                     fig_dumb = go.Figure()
 
-                    # 3. CONECTORES (Línea gris delgada)
-                    # Iteramos para dibujar la línea entre los puntos
+                    # 3. CONECTORES
                     for i, row in df_pivot.iterrows():
                         if pd.notnull(row['EA']) and pd.notnull(row['LP']):
                             fig_dumb.add_shape(
                                 type="line",
                                 x0=row['EA'], y0=row['Secondary Driver'],
                                 x1=row['LP'], y1=row['Secondary Driver'],
-                                line=dict(color="#666666", width=1), # Gris claro sutil
+                                line=dict(color="#666666", width=1),
                                 layer="below"
                             )
 
-                    # 4. Puntos EA (Amarillo Neón)
+                    # 4. Puntos EA
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['EA'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='EA',
@@ -541,7 +539,7 @@ elif st.session_state.page == "ea_lp":
                         textfont=dict(color="#FFFF00", size=11)
                     ))
 
-                    # 5. Puntos LP (Dorado)
+                    # 5. Puntos LP
                     fig_dumb.add_trace(go.Scatter(
                         x=df_pivot['LP'], y=df_pivot['Secondary Driver'],
                         mode='markers+text', name='LP',
@@ -552,21 +550,21 @@ elif st.session_state.page == "ea_lp":
 
                     fig_dumb.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black',
-                        height=max(600, len(df_pivot) * 60), # Altura adaptativa
+                        height=max(600, len(df_pivot) * 60), 
                         font=dict(color="white"),
-                        margin=dict(t=30, b=50, l=200, r=20), # Margen izq amplio para nombres
+                        margin=dict(t=30, b=50, l=200, r=20),
                         xaxis=dict(
                             title="Avg Score", 
                             showgrid=False, # SIN CUADRÍCULA
                             showline=True, linecolor="#444",
-                            range=[3, 8], # RANGO OPTIMIZADO (3 a 8)
-                            dtick=1 # Pasos de 1 en 1
+                            autorange=True, # <--- AQUÍ ESTÁ EL CAMBIO CLAVE (AUTO)
+                            dtick=1 # Mantiene pasos de 1 en 1 para limpieza
                         ),
                         yaxis=dict(
                             title=None, 
                             showgrid=False, # SIN CUADRÍCULA
                             categoryorder='array', 
-                            categoryarray=df_pivot['Secondary Driver'] # Aplica el orden del DF (Gap)
+                            categoryarray=df_pivot['Secondary Driver']
                         ),
                         legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white"))
                     )
