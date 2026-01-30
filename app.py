@@ -335,8 +335,10 @@ elif st.session_state.page == "monthly":
             last_idx = valid_data[-1] if valid_data else 0
             mes_txt = meses[last_idx]
             
-            st.markdown(f"""<div class="section-banner"><h2 style='color: black; margin: 0; font-size: 19px;'>
-                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} – {int(y24_m[last_idx])} LY {int(bu_m[last_idx])} BGT ({int(val_ytd_bu)}) | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
+            # Título compacto para captura
+            st.markdown(f"""<div class="section-banner" style="margin-top: 5px; margin-bottom: 5px; padding: 2px;">
+                        <h2 style='color: black; margin: 0; font-size: 17px;'>
+                        {title_prefix} | {int(y25_m[last_idx])} {mes_txt} vs {int(bu_m[last_idx])} BGT | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
             
             col_a, col_b = st.columns([3, 1.2])
             with col_a:
@@ -348,42 +350,41 @@ elif st.session_state.page == "monthly":
                 fig_l.update_layout(
                     paper_bgcolor='black', 
                     plot_bgcolor='black', 
-                    font=dict(color="white"), 
-                    xaxis=dict(showgrid=False, tickfont=dict(color="white")), # Limpiado el margin erróneo aquí
+                    font=dict(color="white", size=10), 
+                    xaxis=dict(showgrid=False, tickfont=dict(color="white", size=10)), 
                     yaxis=dict(visible=False, autorange=True), 
-                    legend=dict(orientation="h", y=1.02, x=0.5, xanchor="center", font=dict(color="white")), 
-                    height=450, 
-                    margin=dict(t=10, b=20, l=10, r=10) # Márgenes generales correctos
+                    legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white", size=10)), 
+                    height=320, 
+                    margin=dict(t=30, b=30, l=10, r=10)
                 )
-                st.plotly_chart(fig_l, use_container_width=True)
+                st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
             
             with col_b:
                 fig_b = go.Figure()
-                fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=14, family="Arial Black")))
+                fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=11, family="Arial Black")))
                 y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
                 p25, p24 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0, ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
                 fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
                 fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
-                fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
-                fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black"), bordercolor="white", borderpad=5)
+                fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black", size=9), bordercolor="white", borderpad=3)
+                fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black", size=9), bordercolor="white", borderpad=3)
                 
                 fig_b.update_layout(
                     paper_bgcolor='black', 
                     plot_bgcolor='black', 
                     font=dict(color="white"), 
-                    xaxis=dict(showgrid=False, tickfont=dict(color="white")), 
+                    xaxis=dict(showgrid=False, tickfont=dict(color="white", size=10)), 
                     yaxis=dict(visible=False, autorange=True), 
-                    height=450, 
-                    margin=dict(t=10, b=20, l=10, r=10)
+                    height=320, 
+                    margin=dict(t=30, b=30, l=10, r=10)
                 )
-                st.plotly_chart(fig_b, use_container_width=True)
+                st.plotly_chart(fig_b, use_container_width=True, config={'displayModeBar': False})
 
         render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
         render_nps_block(df_raw_evo, 7, "NPS EA")
         render_nps_block(df_raw_evo, 11, "NPS LP")
         
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
-        # ... (resto del código de tabla y anillos sin cambios)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
         table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
         for m in months: table_html += f'<th>{m}</th>'
