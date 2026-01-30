@@ -515,10 +515,10 @@ elif st.session_state.page == "ea_lp":
                 with col_der:
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center; margin-bottom:10px;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
                     
-                    # 1. ORDEN DINÁMICO DE MAYOR A MENOR
+                    # 1. ORDEN DINÁMICO DE MENOR A MAYOR (Smallest at top)
                     df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
-                    # Calculamos el orden basado en la suma total por Driver (Mayor a Menor de arriba hacia abajo)
-                    order_map = df_horiz_data.groupby('Secondary Driver')['Cuenta'].sum().sort_values(ascending=True).index
+                    # Para que el menor esté arriba en Plotly horizontal, ordenamos Descendente en el array
+                    order_map = df_horiz_data.groupby('Secondary Driver')['Cuenta'].sum().sort_values(ascending=False).index
                     
                     fig_horiz = px.bar(
                         df_horiz_data, 
@@ -531,23 +531,26 @@ elif st.session_state.page == "ea_lp":
                     
                     fig_horiz.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                        margin=dict(t=10, b=80, l=10, r=10), # Espacio de ~1cm con el título
+                        margin=dict(t=10, b=80, l=10, r=10),
                         xaxis=dict(
-                            title=None, showgrid=False, showline=False, showticklabels=False,
-                            tickfont=dict(weight='normal') # EJE X SIN NEGRILLA
+                            title=None, showgrid=False, showline=False, showticklabels=True,
+                            tickfont=dict(color="white", size=12, weight='normal') # EJE X BLANCO, NORMAL
                         ),
                         yaxis=dict(
                             title=None, showgrid=False, showline=False,
-                            tickfont=dict(size=13, color="white", family="Arial Black") # Eje Y Notorio
+                            tickfont=dict(size=13, color="white", family="Arial Black")
                         ),
                         legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center")
                     )
                     
-                    # 2. ETIQUETA DE DATOS COLOR BLANCO Y NEGRILLA
-                    fig_horiz.update_traces(
-                        textposition='inside', 
-                        textfont=dict(color="white", size=14, family="Arial Black")
-                    )
+                    # 2. COLORES DE ETIQUETA DIFERENCIADOS POR REGIÓN
+                    fig_horiz.for_each_trace(lambda t: t.update(
+                        textfont=dict(
+                            color="white" if t.name == "EA" else "black", 
+                            size=14, 
+                            family="Arial Black"
+                        )
+                    ))
                     
                     event = st.plotly_chart(
                         fig_horiz, 
