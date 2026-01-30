@@ -371,10 +371,10 @@ elif st.session_state.page == "monthly":
                 )
                 st.plotly_chart(fig_b, use_container_width=True, config={'displayModeBar': False})
 
-        # --- ORDEN CORREGIDO ---
+        # --- ORDEN SOLICITADO ---
         render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO") # Gráfica 1
-        render_nps_block(df_raw_evo, 11, "NPS LP")        # Gráfica 2: AHORA NPS LP (Fila 11)
-        render_nps_block(df_raw_evo, 7, "NPS EA")         # Gráfica 3: AHORA NPS EA (Fila 7)
+        render_nps_block(df_raw_evo, 7, "NPS EA")         # Gráfica 2: NPS EA (Fila 7)
+        render_nps_block(df_raw_evo, 11, "NPS LP")        # Gráfica 3: NPS LP (Fila 11)
         
         st.markdown('<div class="section-banner">DETRACTORS</div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
