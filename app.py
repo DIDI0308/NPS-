@@ -349,11 +349,11 @@ elif st.session_state.page == "monthly":
                     paper_bgcolor='black', 
                     plot_bgcolor='black', 
                     font=dict(color="white"), 
-                    xaxis=dict(showgrid=False, tickfont=dict(color="white"), margin=dict(t=0)), 
-                    yaxis=dict(visible=False, autorange=True, range=None), # Eje Y dinámico
-                    legend=dict(orientation="h", y=1.02, x=0.5, xanchor="center", font=dict(color="white")), # Leyenda a ~1cm
+                    xaxis=dict(showgrid=False, tickfont=dict(color="white")), # Limpiado el margin erróneo aquí
+                    yaxis=dict(visible=False, autorange=True), 
+                    legend=dict(orientation="h", y=1.02, x=0.5, xanchor="center", font=dict(color="white")), 
                     height=450, 
-                    margin=dict(t=10, b=10, l=10, r=10) # Espacio título-gráfica mínimo
+                    margin=dict(t=10, b=20, l=10, r=10) # Márgenes generales correctos
                 )
                 st.plotly_chart(fig_l, use_container_width=True)
             
@@ -374,7 +374,7 @@ elif st.session_state.page == "monthly":
                     xaxis=dict(showgrid=False, tickfont=dict(color="white")), 
                     yaxis=dict(visible=False, autorange=True), 
                     height=450, 
-                    margin=dict(t=10, b=10, l=10, r=10)
+                    margin=dict(t=10, b=20, l=10, r=10)
                 )
                 st.plotly_chart(fig_b, use_container_width=True)
 
@@ -383,6 +383,7 @@ elif st.session_state.page == "monthly":
         render_nps_block(df_raw_evo, 11, "NPS LP")
         
         st.markdown('<div class="section-banner">DETRACTORS </div>', unsafe_allow_html=True)
+        # ... (resto del código de tabla y anillos sin cambios)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
         table_html = '<table class="detractores-table"><thead><tr><th>Secondary Driver</th>'
         for m in months: table_html += f'<th>{m}</th>'
@@ -415,7 +416,7 @@ elif st.session_state.page == "monthly":
         with c1: st.text_area("Causas Raíz YTD", height=150, value="Top 5:\n• Equipos de Frío\n• Servicio Entrega\n• Bees App", key="c1_m")
         with c2: st.text_area("Plan de Acción", height=150, value="• Recapacitación atención cliente.\n• Refuerzo Operadores Logísticos.", key="c2_m")
         with c3: st.text_area("Key KPIs", height=150, value="• Canjes\n• Rechazo\n• On time", key="c3_m")
-# ==========================================
+            # ==========================================
 # VISTA 4: EA / LP (SOLUCIÓN DEFINITIVA - INTERACTIVA)
 # ==========================================
 elif st.session_state.page == "ea_lp":
