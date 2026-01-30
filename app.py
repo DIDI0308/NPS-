@@ -515,9 +515,9 @@ elif st.session_state.page == "ea_lp":
                 with col_der:
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center; margin-bottom:10px;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
                     
-                    # 1. ORDEN DINÁMICO DE MENOR A MAYOR (Smallest at top)
+                    # 1. ORDEN DINÁMICO DE MENOR A MAYOR (Menor arriba, Mayor abajo)
                     df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
-                    # Para que el menor esté arriba en Plotly horizontal, ordenamos Descendente en el array
+                    # Ordenamos descendente para que en el gráfico horizontal de Plotly el menor quede arriba
                     order_map = df_horiz_data.groupby('Secondary Driver')['Cuenta'].sum().sort_values(ascending=False).index
                     
                     fig_horiz = px.bar(
@@ -534,19 +534,19 @@ elif st.session_state.page == "ea_lp":
                         margin=dict(t=10, b=80, l=10, r=10),
                         xaxis=dict(
                             title=None, showgrid=False, showline=False, showticklabels=True,
-                            tickfont=dict(color="white", size=12, weight='normal') # EJE X BLANCO, NORMAL
+                            tickfont=dict(color="white", size=12, weight='normal') # Eje X normal
                         ),
                         yaxis=dict(
                             title=None, showgrid=False, showline=False,
-                            tickfont=dict(size=13, color="white", family="Arial Black")
+                            tickfont=dict(size=12, color="white", weight='normal') # Eje Y normal (no negrilla)
                         ),
                         legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center")
                     )
                     
-                    # 2. COLORES DE ETIQUETA DIFERENCIADOS POR REGIÓN
+                    # 2. COLORES DE ETIQUETA: EA NEGRO, LP BLANCO
                     fig_horiz.for_each_trace(lambda t: t.update(
                         textfont=dict(
-                            color="white" if t.name == "EA" else "black", 
+                            color="black" if t.name == "EA" else "white", 
                             size=14, 
                             family="Arial Black"
                         )
