@@ -350,7 +350,6 @@ elif st.session_state.page == "monthly":
                     paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white", size=10), 
                     xaxis=dict(showgrid=False, tickfont=dict(color="white", size=11)), 
                     yaxis=dict(visible=False, autorange=True), 
-                    # LEYENDA A 0.5 CM (y=1.05)
                     legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=11)), 
                     height=320, margin=dict(t=30, b=30, l=10, r=10)
                 )
@@ -372,9 +371,10 @@ elif st.session_state.page == "monthly":
                 )
                 st.plotly_chart(fig_b, use_container_width=True, config={'displayModeBar': False})
 
-        render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO")
-        render_nps_block(df_raw_evo, 7, "NPS EA")
-        render_nps_block(df_raw_evo, 11, "NPS LP")
+        # --- ORDEN CORREGIDO ---
+        render_nps_block(df_raw_evo, 2, "NPS CD EL ALTO") # Gráfica 1
+        render_nps_block(df_raw_evo, 7, "NPS EA")         # Gráfica 2 (Ahora EA)
+        render_nps_block(df_raw_evo, 11, "NPS LP")        # Gráfica 3 (Ahora LP)
         
         st.markdown('<div class="section-banner">DETRACTORS</div>', unsafe_allow_html=True)
         rows_det, months = [18, 20, 22], ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
