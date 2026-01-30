@@ -299,7 +299,6 @@ elif st.session_state.page == "monthly":
             st.cache_data.clear()
             st.rerun()
 
-    # Obtención de logos
     img_logo_izq, img_logo_der = get_base64('logo2.png'), get_base64('logo.png')
     st.markdown(f"""
         <div class="header-banner">
@@ -336,7 +335,6 @@ elif st.session_state.page == "monthly":
             last_idx = valid_data[-1] if valid_data else 0
             mes_txt = meses[last_idx]
             
-            # Título de sección compacto
             st.markdown(f"""<div class="section-banner" style="margin-top: 5px; margin-bottom: 5px; padding: 2px;">
                         <h2 style='color: black; margin: 0; font-size: 17px;'>
                         {title_prefix} | {int(y25_m[last_idx])} {mes_txt} vs {int(bu_m[last_idx])} BGT | {int(val_ytd_25)} YTD vs {int(val_ytd_bu)} BGT YTD</h2></div>""", unsafe_allow_html=True)
@@ -344,7 +342,6 @@ elif st.session_state.page == "monthly":
             col_a, col_b = st.columns([3, 1.2])
             with col_a:
                 fig_l = go.Figure()
-                # Etiquetas de datos 1 punto más pequeñas (size: 13 y 12)
                 fig_l.add_trace(go.Scatter(x=meses, y=y25_m, mode='markers+lines+text', name=label_25, line=dict(color='#FFFF00', width=4), text=y25_m, textposition="top center", textfont=dict(color="white", size=13, family="Arial Black")))
                 fig_l.add_trace(go.Scatter(x=meses, y=bu_m, mode='lines', name=label_bu, line=dict(color='#FFD700', width=2, dash='dash')))
                 fig_l.add_trace(go.Scatter(x=meses, y=y24_m, mode='markers+lines+text', name=label_24, line=dict(color='#F4D03F', width=2), text=y24_m, textposition="bottom center", textfont=dict(color="white", size=12, family="Arial Black")))
@@ -353,21 +350,19 @@ elif st.session_state.page == "monthly":
                     paper_bgcolor='black', plot_bgcolor='black', font=dict(color="white", size=10), 
                     xaxis=dict(showgrid=False, tickfont=dict(color="white", size=11)), 
                     yaxis=dict(visible=False, autorange=True), 
-                    legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center", font=dict(color="white", size=11)), 
+                    # LEYENDA A 0.5 CM (y=1.05)
+                    legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white", size=11)), 
                     height=320, margin=dict(t=30, b=30, l=10, r=10)
                 )
                 st.plotly_chart(fig_l, use_container_width=True, config={'displayModeBar': False})
             
             with col_b:
                 fig_b = go.Figure()
-                # Etiquetas de barras más grandes (size: 17)
                 fig_b.add_trace(go.Bar(x=[label_24, label_bu, label_25], y=[val_ytd_24, val_ytd_bu, val_ytd_25], text=[f"{val_ytd_24}", f"{val_ytd_bu}", f"{val_ytd_25}"], textposition='auto', marker_color=['#F4D03F', '#FFD700', '#FFFF00'], width=0.6, textfont=dict(color="black", size=17, family="Arial Black")))
                 y_t = max(val_ytd_25, val_ytd_bu, val_ytd_24) + 15
                 p25, p24 = ((val_ytd_25 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0, ((val_ytd_24 / val_ytd_bu) - 1) * 100 if val_ytd_bu else 0
                 fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 2,{y_t} L 2,{val_ytd_25}", line=dict(color="white", width=2))
                 fig_b.add_shape(type="path", path=f"M 1,{val_ytd_bu} L 1,{y_t} L 0,{y_t} L 0,{val_ytd_24}", line=dict(color="white", width=2))
-                
-                # Indicadores de porcentaje más grandes (size: 14)
                 fig_b.add_annotation(x=1.5, y=y_t, text=f"<b>{p25:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p25 >= 0 else "#FF0000", font=dict(color="black", size=14), bordercolor="white", borderpad=4)
                 fig_b.add_annotation(x=0.5, y=y_t, text=f"<b>{p24:+.1f}%</b>", showarrow=False, bgcolor="#00FF00" if p24 >= 0 else "#FF0000", font=dict(color="black", size=14), bordercolor="white", borderpad=4)
                 
@@ -399,7 +394,6 @@ elif st.session_state.page == "monthly":
             mitad = len(palabras) // 2
             txt_form = "<br>".join([" ".join(palabras[:mitad]), " ".join(palabras[mitad:])])
             fig_ring = go.Figure(go.Pie(values=[1], hole=0.8, marker=dict(colors=['rgba(0,0,0,0)'], line=dict(color='#FFFF00', width=6)), showlegend=False, hoverinfo='none'))
-            # Indicadores de anillo prominentes
             fig_ring.add_annotation(text=f"<b>{val_ytd}</b>", x=0.5, y=0.5, showarrow=False, font=dict(color="white", size=55, family="Arial Black"))
             fig_ring.add_annotation(text=f"<b>{txt_form}</b>", x=0.5, y=-0.15, showarrow=False, font=dict(color="white", size=16), align='center', xref="paper", yref="paper")
             fig_ring.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', margin=dict(t=0, b=40, l=10, r=10), height=280)
