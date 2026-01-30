@@ -499,7 +499,6 @@ elif st.session_state.page == "ea_lp":
             if not df_final.empty:
                 col_izq, col_der = st.columns([1.5, 2.5])
                 with col_izq:
-                    # Título actualizado a CUSTOMER DISTRIBUTION
                     st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center; margin-bottom:10px;">CUSTOMER DISTRIBUTION</p>', unsafe_allow_html=True)
                     df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
                     fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
@@ -507,11 +506,13 @@ elif st.session_state.page == "ea_lp":
                                  category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
                     fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
                                       margin=dict(t=10, b=80),
-                                      xaxis=dict(title=None, showgrid=False, showline=False),
+                                      xaxis=dict(
+                                          title=None, showgrid=False, showline=False,
+                                          tickfont=dict(color="white", size=13, weight='normal') # Eje X más notorio
+                                      ),
                                       yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
                                       legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
                     
-                    # Etiquetas de datos: Negras para EA y Blancas para LP, tamaño mayor y Arial Black
                     fig.for_each_trace(lambda t: t.update(
                         textposition='inside',
                         textfont=dict(
@@ -542,7 +543,7 @@ elif st.session_state.page == "ea_lp":
                         margin=dict(t=10, b=80, l=10, r=10),
                         xaxis=dict(
                             title=None, showgrid=False, showline=False, showticklabels=True,
-                            tickfont=dict(color="white", size=12, weight='normal')
+                            tickfont=dict(color="white", size=13, weight='normal') # Eje X más notorio
                         ),
                         yaxis=dict(
                             title=None, showgrid=False, showline=False,
