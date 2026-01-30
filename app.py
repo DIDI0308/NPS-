@@ -439,7 +439,6 @@ elif st.session_state.page == "ea_lp":
             text-align: center; margin-bottom: 20px;
         }
         .stMultiSelect label { color: #FFFF00 !important; font-weight: bold; }
-        /* Estilo para que la tabla sea legible en fondo negro */
         [data-testid="stDataFrame"] { margin-top: 20px; }
         </style>
         """, unsafe_allow_html=True)
@@ -459,23 +458,18 @@ elif st.session_state.page == "ea_lp":
     df_raw = get_data_absolute_new()
 
     if not df_raw.empty:
-        # Limpiar espacios en nombres de columnas
         df_raw.columns = df_raw.columns.str.strip()
         
-        # 1. Identificar Columna de Primary Driver
         target_col = None
         for c in df_raw.columns:
             if 'PRIMARY' in c.upper() and 'DRIVER' in c.upper():
                 target_col = c
                 break
         
-        # 2. Identificar Columna de Comentarios (Búsqueda Robusta)
         col_comment = None
-        # Prioridad exacta
         if 'Comment (Native Language)' in df_raw.columns:
             col_comment = 'Comment (Native Language)'
         else:
-            # Búsqueda aproximada si no está el nombre exacto
             for c in df_raw.columns:
                 if "COMMENT" in c.upper() or "NATIVE" in c.upper() or "VERBATIM" in c.upper():
                     col_comment = c
@@ -503,16 +497,15 @@ elif st.session_state.page == "ea_lp":
             ].copy()
 
             if not df_final.empty:
-                # --- FILA 1 ---
                 col_izq, col_der = st.columns([1.5, 2.5])
                 with col_izq:
-                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center; margin-bottom:10px;">CLIENT DISTRIBUTION</p>', unsafe_allow_html=True)
                     df_plot = df_final.groupby(['Category', 'REG_GROUP']).size().reset_index(name='Counts')
                     fig = px.bar(df_plot, x="Category", y="Counts", color="REG_GROUP", text="Counts",
                                  barmode="stack", color_discrete_map={'EA': '#FFFF00', 'LP': '#DAA520'},
                                  category_orders={"Category": ["Detractor", "Passive", "Promoter"]})
                     fig.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                                      margin=dict(t=20, b=80),
+                                      margin=dict(t=10, b=80),
                                       xaxis=dict(title=None, showgrid=False, showline=False),
                                       yaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
                                       legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center"))
@@ -520,28 +513,41 @@ elif st.session_state.page == "ea_lp":
                     st.plotly_chart(fig, use_container_width=True)
                 
                 with col_der:
-                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
-                    df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
+                    # Ajuste de título con margen controlado
+                    st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center; margin-bottom:10px;">DRIVERS BY REGION</p>', unsafe_allow_html=True)
                     
-                    # Gráfica interactiva
+                    # Preparación de datos ordenados por el total de la suma de ambas regiones
+                    df_horiz_data = df_final.groupby(['Secondary Driver', 'REG_GROUP']).size().reset_index(name='Cuenta')
+                    order_map = df_horiz_data.groupby('Secondary Driver')['Cuenta'].sum().sort_values(ascending=True).index
+                    
                     fig_horiz = px.bar(
                         df_horiz_data, 
                         y="Secondary Driver", x="Cuenta", color="REG_GROUP",
                         orientation='h', text="Cuenta", 
                         color_discrete_map={'EA': '#FFFF00', 'LP': '#CC9900'},
-                        # Datos necesarios para el filtro al hacer clic
+                        category_orders={"Secondary Driver": list(order_map)},
                         custom_data=['Secondary Driver', 'REG_GROUP']
                     )
+                    
                     fig_horiz.update_layout(
                         paper_bgcolor='black', plot_bgcolor='black', height=400, font=dict(color="white"),
-                        margin=dict(t=20, b=80),
+                        margin=dict(t=10, b=80, l=10, r=10), # Margen superior de 10px (~1cm visual)
                         xaxis=dict(title=None, showgrid=False, showline=False, showticklabels=False),
-                        yaxis=dict(title=None, showgrid=False, showline=False),
+                        yaxis=dict(
+                            title=None, 
+                            showgrid=False, 
+                            showline=False,
+                            tickfont=dict(size=13, color="white", family="Arial Black") # Eje Y más notorio
+                        ),
                         legend=dict(font=dict(color="white"), orientation="h", y=-0.15, x=0.5, xanchor="center")
                     )
-                    fig_horiz.update_traces(textposition='inside', textfont=dict(color="black", size=12))
                     
-                    # CAPTURA DEL EVENTO DE CLIC
+                    # Etiquetas de datos en negrita y más grandes
+                    fig_horiz.update_traces(
+                        textposition='inside', 
+                        textfont=dict(color="black", size=14, family="Arial Black")
+                    )
+                    
                     event = st.plotly_chart(
                         fig_horiz, 
                         use_container_width=True, 
@@ -550,42 +556,25 @@ elif st.session_state.page == "ea_lp":
                         selection_mode="points"
                     )
 
-                # --- TABLA DE DETALLES (DRILL-DOWN) ---
                 if event and event.selection.points:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    # Extraer criterios de los puntos seleccionados
                     selected_drivers = [p['customdata'][0] for p in event.selection.points]
                     selected_regions = [p['customdata'][1] for p in event.selection.points]
                     
                     if selected_drivers:
                         driver_name = selected_drivers[0]
                         st.markdown(f'<p style="color:#FFFF00; font-size:20px; font-weight:bold;">DETALLES: {driver_name}</p>', unsafe_allow_html=True)
-                        
-                        # Filtrar datos
                         df_details = df_final[
                             (df_final['Secondary Driver'].isin(selected_drivers)) & 
                             (df_final['REG_GROUP'].isin(selected_regions))
                         ].copy()
-                        
-                        # Definir columnas a mostrar
                         cols_display = ['Customer ID', 'Score', 'Category', 'Secondary Driver']
-                        if col_comment: 
-                            cols_display.append(col_comment) # Añadir comentario si existe
-                        
-                        # Mostrar tabla
-                        st.dataframe(
-                            df_details[cols_display], 
-                            use_container_width=True,
-                            hide_index=True
-                        )
+                        if col_comment: cols_display.append(col_comment)
+                        st.dataframe(df_details[cols_display], use_container_width=True, hide_index=True)
                         st.markdown("<hr style='border: 1px solid #333;'>", unsafe_allow_html=True)
 
-                # --- FILA 2: DUMBBELL CHART (GAP ANALYSIS) ---
                 st.markdown("<br>", unsafe_allow_html=True)
                 st.markdown('<p style="color:#FFFF00; font-size:18px; font-weight:bold; text-align:center;">SCORE GAP ANALYSIS</p>', unsafe_allow_html=True)
-                
-                # Buscar columna de Score (Prom Score o Score)
                 col_score = 'Score'
                 for c in df_final.columns:
                     if c.upper() in ['SCORE', 'PROM SCORE', 'PROMSCORE']:
@@ -594,51 +583,29 @@ elif st.session_state.page == "ea_lp":
                 
                 if col_score in df_final.columns:
                     df_final[col_score] = pd.to_numeric(df_final[col_score], errors='coerce')
-                    
-                    # Pivotar y Ordenar
                     df_stats = df_final.groupby(['Secondary Driver', 'REG_GROUP'])[col_score].mean().reset_index()
                     df_pivot = df_stats.pivot(index='Secondary Driver', columns='REG_GROUP', values=col_score)
-                    
                     if 'EA' not in df_pivot.columns: df_pivot['EA'] = None
                     if 'LP' not in df_pivot.columns: df_pivot['LP'] = None
-                    
                     df_pivot = df_pivot.reset_index()
                     df_pivot['Gap'] = abs(df_pivot['EA'].fillna(0) - df_pivot['LP'].fillna(0))
                     df_pivot = df_pivot.sort_values(by='Gap', ascending=True)
-
                     fig_dumb = go.Figure()
-
-                    # Conectores
                     for i, row in df_pivot.iterrows():
                         if pd.notnull(row['EA']) and pd.notnull(row['LP']):
-                            fig_dumb.add_shape(type="line", 
-                                x0=row['EA'], y0=row['Secondary Driver'], 
-                                x1=row['LP'], y1=row['Secondary Driver'],
+                            fig_dumb.add_shape(type="line", x0=row['EA'], y0=row['Secondary Driver'], x1=row['LP'], y1=row['Secondary Driver'],
                                 line=dict(color="#666666", width=1), layer="below")
-
-                    # Puntos EA
-                    fig_dumb.add_trace(go.Scatter(
-                        x=df_pivot['EA'], y=df_pivot['Secondary Driver'], mode='markers+text', name='EA',
+                    fig_dumb.add_trace(go.Scatter(x=df_pivot['EA'], y=df_pivot['Secondary Driver'], mode='markers+text', name='EA',
                         marker=dict(color='#FFFF00', size=14, line=dict(color='black', width=1)),
-                        text=df_pivot['EA'].round(2), textposition="top center", textfont=dict(color="#FFFF00", size=11)
-                    ))
-
-                    # Puntos LP
-                    fig_dumb.add_trace(go.Scatter(
-                        x=df_pivot['LP'], y=df_pivot['Secondary Driver'], mode='markers+text', name='LP',
+                        text=df_pivot['EA'].round(2), textposition="top center", textfont=dict(color="#FFFF00", size=11)))
+                    fig_dumb.add_trace(go.Scatter(x=df_pivot['LP'], y=df_pivot['Secondary Driver'], mode='markers+text', name='LP',
                         marker=dict(color='#DAA520', size=14, line=dict(color='black', width=1)),
-                        text=df_pivot['LP'].round(2), textposition="bottom center", textfont=dict(color="#DAA520", size=11)
-                    ))
-
-                    fig_dumb.update_layout(
-                        paper_bgcolor='black', plot_bgcolor='black',
-                        height=max(600, len(df_pivot) * 60),
+                        text=df_pivot['LP'].round(2), textposition="bottom center", textfont=dict(color="#DAA520", size=11)))
+                    fig_dumb.update_layout(paper_bgcolor='black', plot_bgcolor='black', height=max(600, len(df_pivot) * 60),
                         font=dict(color="white"), margin=dict(t=30, b=50, l=200, r=20),
                         xaxis=dict(title="Avg Score", showgrid=False, showline=True, linecolor="#444", autorange=True, dtick=1),
                         yaxis=dict(title=None, showgrid=False, categoryorder='array', categoryarray=df_pivot['Secondary Driver']),
-                        legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white"))
-                    )
-                    
+                        legend=dict(orientation="h", y=1.05, x=0.5, xanchor="center", font=dict(color="white")))
                     st.plotly_chart(fig_dumb, use_container_width=True, config={'displayModeBar': False})
                 else:
                     st.warning("No se encontró la columna de Score en el archivo.")
@@ -646,5 +613,3 @@ elif st.session_state.page == "ea_lp":
                 st.warning("No hay datos para los filtros seleccionados.")
         else:
             st.error("No se encontró la columna 'Primary Driver'.")
-    else:
-        st.error("No se pudo conectar con la base de datos.")
